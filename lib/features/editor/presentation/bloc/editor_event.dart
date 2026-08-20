@@ -1,0 +1,313 @@
+import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
+import '../../domain/entities/layer.dart';
+import '../../domain/entities/layer_enums.dart';
+import '../../domain/entities/canvas_page.dart';
+import '../../domain/entities/canvas_project.dart';
+import '../../domain/entities/component_definition.dart';
+
+abstract class EditorEvent extends Equatable {
+  const EditorEvent();
+
+  @override
+  List<Object?> get props => [];
+}
+
+// Project Initialization
+class LoadProjectEvent extends EditorEvent {
+  final CanvasProject project;
+  const LoadProjectEvent(this.project);
+
+  @override
+  List<Object?> get props => [project];
+}
+
+// Selection & Hover
+class SelectLayerEvent extends EditorEvent {
+  final String? layerId;
+  final bool isMultiSelect;
+  const SelectLayerEvent(this.layerId, {this.isMultiSelect = false});
+
+  @override
+  List<Object?> get props => [layerId, isMultiSelect];
+}
+
+class ClearSelectionEvent extends EditorEvent {
+  const ClearSelectionEvent();
+}
+
+class HoverLayerEvent extends EditorEvent {
+  final String? layerId;
+  const HoverLayerEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
+// Layer Transformations & Actions
+class AddLayerEvent extends EditorEvent {
+  final Layer layer;
+  const AddLayerEvent(this.layer);
+
+  @override
+  List<Object?> get props => [layer];
+}
+
+class UpdateLayerEvent extends EditorEvent {
+  final Layer layer;
+  final bool recordHistory;
+  const UpdateLayerEvent(this.layer, {this.recordHistory = true});
+
+  @override
+  List<Object?> get props => [layer, recordHistory];
+}
+
+class MoveLayerDeltaEvent extends EditorEvent {
+  final String layerId;
+  final double dx;
+  final double dy;
+  final bool isFinal;
+  const MoveLayerDeltaEvent({
+    required this.layerId,
+    required this.dx,
+    required this.dy,
+    this.isFinal = false,
+  });
+
+  @override
+  List<Object?> get props => [layerId, dx, dy, isFinal];
+}
+
+class ResizeLayerHandleEvent extends EditorEvent {
+  final String layerId;
+  final ResizeHandle handle;
+  final double dx;
+  final double dy;
+  final bool lockAspectRatio;
+  final bool isFinal;
+
+  const ResizeLayerHandleEvent({
+    required this.layerId,
+    required this.handle,
+    required this.dx,
+    required this.dy,
+    this.lockAspectRatio = false,
+    this.isFinal = false,
+  });
+
+  @override
+  List<Object?> get props => [layerId, handle, dx, dy, lockAspectRatio, isFinal];
+}
+
+class RotateLayerEvent extends EditorEvent {
+  final String layerId;
+  final double angle; // in radians
+  final bool isFinal;
+
+  const RotateLayerEvent({
+    required this.layerId,
+    required this.angle,
+    this.isFinal = false,
+  });
+
+  @override
+  List<Object?> get props => [layerId, angle, isFinal];
+}
+
+class DeleteSelectedLayersEvent extends EditorEvent {
+  const DeleteSelectedLayersEvent();
+}
+
+class DuplicateSelectedLayersEvent extends EditorEvent {
+  const DuplicateSelectedLayersEvent();
+}
+
+class ReorderLayerEvent extends EditorEvent {
+  final String layerId;
+  final int newIndex;
+
+  const ReorderLayerEvent(this.layerId, this.newIndex);
+
+  @override
+  List<Object?> get props => [layerId, newIndex];
+}
+
+class BringForwardEvent extends EditorEvent {
+  final String layerId;
+  const BringForwardEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
+class SendBackwardEvent extends EditorEvent {
+  final String layerId;
+  const SendBackwardEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
+class BringToFrontEvent extends EditorEvent {
+  final String layerId;
+  const BringToFrontEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
+class SendToBackEvent extends EditorEvent {
+  final String layerId;
+  const SendToBackEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
+class ToggleLockLayerEvent extends EditorEvent {
+  final String layerId;
+  const ToggleLockLayerEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
+class ToggleVisibilityLayerEvent extends EditorEvent {
+  final String layerId;
+  const ToggleVisibilityLayerEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
+// Alignment tools
+enum AlignmentAction {
+  left,
+  center,
+  right,
+  top,
+  middle,
+  bottom,
+}
+
+class AlignSelectedLayersEvent extends EditorEvent {
+  final AlignmentAction action;
+  const AlignSelectedLayersEvent(this.action);
+
+  @override
+  List<Object?> get props => [action];
+}
+
+// Pages
+class SelectPageEvent extends EditorEvent {
+  final int pageIndex;
+  const SelectPageEvent(this.pageIndex);
+
+  @override
+  List<Object?> get props => [pageIndex];
+}
+
+class AddPageEvent extends EditorEvent {
+  final CanvasPage? page;
+  const AddPageEvent({this.page});
+
+  @override
+  List<Object?> get props => [page];
+}
+
+class DuplicatePageEvent extends EditorEvent {
+  final int pageIndex;
+  const DuplicatePageEvent(this.pageIndex);
+
+  @override
+  List<Object?> get props => [pageIndex];
+}
+
+class DeletePageEvent extends EditorEvent {
+  final int pageIndex;
+  const DeletePageEvent(this.pageIndex);
+
+  @override
+  List<Object?> get props => [pageIndex];
+}
+
+class ReorderPageEvent extends EditorEvent {
+  final int oldIndex;
+  final int newIndex;
+  const ReorderPageEvent(this.oldIndex, this.newIndex);
+
+  @override
+  List<Object?> get props => [oldIndex, newIndex];
+}
+
+class UpdatePageBackgroundEvent extends EditorEvent {
+  final BackgroundType type;
+  final Color? color;
+  final Gradient? gradient;
+  final String? imagePath;
+
+  const UpdatePageBackgroundEvent({
+    required this.type,
+    this.color,
+    this.gradient,
+    this.imagePath,
+  });
+
+  @override
+  List<Object?> get props => [type, color, gradient, imagePath];
+}
+
+// Component Definitions
+class RegisterComponentDefinitionEvent extends EditorEvent {
+  final ComponentDefinition definition;
+  const RegisterComponentDefinitionEvent(this.definition);
+
+  @override
+  List<Object?> get props => [definition];
+}
+
+class UpdateComponentDefinitionEvent extends EditorEvent {
+  final ComponentDefinition definition;
+  const UpdateComponentDefinitionEvent(this.definition);
+
+  @override
+  List<Object?> get props => [definition];
+}
+
+// Viewport / Studio options
+class SetZoomEvent extends EditorEvent {
+  final double zoom;
+  const SetZoomEvent(this.zoom);
+
+  @override
+  List<Object?> get props => [zoom];
+}
+
+class SetPanOffsetEvent extends EditorEvent {
+  final Offset offset;
+  const SetPanOffsetEvent(this.offset);
+
+  @override
+  List<Object?> get props => [offset];
+}
+
+class ToggleGridEvent extends EditorEvent {
+  const ToggleGridEvent();
+}
+
+class ToggleGuidesEvent extends EditorEvent {
+  const ToggleGuidesEvent();
+}
+
+class ToggleSnapEvent extends EditorEvent {
+  const ToggleSnapEvent();
+}
+
+// History
+class UndoEvent extends EditorEvent {
+  const UndoEvent();
+}
+
+class RedoEvent extends EditorEvent {
+  const RedoEvent();
+}
