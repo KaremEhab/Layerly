@@ -24,6 +24,7 @@ class PageRenderer extends StatelessWidget {
   final Function(String layerId, ResizeHandle handle, DragUpdateDetails details)? onResizeLayer;
   final Function(String layerId, ResizeHandle handle, DragEndDetails details)? onResizeLayerEnd;
   final Function(String layerId, double angle, bool isFinal)? onRotateLayer;
+  final Function(String layerId, Offset globalPosition)? onContextMenu;
 
   const PageRenderer({
     super.key,
@@ -39,6 +40,7 @@ class PageRenderer extends StatelessWidget {
     this.onResizeLayer,
     this.onResizeLayerEnd,
     this.onRotateLayer,
+    this.onContextMenu,
   });
 
   @override
@@ -176,6 +178,10 @@ class PageRenderer extends StatelessWidget {
           behavior: HitTestBehavior.translucent,
           onTap: () {
             onSelectLayer?.call(layer.id, false);
+          },
+          onSecondaryTapDown: (details) {
+            onSelectLayer?.call(layer.id, false);
+            onContextMenu?.call(layer.id, details.globalPosition);
           },
           onLongPress: () {
             onSelectLayer?.call(layer.id, true);

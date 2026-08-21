@@ -10,6 +10,7 @@ import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/page_renderer.dart';
+import 'package:layerly/features/editor/presentation/widgets/canvas/figma_context_menu.dart';
 
 class EditorCanvas extends StatefulWidget {
   final bool isLockedTop;
@@ -30,6 +31,17 @@ class _EditorCanvasState extends State<EditorCanvas> {
   Offset? _marqueeStart;
   Offset? _marqueeEnd;
   bool _isMarqueeActive = false;
+  final Map<int, Offset> _activePointerPositions = {};
+
+  void _openContextMenu(Offset globalPosition) {
+    final bloc = context.read<EditorBloc>();
+    showFigmaContextMenu(
+      context: context,
+      globalPosition: globalPosition,
+      state: bloc.state,
+      bloc: bloc,
+    );
+  }
 
   @override
   void initState() {
@@ -183,177 +195,207 @@ class _EditorCanvasState extends State<EditorCanvas> {
         final double scale = fitWidth / activePage.width;
         final pageOrigin = Offset((constraints.maxWidth - fitWidth) / 2, 8.0);
 
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) {
-            _focusNode.requestFocus();
-            context.read<EditorBloc>().add(const ClearSelectionEvent());
+        return Listener(
+          onPointerDown: (event) {
+            _activePointerPositions[event.pointer] = event.position;
+            if (_activePointerPositions.length == 2) {
+              final points = _activePointerPositions.values.toList();
+              final midPoint = Offset(
+                (points[0].dx + points[1].dx) / 2,
+                (points[0].dy + points[1].dy) / 2,
+              );
+              _openContextMenu(midPoint);
+            }
           },
-          onLongPressStart: (details) {
-            _focusNode.requestFocus();
-            setState(() {
-              _marqueeStart = details.localPosition;
-              _marqueeEnd = details.localPosition;
-              _isMarqueeActive = true;
-            });
+          onPointerMove: (event) {
+            if (_activePointerPositions.containsKey(event.pointer)) {
+              _activePointerPositions[event.pointer] = event.position;
+            }
           },
-          onLongPressMoveUpdate: (details) {
-            if (!_isMarqueeActive || _marqueeStart == null) return;
-            setState(() {
-              _marqueeEnd = details.localPosition;
-            });
-            _updateMarqueeSelection(
-              screenMarquee: Rect.fromPoints(_marqueeStart!, _marqueeEnd!),
-              pageOrigin: pageOrigin,
-              scale: scale,
-              activePage: activePage,
-            );
+          onPointerUp: (event) {
+            _activePointerPositions.remove(event.pointer);
           },
-          onLongPressEnd: (_) {
-            setState(() {
-              _isMarqueeActive = false;
-              _marqueeStart = null;
-              _marqueeEnd = null;
-            });
+          onPointerCancel: (event) {
+            _activePointerPositions.remove(event.pointer);
           },
-          onLongPressCancel: () {
-            setState(() {
-              _isMarqueeActive = false;
-              _marqueeStart = null;
-              _marqueeEnd = null;
-            });
-          },
-          child: Container(
-            color: AppColors.canvasBackground,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _DotGridPainter(),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  left: (constraints.maxWidth - fitWidth) / 2,
-                  width: fitWidth,
-                  height: fitHeight,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          blurRadius: 30,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 8),
-                        ),
-                        BoxShadow(
-                          color: const Color(0xFFA970FF).withValues(alpha: 0.12),
-                          blurRadius: 45,
-                          spreadRadius: 0,
-                        ),
-                      ],
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (_) {
+              _focusNode.requestFocus();
+              context.read<EditorBloc>().add(const ClearSelectionEvent());
+            },
+            onSecondaryTapDown: (details) {
+              _openContextMenu(details.globalPosition);
+            },
+            onLongPressStart: (details) {
+              _focusNode.requestFocus();
+              setState(() {
+                _marqueeStart = details.localPosition;
+                _marqueeEnd = details.localPosition;
+                _isMarqueeActive = true;
+              });
+            },
+            onLongPressMoveUpdate: (details) {
+              if (!_isMarqueeActive || _marqueeStart == null) return;
+              setState(() {
+                _marqueeEnd = details.localPosition;
+              });
+              _updateMarqueeSelection(
+                screenMarquee: Rect.fromPoints(_marqueeStart!, _marqueeEnd!),
+                pageOrigin: pageOrigin,
+                scale: scale,
+                activePage: activePage,
+              );
+            },
+            onLongPressEnd: (_) {
+              setState(() {
+                _isMarqueeActive = false;
+                _marqueeStart = null;
+                _marqueeEnd = null;
+              });
+            },
+            onLongPressCancel: () {
+              setState(() {
+                _isMarqueeActive = false;
+                _marqueeStart = null;
+                _marqueeEnd = null;
+              });
+            },
+            child: Container(
+              color: AppColors.canvasBackground,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _DotGridPainter(),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: SizedBox(
-                        width: fitWidth,
-                        height: fitHeight,
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          alignment: Alignment.center,
-                          child: SizedBox(
-                            width: activePage.width,
-                            height: activePage.height,
-                            child: PageRenderer(
-                              page: activePage,
-                              selectedLayerIds: state.selectedLayerIds,
-                              activeGuides: state.activeSnapGuides,
-                              activeSpacingMeasurements: state.activeSpacingMeasurements,
-                              scale: scale,
-                              getComponentDefinition: (id) =>
-                                  state.getComponentDefinition(id),
-                              onSelectLayer: (layerId, isMulti) {
-                                _focusNode.requestFocus();
-                                context.read<EditorBloc>().add(
-                                      SelectLayerEvent(layerId, isMultiSelect: isMulti),
-                                    );
-                              },
-                              onMoveLayer: (layerId, details) {
-                                context.read<EditorBloc>().add(
-                                      MoveLayerDeltaEvent(
-                                        layerId: layerId,
-                                        dx: details.delta.dx / scale,
-                                        dy: details.delta.dy / scale,
-                                        isFinal: false,
-                                      ),
-                                    );
-                              },
-                              onMoveLayerEnd: (layerId, details) {
-                                context.read<EditorBloc>().add(
-                                      MoveLayerDeltaEvent(
-                                        layerId: layerId,
-                                        dx: 0,
-                                        dy: 0,
-                                        isFinal: true,
-                                      ),
-                                    );
-                              },
-                              onResizeLayer: (layerId, handle, details) {
-                                context.read<EditorBloc>().add(
-                                      ResizeLayerHandleEvent(
-                                        layerId: layerId,
-                                        handle: handle,
-                                        dx: details.delta.dx / scale,
-                                        dy: details.delta.dy / scale,
-                                        isFinal: false,
-                                      ),
-                                    );
-                              },
-                              onResizeLayerEnd: (layerId, handle, details) {
-                                context.read<EditorBloc>().add(
-                                      ResizeLayerHandleEvent(
-                                        layerId: layerId,
-                                        handle: handle,
-                                        dx: 0,
-                                        dy: 0,
-                                        isFinal: true,
-                                      ),
-                                    );
-                              },
-                              onRotateLayer: (layerId, angle, isFinal) {
-                                context.read<EditorBloc>().add(
-                                      RotateLayerEvent(
-                                        layerId: layerId,
-                                        angle: angle,
-                                        isFinal: isFinal,
-                                      ),
-                                    );
-                              },
+                  ),
+                  Positioned(
+                    top: 8,
+                    left: (constraints.maxWidth - fitWidth) / 2,
+                    width: fitWidth,
+                    height: fitHeight,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            blurRadius: 30,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 8),
+                          ),
+                          BoxShadow(
+                            color: const Color(0xFFA970FF).withValues(alpha: 0.12),
+                            blurRadius: 45,
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: SizedBox(
+                          width: fitWidth,
+                          height: fitHeight,
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            alignment: Alignment.center,
+                            child: SizedBox(
+                              width: activePage.width,
+                              height: activePage.height,
+                              child: PageRenderer(
+                                page: activePage,
+                                selectedLayerIds: state.selectedLayerIds,
+                                activeGuides: state.activeSnapGuides,
+                                activeSpacingMeasurements: state.activeSpacingMeasurements,
+                                scale: scale,
+                                getComponentDefinition: (id) =>
+                                    state.getComponentDefinition(id),
+                                onContextMenu: (layerId, globalPosition) {
+                                  _openContextMenu(globalPosition);
+                                },
+                                onSelectLayer: (layerId, isMulti) {
+                                  _focusNode.requestFocus();
+                                  context.read<EditorBloc>().add(
+                                        SelectLayerEvent(layerId, isMultiSelect: isMulti),
+                                      );
+                                },
+                                onMoveLayer: (layerId, details) {
+                                  context.read<EditorBloc>().add(
+                                        MoveLayerDeltaEvent(
+                                          layerId: layerId,
+                                          dx: details.delta.dx / scale,
+                                          dy: details.delta.dy / scale,
+                                          isFinal: false,
+                                        ),
+                                      );
+                                },
+                                onMoveLayerEnd: (layerId, details) {
+                                  context.read<EditorBloc>().add(
+                                        MoveLayerDeltaEvent(
+                                          layerId: layerId,
+                                          dx: 0,
+                                          dy: 0,
+                                          isFinal: true,
+                                        ),
+                                      );
+                                },
+                                onResizeLayer: (layerId, handle, details) {
+                                  context.read<EditorBloc>().add(
+                                        ResizeLayerHandleEvent(
+                                          layerId: layerId,
+                                          handle: handle,
+                                          dx: details.delta.dx / scale,
+                                          dy: details.delta.dy / scale,
+                                          isFinal: false,
+                                        ),
+                                      );
+                                },
+                                onResizeLayerEnd: (layerId, handle, details) {
+                                  context.read<EditorBloc>().add(
+                                        ResizeLayerHandleEvent(
+                                          layerId: layerId,
+                                          handle: handle,
+                                          dx: 0,
+                                          dy: 0,
+                                          isFinal: true,
+                                        ),
+                                      );
+                                },
+                                onRotateLayer: (layerId, angle, isFinal) {
+                                  context.read<EditorBloc>().add(
+                                        RotateLayerEvent(
+                                          layerId: layerId,
+                                          angle: angle,
+                                          isFinal: isFinal,
+                                        ),
+                                      );
+                                },
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                if (_isMarqueeActive && _marqueeStart != null && _marqueeEnd != null)
-                  Positioned.fromRect(
-                    rect: Rect.fromPoints(_marqueeStart!, _marqueeEnd!),
-                    child: IgnorePointer(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0D99FF).withValues(alpha: 0.12),
-                          border: Border.all(
-                            color: const Color(0xFF0D99FF),
-                            width: 1.5,
+                  if (_isMarqueeActive && _marqueeStart != null && _marqueeEnd != null)
+                    Positioned.fromRect(
+                      rect: Rect.fromPoints(_marqueeStart!, _marqueeEnd!),
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0D99FF).withValues(alpha: 0.12),
+                            border: Border.all(
+                              color: const Color(0xFF0D99FF),
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -365,124 +407,151 @@ class _EditorCanvasState extends State<EditorCanvas> {
   Widget _buildFreeInfiniteCanvas(BuildContext context, EditorState state) {
     final activePage = state.activePage;
 
-    return Container(
-      color: AppColors.canvasBackground,
-      child: Stack(
-        children: [
-          // Dot Grid Canvas Texture
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _DotGridPainter(),
+    return Listener(
+      onPointerDown: (event) {
+        _activePointerPositions[event.pointer] = event.position;
+        if (_activePointerPositions.length == 2) {
+          final points = _activePointerPositions.values.toList();
+          final midPoint = Offset(
+            (points[0].dx + points[1].dx) / 2,
+            (points[0].dy + points[1].dy) / 2,
+          );
+          _openContextMenu(midPoint);
+        }
+      },
+      onPointerMove: (event) {
+        if (_activePointerPositions.containsKey(event.pointer)) {
+          _activePointerPositions[event.pointer] = event.position;
+        }
+      },
+      onPointerUp: (event) {
+        _activePointerPositions.remove(event.pointer);
+      },
+      onPointerCancel: (event) {
+        _activePointerPositions.remove(event.pointer);
+      },
+      child: Container(
+        color: AppColors.canvasBackground,
+        child: Stack(
+          children: [
+            // Dot Grid Canvas Texture
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _DotGridPainter(),
+              ),
             ),
-          ),
 
-          // Interactive Viewport with Pan and Zoom
-          InteractiveViewer(
-            transformationController: _transformController,
-            minScale: 0.1,
-            maxScale: 3.5,
-            boundaryMargin: const EdgeInsets.all(2000),
-            constrained: false,
-            onInteractionUpdate: (details) {
-              final scale = _transformController.value.getMaxScaleOnAxis();
-              if ((scale - state.zoom).abs() > 0.05) {
-                context.read<EditorBloc>().add(SetZoomEvent(scale));
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(200),
-              child: Center(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        blurRadius: 40,
-                        spreadRadius: 10,
-                        offset: const Offset(0, 15),
+            // Interactive Viewport with Pan and Zoom
+            InteractiveViewer(
+              transformationController: _transformController,
+              minScale: 0.1,
+              maxScale: 3.5,
+              boundaryMargin: const EdgeInsets.all(2000),
+              constrained: false,
+              onInteractionUpdate: (details) {
+                final scale = _transformController.value.getMaxScaleOnAxis();
+                if ((scale - state.zoom).abs() > 0.05) {
+                  context.read<EditorBloc>().add(SetZoomEvent(scale));
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(200),
+                child: Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          blurRadius: 40,
+                          spreadRadius: 10,
+                          offset: const Offset(0, 15),
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFFA970FF).withValues(alpha: 0.1),
+                          blurRadius: 60,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: PageRenderer(
+                        page: activePage,
+                        selectedLayerIds: state.selectedLayerIds,
+                        activeGuides: state.activeSnapGuides,
+                        activeSpacingMeasurements: state.activeSpacingMeasurements,
+                        scale: state.zoom,
+                        getComponentDefinition: (id) =>
+                            state.getComponentDefinition(id),
+                        onContextMenu: (layerId, globalPosition) {
+                          _openContextMenu(globalPosition);
+                        },
+                        onSelectLayer: (layerId, isMulti) {
+                          _focusNode.requestFocus();
+                          context.read<EditorBloc>().add(
+                                SelectLayerEvent(layerId, isMultiSelect: isMulti),
+                              );
+                        },
+                        onMoveLayer: (layerId, details) {
+                          context.read<EditorBloc>().add(
+                                MoveLayerDeltaEvent(
+                                  layerId: layerId,
+                                  dx: details.delta.dx,
+                                  dy: details.delta.dy,
+                                  isFinal: false,
+                                ),
+                              );
+                        },
+                        onMoveLayerEnd: (layerId, details) {
+                          context.read<EditorBloc>().add(
+                                MoveLayerDeltaEvent(
+                                  layerId: layerId,
+                                  dx: 0,
+                                  dy: 0,
+                                  isFinal: true,
+                                ),
+                              );
+                        },
+                        onResizeLayer: (layerId, handle, details) {
+                          context.read<EditorBloc>().add(
+                                ResizeLayerHandleEvent(
+                                  layerId: layerId,
+                                  handle: handle,
+                                  dx: details.delta.dx,
+                                  dy: details.delta.dy,
+                                  isFinal: false,
+                                ),
+                              );
+                        },
+                        onResizeLayerEnd: (layerId, handle, details) {
+                          context.read<EditorBloc>().add(
+                                ResizeLayerHandleEvent(
+                                  layerId: layerId,
+                                  handle: handle,
+                                  dx: 0,
+                                  dy: 0,
+                                  isFinal: true,
+                                ),
+                              );
+                        },
+                        onRotateLayer: (layerId, angle, isFinal) {
+                          context.read<EditorBloc>().add(
+                                RotateLayerEvent(
+                                  layerId: layerId,
+                                  angle: angle,
+                                  isFinal: isFinal,
+                                ),
+                              );
+                        },
                       ),
-                      BoxShadow(
-                        color: const Color(0xFFA970FF).withValues(alpha: 0.1),
-                        blurRadius: 60,
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: PageRenderer(
-                      page: activePage,
-                      selectedLayerIds: state.selectedLayerIds,
-                      activeGuides: state.activeSnapGuides,
-                      activeSpacingMeasurements: state.activeSpacingMeasurements,
-                      scale: state.zoom,
-                      getComponentDefinition: (id) =>
-                          state.getComponentDefinition(id),
-                      onSelectLayer: (layerId, isMulti) {
-                        _focusNode.requestFocus();
-                        context.read<EditorBloc>().add(
-                              SelectLayerEvent(layerId, isMultiSelect: isMulti),
-                            );
-                      },
-                      onMoveLayer: (layerId, details) {
-                        context.read<EditorBloc>().add(
-                              MoveLayerDeltaEvent(
-                                layerId: layerId,
-                                dx: details.delta.dx,
-                                dy: details.delta.dy,
-                                isFinal: false,
-                              ),
-                            );
-                      },
-                      onMoveLayerEnd: (layerId, details) {
-                        context.read<EditorBloc>().add(
-                              MoveLayerDeltaEvent(
-                                layerId: layerId,
-                                dx: 0,
-                                dy: 0,
-                                isFinal: true,
-                              ),
-                            );
-                      },
-                      onResizeLayer: (layerId, handle, details) {
-                        context.read<EditorBloc>().add(
-                              ResizeLayerHandleEvent(
-                                layerId: layerId,
-                                handle: handle,
-                                dx: details.delta.dx,
-                                dy: details.delta.dy,
-                                isFinal: false,
-                              ),
-                            );
-                      },
-                      onResizeLayerEnd: (layerId, handle, details) {
-                        context.read<EditorBloc>().add(
-                              ResizeLayerHandleEvent(
-                                layerId: layerId,
-                                handle: handle,
-                                dx: 0,
-                                dy: 0,
-                                isFinal: true,
-                              ),
-                            );
-                      },
-                      onRotateLayer: (layerId, angle, isFinal) {
-                        context.read<EditorBloc>().add(
-                              RotateLayerEvent(
-                                layerId: layerId,
-                                angle: angle,
-                                isFinal: isFinal,
-                              ),
-                            );
-                      },
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
