@@ -67,8 +67,12 @@ class _ResponsiveEditorLayoutState extends State<ResponsiveEditorLayout> {
             // Slide Strip (+ Add Slide, 01, 02, 03...)
             const PageStrip(),
 
+            const SizedBox(height: 4),
+
             // Contextual Inspector (Changes depending on selection)
             const PropertiesPanel(),
+
+            const SizedBox(height: 4),
 
             // Contextual Action Bar (Undo, Redo, Duplicate, Visibility, Lock, Layout, Delete)
             const ContextualActionBar(),

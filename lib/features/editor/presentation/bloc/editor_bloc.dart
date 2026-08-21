@@ -22,9 +22,10 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
   static const int maxHistoryLength = 50;
 
   EditorBloc({required CanvasProject initialProject})
-      : super(EditorState(project: initialProject)) {
+      : super(EditorState(project: normalizeProject(initialProject))) {
     on<LoadProjectEvent>(_onLoadProject);
     on<SelectLayerEvent>(_onSelectLayer);
+    on<SelectMultipleLayersEvent>(_onSelectMultipleLayers);
     on<ClearSelectionEvent>(_onClearSelection);
     on<HoverLayerEvent>(_onHoverLayer);
     on<AddLayerEvent>(_onAddLayer);
@@ -79,7 +80,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
 
   void _onLoadProject(LoadProjectEvent event, Emitter<EditorState> emit) {
     emit(EditorState(
-      project: event.project,
+      project: normalizeProject(event.project),
       selectedLayerIds: const [],
       undoStack: const [],
       redoStack: const [],
@@ -108,6 +109,13 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       }
       emit(state.copyWith(selectedLayerIds: [event.layerId!]));
     }
+  }
+
+  void _onSelectMultipleLayers(
+    SelectMultipleLayersEvent event,
+    Emitter<EditorState> emit,
+  ) {
+    emit(state.copyWith(selectedLayerIds: event.layerIds));
   }
 
   void _onClearSelection(ClearSelectionEvent event, Emitter<EditorState> emit) {
@@ -165,6 +173,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     if (event.isFinal && (event.layerId.isEmpty || (event.dx == 0 && event.dy == 0))) {
       emit(state.copyWith(
         activeSnapGuides: [],
+        activeSpacingMeasurements: [],
         isInteracting: false,
         undoStack: _pushHistory(state.project, state.undoStack),
         redoStack: [],
@@ -178,6 +187,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       if (event.isFinal) {
         emit(state.copyWith(
           activeSnapGuides: [],
+          activeSpacingMeasurements: [],
           isInteracting: false,
         ));
       }
@@ -227,6 +237,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     emit(state.copyWith(
       project: updatedProject,
       activeSnapGuides: event.isFinal ? [] : snap.activeGuides,
+      activeSpacingMeasurements: event.isFinal ? [] : snap.spacingMeasurements,
       isInteracting: !event.isFinal,
       undoStack: event.isFinal
           ? _pushHistory(state.project, state.undoStack)
@@ -240,11 +251,8 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     Emitter<EditorState> emit,
   ) {
     final activePage = state.activePage;
-    final layerIndex = activePage.layers.indexWhere((l) => l.id == event.layerId);
-    if (layerIndex == -1) return;
-
-    final layer = activePage.layers[layerIndex];
-    if (layer.locked) return;
+    final layer = state.findLayerById(event.layerId);
+    if (layer == null || layer.locked) return;
 
     double newX = layer.x;
     double newY = layer.y;
@@ -308,9 +316,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       height: newH,
     );
 
-    final updatedLayers = List<Layer>.from(activePage.layers);
-    updatedLayers[layerIndex] = updatedLayer;
-
+    final updatedLayers = _updateLayerInTree(activePage.layers, updatedLayer);
     final updatedPage = activePage.copyWith(layers: updatedLayers);
     final updatedPages = List<CanvasPage>.from(state.project.pages);
     updatedPages[state.project.activePageIndex] = updatedPage;
@@ -330,15 +336,11 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
 
   void _onRotateLayer(RotateLayerEvent event, Emitter<EditorState> emit) {
     final activePage = state.activePage;
-    final layerIndex = activePage.layers.indexWhere((l) => l.id == event.layerId);
-    if (layerIndex == -1) return;
-
-    final layer = activePage.layers[layerIndex];
-    if (layer.locked) return;
+    final layer = state.findLayerById(event.layerId);
+    if (layer == null || layer.locked) return;
 
     final updatedLayer = layer.copyWithTransform(rotation: event.angle);
-    final updatedLayers = List<Layer>.from(activePage.layers);
-    updatedLayers[layerIndex] = updatedLayer;
+    final updatedLayers = _updateLayerInTree(activePage.layers, updatedLayer);
 
     final updatedPage = activePage.copyWith(layers: updatedLayers);
     final updatedPages = List<CanvasPage>.from(state.project.pages);
@@ -680,6 +682,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       project: state.project.copyWith(activePageIndex: event.pageIndex),
       selectedLayerIds: [],
       activeSnapGuides: [],
+      activeSpacingMeasurements: [],
     ));
   }
 
@@ -1135,7 +1138,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     }).toList();
   }
 
-  AutoLayoutLayer _recalculateAutoLayoutDimensions(AutoLayoutLayer container) {
+  static AutoLayoutLayer _recalculateAutoLayoutDimensions(AutoLayoutLayer container) {
     if (container.children.isEmpty) return container;
 
     final isHorizontal = container.direction == AutoLayoutDirection.horizontal;
@@ -1195,7 +1198,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     }).toList();
   }
 
-  TextLayer _recalculateTextDimensions(TextLayer textLayer) {
+  static TextLayer _recalculateTextDimensions(TextLayer textLayer) {
     final style = TextStyle(
       fontFamily: textLayer.fontFamily,
       fontSize: textLayer.fontSize,
@@ -1217,13 +1220,34 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     final paddingH = (textLayer.padding?.horizontal ?? 0.0);
     final paddingV = (textLayer.padding?.vertical ?? 0.0);
 
-    final measuredWidth = (textPainter.width + paddingH + 6.0).ceilToDouble().clamp(20.0, 5000.0);
-    final measuredHeight = (textPainter.height + paddingV + 4.0).ceilToDouble().clamp(16.0, 5000.0);
+    // Exact intrinsic width and height hugging without excess margin
+    final measuredWidth = (textPainter.width + paddingH).ceilToDouble().clamp(1.0, 5000.0);
+    final measuredHeight = (textPainter.height + paddingV).ceilToDouble().clamp(1.0, 5000.0);
 
     return textLayer.copyWith(
       width: measuredWidth,
       height: measuredHeight,
     );
+  }
+
+  static Layer _normalizeLayer(Layer layer) {
+    if (layer is TextLayer) {
+      return _recalculateTextDimensions(layer);
+    } else if (layer is AutoLayoutLayer) {
+      final normalizedChildren = layer.children.map(_normalizeLayer).toList();
+      final withChildren = layer.copyWith(children: normalizedChildren);
+      return _recalculateAutoLayoutDimensions(withChildren);
+    }
+    return layer;
+  }
+
+  static CanvasProject normalizeProject(CanvasProject project) {
+    final normalizedPages = project.pages.map((page) {
+      final normalizedLayers = page.layers.map(_normalizeLayer).toList();
+      return page.copyWith(layers: normalizedLayers);
+    }).toList();
+
+    return project.copyWith(pages: normalizedPages);
   }
 
   List<Layer> _updateLayerInTree(List<Layer> list, Layer updatedLayer) {

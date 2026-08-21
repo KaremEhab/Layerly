@@ -12,6 +12,7 @@ import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
+import 'package:layerly/features/editor/presentation/widgets/canvas/transform_box.dart';
 
 class LayerView extends StatelessWidget {
   final Layer layer;
@@ -19,6 +20,9 @@ class LayerView extends StatelessWidget {
   final Function(String layerId, bool isMulti)? onSelectLayer;
   final List<String> selectedLayerIds;
   final double scale;
+  final Function(String layerId, ResizeHandle handle, DragUpdateDetails details)? onResizeLayer;
+  final Function(String layerId, ResizeHandle handle, DragEndDetails details)? onResizeLayerEnd;
+  final Function(String layerId, double angle, bool isFinal)? onRotateLayer;
 
   const LayerView({
     super.key,
@@ -27,6 +31,9 @@ class LayerView extends StatelessWidget {
     this.onSelectLayer,
     this.selectedLayerIds = const [],
     this.scale = 1.0,
+    this.onResizeLayer,
+    this.onResizeLayerEnd,
+    this.onRotateLayer,
   });
 
   @override
@@ -680,39 +687,89 @@ class LayerView extends StatelessWidget {
     );
   }
 
-  Widget _buildAutoLayoutLayer(AutoLayoutLayer layer) {
-    // Dynamically calculate required bounds to guarantee zero Flex overflow
+  static Size measureTextSize(TextLayer textLayer) {
+    TextStyle style;
+    try {
+      style = GoogleFonts.getFont(
+        textLayer.fontFamily,
+        color: textLayer.color,
+        fontSize: textLayer.fontSize,
+        fontWeight: textLayer.fontWeight,
+        fontStyle: textLayer.fontStyle,
+        letterSpacing: textLayer.letterSpacing,
+        height: textLayer.lineHeight,
+      );
+    } catch (_) {
+      style = TextStyle(
+        fontFamily: textLayer.fontFamily,
+        color: textLayer.color,
+        fontSize: textLayer.fontSize,
+        fontWeight: textLayer.fontWeight,
+        fontStyle: textLayer.fontStyle,
+        letterSpacing: textLayer.letterSpacing,
+        height: textLayer.lineHeight,
+      );
+    }
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: textLayer.content.isEmpty ? ' ' : textLayer.content,
+        style: style,
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: textLayer.textAlign,
+    )..layout();
+
+    final paddingH = textLayer.padding?.horizontal ?? 0.0;
+    final paddingV = textLayer.padding?.vertical ?? 0.0;
+
+    return Size(
+      (textPainter.width + paddingH).ceilToDouble().clamp(1.0, 5000.0),
+      (textPainter.height + paddingV).ceilToDouble().clamp(1.0, 5000.0),
+    );
+  }
+
+  static Size measureAutoLayoutSize(AutoLayoutLayer layer) {
     double requiredMainAxis = 0;
     double maxCrossAxis = 0;
     final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
 
     for (int i = 0; i < layer.children.length; i++) {
       final child = layer.children[i];
+      final childSize = child is TextLayer
+          ? measureTextSize(child)
+          : (child is AutoLayoutLayer ? measureAutoLayoutSize(child) : Size(child.width, child.height));
       if (isHorizontal) {
-        requiredMainAxis += child.width;
-        if (child.height > maxCrossAxis) maxCrossAxis = child.height;
+        requiredMainAxis += childSize.width;
+        if (childSize.height > maxCrossAxis) maxCrossAxis = childSize.height;
       } else {
-        requiredMainAxis += child.height;
-        if (child.width > maxCrossAxis) maxCrossAxis = child.width;
+        requiredMainAxis += childSize.height;
+        if (childSize.width > maxCrossAxis) maxCrossAxis = childSize.width;
       }
       if (i > 0) requiredMainAxis += layer.gap;
     }
 
     final effectiveWidth = isHorizontal
-        ? (requiredMainAxis + layer.paddingHorizontal * 2).clamp(layer.width, double.infinity)
-        : (maxCrossAxis + layer.paddingHorizontal * 2).clamp(layer.width, double.infinity);
+        ? (requiredMainAxis + layer.paddingHorizontal * 2)
+        : (maxCrossAxis + layer.paddingHorizontal * 2);
 
     final effectiveHeight = isHorizontal
-        ? (maxCrossAxis + layer.paddingVertical * 2).clamp(layer.height, double.infinity)
-        : (requiredMainAxis + layer.paddingVertical * 2).clamp(layer.height, double.infinity);
+        ? (maxCrossAxis + layer.paddingVertical * 2)
+        : (requiredMainAxis + layer.paddingVertical * 2);
+
+    return Size(
+      math.max(layer.width, effectiveWidth.ceilToDouble()),
+      math.max(layer.height, effectiveHeight.ceilToDouble()),
+    );
+  }
+
+  Widget _buildAutoLayoutLayer(AutoLayoutLayer layer) {
+    final size = measureAutoLayoutSize(layer);
+    final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
 
     return Container(
-      width: effectiveWidth,
-      height: effectiveHeight,
-      constraints: BoxConstraints(
-        minWidth: layer.width,
-        minHeight: layer.height,
-      ),
+      width: size.width,
+      height: size.height,
       padding: EdgeInsets.symmetric(
         horizontal: layer.paddingHorizontal,
         vertical: layer.paddingVertical,
@@ -724,69 +781,89 @@ class LayerView extends StatelessWidget {
             ? Border.all(color: layer.strokeColor!, width: layer.strokeWidth)
             : null,
       ),
-      child: Flex(
-        direction: isHorizontal ? Axis.horizontal : Axis.vertical,
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: _getFlexMainAxis(layer.distribution),
-        crossAxisAlignment: _getFlexCrossAxis(layer.alignment),
-        children: [
-          for (int i = 0; i < layer.children.length; i++) ...[
-            if (i > 0)
-              SizedBox(
-                width: isHorizontal ? layer.gap : 0,
-                height: isHorizontal ? 0 : layer.gap,
-              ),
-            () {
-              final child = layer.children[i];
-              final isChildSelected = selectedLayerIds.contains(child.id);
-
-              Widget childView = LayerView(
-                layer: child,
-                getComponentDefinition: getComponentDefinition,
-                onSelectLayer: onSelectLayer,
-                selectedLayerIds: selectedLayerIds,
-                scale: scale,
-              );
-
-              if (isChildSelected) {
-                childView = Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    childView,
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: const Color(0xFFA970FF),
-                            width: 1.5 / scale.clamp(0.5, 2.0),
-                          ),
-                          borderRadius: BorderRadius.circular(
-                            child is ShapeLayer
-                                ? child.cornerRadius
-                                : (child is AutoLayoutLayer ? child.cornerRadius : 4),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-
-              return SizedBox(
-                width: child.width,
-                height: child.height,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onDoubleTap: () {
-                    // Double-clicking dives directly into this inner child layer!
-                    onSelectLayer?.call(child.id, false);
-                  },
-                  child: childView,
+      child: OverflowBox(
+        alignment: Alignment.topLeft,
+        minWidth: 0,
+        minHeight: 0,
+        maxWidth: double.infinity,
+        maxHeight: double.infinity,
+        child: Flex(
+          direction: isHorizontal ? Axis.horizontal : Axis.vertical,
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: _getFlexMainAxis(layer.distribution),
+          crossAxisAlignment: _getFlexCrossAxis(layer.alignment),
+          children: [
+            for (int i = 0; i < layer.children.length; i++) ...[
+              if (i > 0)
+                SizedBox(
+                  width: isHorizontal ? layer.gap : 0,
+                  height: isHorizontal ? 0 : layer.gap,
                 ),
-              );
-            }(),
+              () {
+                final child = layer.children[i];
+                final isChildSelected = selectedLayerIds.contains(child.id);
+                final childSize = child is TextLayer
+                    ? measureTextSize(child)
+                    : (child is AutoLayoutLayer ? measureAutoLayoutSize(child) : Size(child.width, child.height));
+                final childLayer = child is TextLayer
+                    ? child.copyWith(width: childSize.width, height: childSize.height)
+                    : (child is AutoLayoutLayer
+                        ? child.copyWith(width: childSize.width, height: childSize.height)
+                        : child);
+
+                Widget childView = LayerView(
+                  layer: childLayer,
+                  getComponentDefinition: getComponentDefinition,
+                  onSelectLayer: onSelectLayer,
+                  selectedLayerIds: selectedLayerIds,
+                  scale: scale,
+                  onResizeLayer: onResizeLayer,
+                  onResizeLayerEnd: onResizeLayerEnd,
+                  onRotateLayer: onRotateLayer,
+                );
+
+                if (isChildSelected) {
+                  childView = Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      childView,
+                      TransformBox(
+                        layer: childLayer,
+                        scale: scale,
+                        onResize: (handle, details) {
+                          onResizeLayer?.call(child.id, handle, details);
+                        },
+                        onResizeEnd: (handle, details) {
+                          onResizeLayerEnd?.call(child.id, handle, details);
+                        },
+                        onRotate: (angle, isFinal) {
+                          onRotateLayer?.call(child.id, angle, isFinal);
+                        },
+                      ),
+                    ],
+                  );
+                }
+
+                final isParentSelected = selectedLayerIds.contains(layer.id);
+
+                return SizedBox(
+                  width: childSize.width,
+                  height: childSize.height,
+                  child: isParentSelected
+                      ? GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onDoubleTap: () {
+                            // Double-clicking dives directly into this immediate direct child layer (1 level down)
+                            onSelectLayer?.call(child.id, false);
+                          },
+                          child: childView,
+                        )
+                      : childView,
+                );
+              }(),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

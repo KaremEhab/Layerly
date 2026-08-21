@@ -19,6 +19,7 @@ class EditorState extends Equatable {
   final bool showGuides;
   final bool snapEnabled;
   final List<SnapGuideLine> activeSnapGuides;
+  final List<SpacingMeasurement> activeSpacingMeasurements;
   final bool isInteracting;
 
   const EditorState({
@@ -33,6 +34,7 @@ class EditorState extends Equatable {
     this.showGuides = true,
     this.snapEnabled = true,
     this.activeSnapGuides = const [],
+    this.activeSpacingMeasurements = const [],
     this.isInteracting = false,
   });
 
@@ -56,6 +58,8 @@ class EditorState extends Equatable {
     }
     return result;
   }
+
+  Layer? findLayerById(String id) => _findLayerRecursively(activePageLayers, id);
 
   static Layer? _findLayerRecursively(List<Layer> list, String id) {
     for (final l in list) {
@@ -92,6 +96,7 @@ class EditorState extends Equatable {
     bool? showGuides,
     bool? snapEnabled,
     List<SnapGuideLine>? activeSnapGuides,
+    List<SpacingMeasurement>? activeSpacingMeasurements,
     bool? isInteracting,
   }) {
     return EditorState(
@@ -106,6 +111,7 @@ class EditorState extends Equatable {
       showGuides: showGuides ?? this.showGuides,
       snapEnabled: snapEnabled ?? this.snapEnabled,
       activeSnapGuides: activeSnapGuides ?? this.activeSnapGuides,
+      activeSpacingMeasurements: activeSpacingMeasurements ?? this.activeSpacingMeasurements,
       isInteracting: isInteracting ?? this.isInteracting,
     );
   }
@@ -123,6 +129,7 @@ class EditorState extends Equatable {
         showGuides,
         snapEnabled,
         activeSnapGuides,
+        activeSpacingMeasurements,
         isInteracting,
       ];
 }

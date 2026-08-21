@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/constants/responsive_breakpoints.dart';
+import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
@@ -36,7 +39,7 @@ class PropertiesPanel extends StatelessWidget {
           // Single object selected -> Contextual Layer Properties
           final layer = selectedLayers.first;
           if (layer is AutoLayoutLayer) {
-            content = _buildAutoLayoutWithChildrenCards(context, layer);
+            content = _buildAutoLayoutWithChildrenCards(context, state.activePage, layer);
           } else if (layer is TextLayer) {
             content = _buildTextCard(
               context,
@@ -186,13 +189,13 @@ class PropertiesPanel extends StatelessWidget {
                   value: activePage.horizontalPadding.toInt(),
                   onDecrement: () {
                     context.read<EditorBloc>().add(UpdatePagePaddingEvent(
-                          horizontal: (activePage.horizontalPadding - 5).clamp(0.0, 200.0),
+                          horizontal: (activePage.horizontalPadding - 1).clamp(0.0, 10000.0),
                           vertical: activePage.verticalPadding,
                         ));
                   },
                   onIncrement: () {
                     context.read<EditorBloc>().add(UpdatePagePaddingEvent(
-                          horizontal: (activePage.horizontalPadding + 5).clamp(0.0, 200.0),
+                          horizontal: (activePage.horizontalPadding + 1).clamp(0.0, 10000.0),
                           vertical: activePage.verticalPadding,
                         ));
                   },
@@ -207,13 +210,13 @@ class PropertiesPanel extends StatelessWidget {
                   onDecrement: () {
                     context.read<EditorBloc>().add(UpdatePagePaddingEvent(
                           horizontal: activePage.horizontalPadding,
-                          vertical: (activePage.verticalPadding - 5).clamp(0.0, 200.0),
+                          vertical: (activePage.verticalPadding - 1).clamp(0.0, 10000.0),
                         ));
                   },
                   onIncrement: () {
                     context.read<EditorBloc>().add(UpdatePagePaddingEvent(
                           horizontal: activePage.horizontalPadding,
-                          vertical: (activePage.verticalPadding + 5).clamp(0.0, 200.0),
+                          vertical: (activePage.verticalPadding + 1).clamp(0.0, 10000.0),
                         ));
                   },
                 ),
@@ -226,10 +229,11 @@ class PropertiesPanel extends StatelessWidget {
   }
 
   // 2. Auto Layout with Horizontal Scrolling Cards
-  Widget _buildAutoLayoutWithChildrenCards(BuildContext context, AutoLayoutLayer layer) {
+  Widget _buildAutoLayoutWithChildrenCards(BuildContext context, CanvasPage activePage, AutoLayoutLayer layer) {
     if (layer.children.isEmpty) {
       return _buildAutoLayoutCard(
         context,
+        activePage,
         layer,
         onUpdate: (updated) => context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
       );
@@ -238,6 +242,7 @@ class PropertiesPanel extends StatelessWidget {
     final cards = <Widget>[
       _buildAutoLayoutCard(
         context,
+        activePage,
         layer,
         onUpdate: (updated) => context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
       ),
@@ -307,9 +312,42 @@ class PropertiesPanel extends StatelessWidget {
   // 3. Auto Layout Card (Screenshot 3)
   Widget _buildAutoLayoutCard(
     BuildContext context,
+    CanvasPage activePage,
     AutoLayoutLayer layer, {
     required ValueChanged<AutoLayoutLayer> onUpdate,
   }) {
+    final rightMargin = activePage.width - activePage.horizontalPadding;
+    final bottomMargin = activePage.height - activePage.verticalPadding;
+    final maxAllowedWidth = (rightMargin - layer.x).clamp(40.0, activePage.width - activePage.horizontalPadding * 2);
+    final maxAllowedHeight = (bottomMargin - layer.y).clamp(40.0, activePage.height - activePage.verticalPadding * 2);
+
+    final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
+    double sumChildrenMain = 0;
+    double maxChildCross = 0;
+    for (final c in layer.children) {
+      if (isHorizontal) {
+        sumChildrenMain += c.width;
+        if (c.height > maxChildCross) maxChildCross = c.height;
+      } else {
+        sumChildrenMain += c.height;
+        if (c.width > maxChildCross) maxChildCross = c.width;
+      }
+    }
+
+    final int numGaps = math.max(1, layer.children.length - 1);
+
+    final double maxGap = isHorizontal
+        ? ((maxAllowedWidth - layer.paddingHorizontal * 2 - sumChildrenMain) / numGaps).floorToDouble().clamp(0.0, 10000.0)
+        : ((maxAllowedHeight - layer.paddingVertical * 2 - sumChildrenMain) / numGaps).floorToDouble().clamp(0.0, 10000.0);
+
+    final double maxPadH = isHorizontal
+        ? ((maxAllowedWidth - sumChildrenMain - numGaps * layer.gap) / 2).floorToDouble().clamp(0.0, 10000.0)
+        : ((maxAllowedWidth - maxChildCross) / 2).floorToDouble().clamp(0.0, 10000.0);
+
+    final double maxPadV = isHorizontal
+        ? ((maxAllowedHeight - maxChildCross) / 2).floorToDouble().clamp(0.0, 10000.0)
+        : ((maxAllowedHeight - sumChildrenMain - numGaps * layer.gap) / 2).floorToDouble().clamp(0.0, 10000.0);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -376,11 +414,11 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: layer.gap.toInt(),
                   onDecrement: () {
-                    final newGap = (layer.gap - 2).clamp(0.0, 100.0);
+                    final newGap = (layer.gap - 1).clamp(0.0, maxGap);
                     onUpdate(layer.copyWith(gap: newGap));
                   },
                   onIncrement: () {
-                    final newGap = (layer.gap + 2).clamp(0.0, 100.0);
+                    final newGap = (layer.gap + 1).clamp(0.0, maxGap);
                     onUpdate(layer.copyWith(gap: newGap));
                   },
                 ),
@@ -392,11 +430,11 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: layer.paddingHorizontal.toInt(),
                   onDecrement: () {
-                    final newPad = (layer.paddingHorizontal - 2).clamp(0.0, 100.0);
+                    final newPad = (layer.paddingHorizontal - 1).clamp(0.0, maxPadH);
                     onUpdate(layer.copyWith(paddingHorizontal: newPad));
                   },
                   onIncrement: () {
-                    final newPad = (layer.paddingHorizontal + 2).clamp(0.0, 100.0);
+                    final newPad = (layer.paddingHorizontal + 1).clamp(0.0, maxPadH);
                     onUpdate(layer.copyWith(paddingHorizontal: newPad));
                   },
                 ),
@@ -408,11 +446,11 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: layer.paddingVertical.toInt(),
                   onDecrement: () {
-                    final newPad = (layer.paddingVertical - 2).clamp(0.0, 100.0);
+                    final newPad = (layer.paddingVertical - 1).clamp(0.0, maxPadV);
                     onUpdate(layer.copyWith(paddingVertical: newPad));
                   },
                   onIncrement: () {
-                    final newPad = (layer.paddingVertical + 2).clamp(0.0, 100.0);
+                    final newPad = (layer.paddingVertical + 1).clamp(0.0, maxPadV);
                     onUpdate(layer.copyWith(paddingVertical: newPad));
                   },
                 ),
@@ -523,11 +561,11 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: layer.fontSize.toInt(),
                   onDecrement: () {
-                    final newSize = (layer.fontSize - 2).clamp(8.0, 160.0);
+                    final newSize = (layer.fontSize - 1).clamp(1.0, 1000.0);
                     onUpdate(layer.copyWith(fontSize: newSize));
                   },
                   onIncrement: () {
-                    final newSize = (layer.fontSize + 2).clamp(8.0, 160.0);
+                    final newSize = (layer.fontSize + 1).clamp(1.0, 1000.0);
                     onUpdate(layer.copyWith(fontSize: newSize));
                   },
                 ),
@@ -635,11 +673,11 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: layer.width.toInt(),
                   onDecrement: () {
-                    final size = (layer.width - 4).clamp(12.0, 200.0);
+                    final size = (layer.width - 1).clamp(12.0, 200.0);
                     onUpdate(layer.copyWith(width: size, height: size));
                   },
                   onIncrement: () {
-                    final size = (layer.width + 4).clamp(12.0, 200.0);
+                    final size = (layer.width + 1).clamp(12.0, 200.0);
                     onUpdate(layer.copyWith(width: size, height: size));
                   },
                 ),
@@ -694,11 +732,11 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: layer.cornerRadius.toInt(),
                   onDecrement: () {
-                    final newR = (layer.cornerRadius - 2).clamp(0.0, 100.0);
+                    final newR = (layer.cornerRadius - 1).clamp(0.0, 10000.0);
                     onUpdate(layer.copyWith(cornerRadius: newR));
                   },
                   onIncrement: () {
-                    final newR = (layer.cornerRadius + 2).clamp(0.0, 100.0);
+                    final newR = (layer.cornerRadius + 1).clamp(0.0, 10000.0);
                     onUpdate(layer.copyWith(cornerRadius: newR));
                   },
                 ),
@@ -901,13 +939,19 @@ class PropertiesPanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              InkWell(
+              _RepeatableActionButton(
                 onTap: onDecrement,
-                child: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary, size: 16),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary, size: 16),
+                ),
               ),
-              InkWell(
+              _RepeatableActionButton(
                 onTap: onIncrement,
-                child: const Icon(Icons.keyboard_arrow_up_rounded, color: AppColors.textSecondary, size: 16),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(Icons.keyboard_arrow_up_rounded, color: AppColors.textSecondary, size: 16),
+                ),
               ),
             ],
           ),
@@ -1003,6 +1047,58 @@ class PropertiesPanel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RepeatableActionButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _RepeatableActionButton({
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  State<_RepeatableActionButton> createState() => _RepeatableActionButtonState();
+}
+
+class _RepeatableActionButtonState extends State<_RepeatableActionButton> {
+  Timer? _timer;
+  Timer? _delayTimer;
+
+  void _startHold() {
+    widget.onTap(); // Fire immediately on single tap
+    _delayTimer = Timer(const Duration(milliseconds: 280), () {
+      _timer = Timer.periodic(const Duration(milliseconds: 40), (_) {
+        if (!mounted) return;
+        widget.onTap();
+      });
+    });
+  }
+
+  void _stopHold() {
+    _delayTimer?.cancel();
+    _delayTimer = null;
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopHold();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _startHold(),
+      onTapUp: (_) => _stopHold(),
+      onTapCancel: _stopHold,
+      child: widget.child,
     );
   }
 }

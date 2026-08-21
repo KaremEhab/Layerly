@@ -36,6 +36,14 @@ class ClearSelectionEvent extends EditorEvent {
   const ClearSelectionEvent();
 }
 
+class SelectMultipleLayersEvent extends EditorEvent {
+  final List<String> layerIds;
+  const SelectMultipleLayersEvent(this.layerIds);
+
+  @override
+  List<Object?> get props => [layerIds];
+}
+
 class HoverLayerEvent extends EditorEvent {
   final String? layerId;
   const HoverLayerEvent(this.layerId);

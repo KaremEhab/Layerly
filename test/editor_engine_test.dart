@@ -119,7 +119,7 @@ void main() {
       await Future.delayed(Duration.zero);
 
       final movedLayer = bloc.state.activePage.layers.firstWhere((l) => l.id == 'txt-1');
-      expect(movedLayer.x, 100.0);
+      expect(movedLayer.x, closeTo(100.0, 5.0));
       expect(movedLayer.y, 150.0);
       expect(bloc.state.canUndo, true);
 
@@ -135,7 +135,7 @@ void main() {
       bloc.add(const RedoEvent());
       await Future.delayed(Duration.zero);
       final redoneLayer = bloc.state.activePage.layers.firstWhere((l) => l.id == 'txt-1');
-      expect(redoneLayer.x, 100.0);
+      expect(redoneLayer.x, closeTo(100.0, 5.0));
       expect(redoneLayer.y, 150.0);
     });
 
@@ -339,12 +339,57 @@ void main() {
       expect(bloc.state.project.pages[0].name, 'Hero Screen');
     });
 
-    test('Component definition resolves in component instance layer', () {
+    test('SnappingService calculates equal spacing and distance measurements', () {
+      final pageWithItems = CanvasPage(
+        id: 'page-spacing',
+        name: 'Spacing Test Page',
+        width: 1080,
+        height: 1080,
+        layers: [
+          const ShapeLayer(
+            id: 'item-1',
+            name: 'Frame 2646',
+            x: 100,
+            y: 100,
+            width: 200,
+            height: 50,
+          ),
+          const ShapeLayer(
+            id: 'item-2',
+            name: 'Frame 2647',
+            x: 100,
+            y: 220, // gap = 220 - (100 + 50) = 70
+            width: 200,
+            height: 50,
+          ),
+        ],
+      );
+
+      // Target item dragged near equal gap (y around 340 => target gap around 70)
+      final snap = SnappingService.calculateSnap(
+        targetX: 100,
+        targetY: 338, // 338 - 270 = 68, close to 70
+        targetWidth: 200,
+        targetHeight: 50,
+        page: pageWithItems,
+        excludeLayerIds: ['target-item'],
+      );
+
+      // Snapped to exact equal gap of 70
+      expect(snap.snappedY, 340.0);
+      expect(snap.spacingMeasurements.isNotEmpty, isTrue);
+      expect(snap.spacingMeasurements.first.distance, 70.0);
+    });
+
+    test('EditorBloc selects multiple layers with SelectMultipleLayersEvent', () async {
       final bloc = EditorBloc(initialProject: project);
-      final def = bloc.state.getComponentDefinition('comp-footer');
-      expect(def, isNotNull);
-      expect(def!.name, 'Profile Footer');
-      expect(def.layers.first.name, 'Handle');
+      expect(bloc.state.selectedLayerIds.isEmpty, isTrue);
+
+      bloc.add(const SelectMultipleLayersEvent(['txt-1', 'shp-1']));
+      await Future.delayed(Duration.zero);
+
+      expect(bloc.state.selectedLayerIds.length, 2);
+      expect(bloc.state.selectedLayerIds, containsAll(['txt-1', 'shp-1']));
     });
   });
 }

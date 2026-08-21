@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
+import 'package:layerly/features/editor/domain/entities/text_layer.dart';
+import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/layer_view.dart';
@@ -13,6 +15,7 @@ class PageRenderer extends StatelessWidget {
   final CanvasPage page;
   final List<String> selectedLayerIds;
   final List<SnapGuideLine> activeGuides;
+  final List<SpacingMeasurement> activeSpacingMeasurements;
   final double scale;
   final ComponentDefinition? Function(String id)? getComponentDefinition;
   final Function(String layerId, bool isMultiSelect)? onSelectLayer;
@@ -27,6 +30,7 @@ class PageRenderer extends StatelessWidget {
     required this.page,
     required this.selectedLayerIds,
     this.activeGuides = const [],
+    this.activeSpacingMeasurements = const [],
     this.scale = 1.0,
     this.getComponentDefinition,
     this.onSelectLayer,
@@ -56,11 +60,13 @@ class PageRenderer extends StatelessWidget {
           // Render all layers in z-index order
           ...page.layers.map((layer) => _buildLayerItem(layer)),
 
-          // Smart Guides (snapping alignment lines)
+          // Smart Guides (snapping alignment lines & Figma spacing measurements)
           SmartGuidesOverlay(
             guides: activeGuides,
+            measurements: activeSpacingMeasurements,
             pageWidth: page.width,
             pageHeight: page.height,
+            scale: scale,
           ),
         ],
       ),
@@ -113,13 +119,27 @@ class PageRenderer extends StatelessWidget {
 
   Widget _buildLayerItem(Layer layer) {
     final isSelected = selectedLayerIds.contains(layer.id);
+    final effectiveLayer = layer is TextLayer
+        ? (layer as TextLayer).copyWith(
+            width: LayerView.measureTextSize(layer as TextLayer).width,
+            height: LayerView.measureTextSize(layer as TextLayer).height,
+          )
+        : (layer is AutoLayoutLayer
+            ? (layer as AutoLayoutLayer).copyWith(
+                width: LayerView.measureAutoLayoutSize(layer as AutoLayoutLayer).width,
+                height: LayerView.measureAutoLayoutSize(layer as AutoLayoutLayer).height,
+              )
+            : layer);
 
     Widget layerWidget = LayerView(
-      layer: layer,
+      layer: effectiveLayer,
       getComponentDefinition: getComponentDefinition,
       onSelectLayer: onSelectLayer,
       selectedLayerIds: selectedLayerIds,
       scale: scale,
+      onResizeLayer: onResizeLayer,
+      onResizeLayerEnd: onResizeLayerEnd,
+      onRotateLayer: onRotateLayer,
     );
 
     // If selected and editable, attach TransformBox
@@ -129,7 +149,7 @@ class PageRenderer extends StatelessWidget {
         children: [
           layerWidget,
           TransformBox(
-            layer: layer,
+            layer: effectiveLayer,
             scale: scale,
             onResize: (handle, details) {
               onResizeLayer?.call(layer.id, handle, details);
@@ -146,12 +166,12 @@ class PageRenderer extends StatelessWidget {
     }
 
     return Positioned(
-      left: layer.x,
-      top: layer.y,
-      width: layer.width,
-      height: layer.height,
+      left: effectiveLayer.x,
+      top: effectiveLayer.y,
+      width: effectiveLayer.width,
+      height: effectiveLayer.height,
       child: Transform.rotate(
-        angle: layer.rotation,
+        angle: effectiveLayer.rotation,
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () {
