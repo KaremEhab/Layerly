@@ -10,8 +10,85 @@ import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
+import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 
 class SampleProject {
+  static AutoLayoutLayer createFooterLayout({
+    required double x,
+    required double y,
+    int activeIndicatorIndex = 0,
+  }) {
+    return AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Profile Footer',
+      x: x,
+      y: y,
+      width: 250,
+      height: 42,
+      direction: AutoLayoutDirection.horizontal,
+      gap: 12,
+      paddingHorizontal: 0,
+      paddingVertical: 0,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.start,
+      children: [
+        // Icon (Logo)
+        IconLayer(
+          id: UuidGenerator.generate(),
+          name: 'Brand Logo',
+          x: 0,
+          y: 0,
+          width: 36,
+          height: 36,
+          icon: Icons.all_inclusive_rounded,
+          color: Colors.white,
+        ),
+
+        // Vertical layout with 2 things: Text (Kareem Ehab) + Text (kareem.designs_)
+        AutoLayoutLayer(
+          id: UuidGenerator.generate(),
+          name: 'Author Info',
+          x: 0,
+          y: 0,
+          width: 180,
+          height: 42,
+          direction: AutoLayoutDirection.vertical,
+          gap: 2,
+          paddingHorizontal: 0,
+          paddingVertical: 0,
+          alignment: AutoLayoutAlignment.start,
+          distribution: AutoLayoutDistribution.start,
+          children: [
+            TextLayer(
+              id: UuidGenerator.generate(),
+              name: 'Author Name',
+              x: 0,
+              y: 0,
+              width: 180,
+              height: 18,
+              content: 'Kareem Ehab',
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textSecondary,
+            ),
+            TextLayer(
+              id: UuidGenerator.generate(),
+              name: 'Author Handle',
+              x: 0,
+              y: 0,
+              width: 180,
+              height: 22,
+              content: 'kareem.designs_',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   static CanvasProject createUberRedesignProject() {
     final footerComponentId = UuidGenerator.generate();
 
@@ -19,119 +96,35 @@ class SampleProject {
     final profileFooterComponent = ComponentDefinition(
       id: footerComponentId,
       name: 'Profile Footer',
-      description: 'Author branding and carousel pagination indicators',
-      width: 440,
-      height: 60,
+      description: 'Author branding',
+      width: 250,
+      height: 42,
       layers: [
-        // Carousel Pagination line pills
-        ShapeLayer(
-          id: UuidGenerator.generate(),
-          name: 'Indicator Active',
-          x: 0,
-          y: 0,
-          width: 42,
-          height: 6,
-          fill: AppColors.primary,
-          cornerRadius: 3,
-        ),
-        ShapeLayer(
-          id: UuidGenerator.generate(),
-          name: 'Indicator 2',
-          x: 48,
-          y: 0,
-          width: 42,
-          height: 6,
-          fill: const Color(0xFF383A45),
-          cornerRadius: 3,
-        ),
-        ShapeLayer(
-          id: UuidGenerator.generate(),
-          name: 'Indicator 3',
-          x: 96,
-          y: 0,
-          width: 42,
-          height: 6,
-          fill: const Color(0xFF383A45),
-          cornerRadius: 3,
-        ),
-        ShapeLayer(
-          id: UuidGenerator.generate(),
-          name: 'Indicator 4',
-          x: 144,
-          y: 0,
-          width: 42,
-          height: 6,
-          fill: const Color(0xFF383A45),
-          cornerRadius: 3,
-        ),
-        ShapeLayer(
-          id: UuidGenerator.generate(),
-          name: 'Indicator 5',
-          x: 192,
-          y: 0,
-          width: 42,
-          height: 6,
-          fill: const Color(0xFF383A45),
-          cornerRadius: 3,
-        ),
-
-        // Brand Mark Icon
-        IconLayer(
-          id: UuidGenerator.generate(),
-          name: 'Brand Logo Mark',
-          x: 0,
-          y: 20,
-          width: 36,
-          height: 36,
-          icon: Icons.all_inclusive_rounded,
-          color: Colors.white,
-        ),
-
-        // Author Name & Handle
-        TextLayer(
-          id: UuidGenerator.generate(),
-          name: 'Author Name',
-          x: 44,
-          y: 18,
-          width: 200,
-          height: 18,
-          content: 'Kareem Ehab',
-          fontSize: 13,
-          fontWeight: FontWeight.w400,
-          color: AppColors.textSecondary,
-        ),
-        TextLayer(
-          id: UuidGenerator.generate(),
-          name: 'Handle',
-          x: 44,
-          y: 36,
-          width: 200,
-          height: 22,
-          content: 'kareem.designs_',
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
+        createFooterLayout(x: 0, y: 0),
       ],
     );
 
-    // Slide 1: Cover
+    // Slide 1: Cover Screen
     final page1 = CanvasPage(
       id: UuidGenerator.generate(),
-      name: '01 - Cover',
+      name: 'Cover Screen',
       width: 1080,
       height: 1080,
+      horizontalPadding: 80,
+      verticalPadding: 80,
       backgroundType: BackgroundType.gradient,
-      backgroundColor: const Color(0xFF090A0D),
+      backgroundColor: AppColors.background,
+      showGuides: false,
       backgroundGradient: const RadialGradient(
-        center: Alignment(0.4, -0.6),
-        radius: 1.2,
+        center: Alignment(0.85, -0.65),
+        radius: 1.25,
         colors: [
-          Color(0xFF2C194D),
-          Color(0xFF13141B),
-          Color(0xFF090A0D),
+          Color(0xFF834DEB), // Vibrant top-right purple glow
+          Color(0xFF381B60), // Deep purple
+          Color(0xFF13101E), // Dark plum
+          Color(0xFF0A0910), // Base black
         ],
-        stops: [0.0, 0.5, 1.0],
+        stops: [0.0, 0.38, 0.72, 1.0],
       ),
       layers: [
         // Category Label
@@ -203,76 +196,124 @@ class SampleProject {
           cornerRadius: 2,
         ),
 
-        // Bullet Checklist 1
-        IconLayer(
+        // Bullet Checklist 1 (Horizontal Auto Layout)
+        AutoLayoutLayer(
           id: UuidGenerator.generate(),
-          name: 'Check 1',
+          name: 'Checklist Item 1',
           x: 80,
           y: 430,
-          width: 44,
+          width: 380,
           height: 44,
-          icon: Icons.check_circle_outline_rounded,
-          color: AppColors.primary,
-        ),
-        TextLayer(
-          id: UuidGenerator.generate(),
-          name: 'Check Text 1',
-          x: 136,
-          y: 436,
-          width: 320,
-          height: 36,
-          content: 'Clearer hierarchy',
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
+          direction: AutoLayoutDirection.horizontal,
+          gap: 14,
+          paddingHorizontal: 0,
+          paddingVertical: 0,
+          alignment: AutoLayoutAlignment.center,
+          distribution: AutoLayoutDistribution.start,
+          children: [
+            IconLayer(
+              id: UuidGenerator.generate(),
+              name: 'Check Icon 1',
+              x: 0,
+              y: 0,
+              width: 36,
+              height: 36,
+              icon: Icons.check_circle_outline_rounded,
+              color: AppColors.primary,
+            ),
+            TextLayer(
+              id: UuidGenerator.generate(),
+              name: 'Check Text 1',
+              x: 0,
+              y: 0,
+              width: 320,
+              height: 36,
+              content: 'Clearer hierarchy',
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ],
         ),
 
-        // Bullet Checklist 2
-        IconLayer(
+        // Bullet Checklist 2 (Horizontal Auto Layout)
+        AutoLayoutLayer(
           id: UuidGenerator.generate(),
-          name: 'Check 2',
+          name: 'Checklist Item 2',
           x: 80,
-          y: 520,
-          width: 44,
+          y: 510,
+          width: 380,
           height: 44,
-          icon: Icons.check_circle_outline_rounded,
-          color: AppColors.primary,
-        ),
-        TextLayer(
-          id: UuidGenerator.generate(),
-          name: 'Check Text 2',
-          x: 136,
-          y: 526,
-          width: 320,
-          height: 36,
-          content: 'Easier choices',
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
+          direction: AutoLayoutDirection.horizontal,
+          gap: 14,
+          paddingHorizontal: 0,
+          paddingVertical: 0,
+          alignment: AutoLayoutAlignment.center,
+          distribution: AutoLayoutDistribution.start,
+          children: [
+            IconLayer(
+              id: UuidGenerator.generate(),
+              name: 'Check Icon 2',
+              x: 0,
+              y: 0,
+              width: 36,
+              height: 36,
+              icon: Icons.check_circle_outline_rounded,
+              color: AppColors.primary,
+            ),
+            TextLayer(
+              id: UuidGenerator.generate(),
+              name: 'Check Text 2',
+              x: 0,
+              y: 0,
+              width: 320,
+              height: 36,
+              content: 'Easier choices',
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ],
         ),
 
-        // Bullet Checklist 3
-        IconLayer(
+        // Bullet Checklist 3 (Horizontal Auto Layout)
+        AutoLayoutLayer(
           id: UuidGenerator.generate(),
-          name: 'Check 3',
+          name: 'Checklist Item 3',
           x: 80,
-          y: 610,
-          width: 44,
+          y: 590,
+          width: 380,
           height: 44,
-          icon: Icons.check_circle_outline_rounded,
-          color: AppColors.primary,
-        ),
-        TextLayer(
-          id: UuidGenerator.generate(),
-          name: 'Check Text 3',
-          x: 136,
-          y: 616,
-          width: 320,
-          height: 36,
-          content: 'Better UX flow',
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
+          direction: AutoLayoutDirection.horizontal,
+          gap: 14,
+          paddingHorizontal: 0,
+          paddingVertical: 0,
+          alignment: AutoLayoutAlignment.center,
+          distribution: AutoLayoutDistribution.start,
+          children: [
+            IconLayer(
+              id: UuidGenerator.generate(),
+              name: 'Check Icon 3',
+              x: 0,
+              y: 0,
+              width: 36,
+              height: 36,
+              icon: Icons.check_circle_outline_rounded,
+              color: AppColors.primary,
+            ),
+            TextLayer(
+              id: UuidGenerator.generate(),
+              name: 'Check Text 3',
+              x: 0,
+              y: 0,
+              width: 320,
+              height: 36,
+              content: 'Better UX flow',
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ],
         ),
 
         // Phone Mockup (on the right)
@@ -287,27 +328,21 @@ class SampleProject {
           device: MockupDevice.iphone,
         ),
 
-        // Linked Component Instance: Profile Footer
-        ComponentInstanceLayer(
-          id: UuidGenerator.generate(),
-          name: 'Profile Footer',
-          componentDefinitionId: footerComponentId,
-          x: 80,
-          y: 900,
-          width: 440,
-          height: 60,
-        ),
+        // Profile Footer (Nested Auto Layout Hierarchy)
+        createFooterLayout(x: 80, y: 920, activeIndicatorIndex: 0),
       ],
     );
 
-    // Slide 2: Problem
+    // Slide 2: Login Screen
     final page2 = CanvasPage(
       id: UuidGenerator.generate(),
-      name: '02 - Problem',
+      name: 'Login Screen',
       width: 1080,
       height: 1080,
+      horizontalPadding: 80,
+      verticalPadding: 80,
       backgroundType: BackgroundType.solid,
-      backgroundColor: const Color(0xFF090A0D),
+      backgroundColor: AppColors.background,
       layers: [
         TextLayer(
           id: UuidGenerator.generate(),
@@ -342,7 +377,7 @@ class SampleProject {
           y: 240,
           width: 920,
           height: 480,
-          fill: const Color(0xFF15161B),
+          fill: AppColors.surface,
           cornerRadius: 20,
           strokeColor: AppColors.border,
           strokeWidth: 1.5,
@@ -361,30 +396,24 @@ class SampleProject {
           lineHeight: 1.4,
           color: AppColors.textSecondary,
         ),
-        ComponentInstanceLayer(
-          id: UuidGenerator.generate(),
-          name: 'Profile Footer',
-          componentDefinitionId: footerComponentId,
-          x: 80,
-          y: 900,
-          width: 440,
-          height: 60,
-        ),
+        createFooterLayout(x: 80, y: 920, activeIndicatorIndex: 1),
       ],
     );
 
-    // Slide 3: Conclusion / CTA
+    // Slide 3: Dashboard
     final page3 = CanvasPage(
       id: UuidGenerator.generate(),
-      name: '03 - Conclusion',
+      name: 'Dashboard',
       width: 1080,
       height: 1080,
+      horizontalPadding: 80,
+      verticalPadding: 80,
       backgroundType: BackgroundType.gradient,
-      backgroundColor: const Color(0xFF090A0D),
+      backgroundColor: AppColors.background,
       backgroundGradient: const RadialGradient(
         center: Alignment(0.0, 0.0),
         radius: 1.0,
-        colors: [Color(0xFF2C194D), Color(0xFF090A0D)],
+        colors: [Color(0xFF2C194D), Color(0xFF0D0B14)],
       ),
       layers: [
         TextLayer(
@@ -412,15 +441,7 @@ class SampleProject {
           textAlign: TextAlign.center,
           color: AppColors.textSecondary,
         ),
-        ComponentInstanceLayer(
-          id: UuidGenerator.generate(),
-          name: 'Profile Footer',
-          componentDefinitionId: footerComponentId,
-          x: 80,
-          y: 900,
-          width: 440,
-          height: 60,
-        ),
+        createFooterLayout(x: 80, y: 920, activeIndicatorIndex: 2),
       ],
     );
 

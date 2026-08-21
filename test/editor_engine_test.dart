@@ -4,13 +4,17 @@ import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_project.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
+import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
+import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/services/snapping_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('Editor Engine Domain & Logic Tests', () {
     late CanvasProject project;
     late ComponentDefinition footerComponent;
@@ -135,6 +139,37 @@ void main() {
       expect(redoneLayer.y, 150.0);
     });
 
+    test('EditorBloc clamps moving layers within page padding margins', () async {
+      final bloc = EditorBloc(initialProject: project);
+
+      // Try moving layer far off the top-left beyond page margins
+      bloc.add(const MoveLayerDeltaEvent(
+        layerId: 'txt-1',
+        dx: -500,
+        dy: -500,
+        isFinal: true,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final movedLayer = bloc.state.activePage.layers.firstWhere((l) => l.id == 'txt-1');
+      expect(movedLayer.x, bloc.state.activePage.horizontalPadding);
+      expect(movedLayer.y, bloc.state.activePage.verticalPadding);
+    });
+
+    test('EditorBloc dynamically shifts layers when page padding updates', () async {
+      final bloc = EditorBloc(initialProject: project);
+      final initialLayer = bloc.state.activePage.layers.firstWhere((l) => l.id == 'txt-1');
+      expect(initialLayer.x, 80.0);
+
+      // Change horizontal padding from 20 to 15 (delta = -5)
+      bloc.add(const UpdatePagePaddingEvent(horizontal: 15, vertical: 15));
+      await Future.delayed(Duration.zero);
+
+      final shiftedLayer = bloc.state.activePage.layers.firstWhere((l) => l.id == 'txt-1');
+      expect(shiftedLayer.x, 75.0);
+      expect(bloc.state.activePage.horizontalPadding, 15.0);
+    });
+
     test('EditorBloc supports multi-page carousel workflows', () async {
       final bloc = EditorBloc(initialProject: project);
       expect(bloc.state.project.pages.length, 1);
@@ -149,6 +184,159 @@ void main() {
       bloc.add(const DuplicatePageEvent(0));
       await Future.delayed(Duration.zero);
       expect(bloc.state.project.pages.length, 3);
+      expect(bloc.state.project.activePageIndex, 2);
+      expect(bloc.state.project.pages.last.name, 'Cover Copy');
+    });
+
+    test('EditorBloc creates Auto Layout container from multi-selection', () async {
+      final bloc = EditorBloc(initialProject: project);
+
+      // Select both txt-1 and shp-1
+      bloc.add(const SelectLayerEvent('txt-1', isMultiSelect: true));
+      bloc.add(const SelectLayerEvent('shp-1', isMultiSelect: true));
+      await Future.delayed(Duration.zero);
+      expect(bloc.state.selectedLayerIds.length, 2);
+
+      // Create Auto Layout
+      bloc.add(const CreateAutoLayoutFromSelectionEvent());
+      await Future.delayed(Duration.zero);
+
+      expect(bloc.state.selectedLayerIds.length, 1);
+      final autoLayout = bloc.state.singleSelectedLayer;
+      expect(autoLayout, isNotNull);
+      expect(autoLayout!.type, LayerType.autoLayout);
+
+      // Remove Auto Layout -> Unpacks children at exact computed positions
+      bloc.add(RemoveAutoLayoutEvent(autoLayout.id));
+      await Future.delayed(Duration.zero);
+
+      expect(bloc.state.selectedLayerIds.length, 2);
+      expect(bloc.state.activePage.layers.any((l) => l.id == 'txt-1'), isTrue);
+      expect(bloc.state.activePage.layers.any((l) => l.id == 'shp-1'), isTrue);
+      expect(bloc.state.activePage.layers.any((l) => l.id == autoLayout.id), isFalse);
+    });
+
+    test('EditorBloc smartly detects vertical layout for vertically stacked elements', () async {
+      final item1 = ShapeLayer(id: 'i1', name: 'Item 1', x: 80, y: 100, width: 300, height: 40);
+      final item2 = ShapeLayer(id: 'i2', name: 'Item 2', x: 80, y: 160, width: 300, height: 40);
+      final item3 = ShapeLayer(id: 'i3', name: 'Item 3', x: 80, y: 220, width: 300, height: 40);
+
+      final customProject = project.copyWith(
+        pages: [
+          project.pages[0].copyWith(layers: [item1, item2, item3]),
+        ],
+      );
+
+      final bloc = EditorBloc(initialProject: customProject);
+      bloc.add(const SelectLayerEvent('i1', isMultiSelect: true));
+      bloc.add(const SelectLayerEvent('i2', isMultiSelect: true));
+      bloc.add(const SelectLayerEvent('i3', isMultiSelect: true));
+      await Future.delayed(Duration.zero);
+
+      bloc.add(const CreateAutoLayoutFromSelectionEvent());
+      await Future.delayed(Duration.zero);
+
+      final layout = bloc.state.singleSelectedLayer as AutoLayoutLayer;
+      expect(layout.direction, AutoLayoutDirection.vertical);
+      expect(layout.children.length, 3);
+      expect(layout.gap, 20.0);
+      expect(layout.height, 160.0); // 40 + 20 + 40 + 20 + 40
+
+      // Update gap from 20 to 16
+      bloc.add(UpdateAutoLayoutEvent(layerId: layout.id, gap: 16.0));
+      await Future.delayed(Duration.zero);
+
+      final updatedLayout = bloc.state.singleSelectedLayer as AutoLayoutLayer;
+      expect(updatedLayout.gap, 16.0);
+      expect(updatedLayout.height, 152.0); // 40 + 16 + 40 + 16 + 40 (shrinks automatically!)
+
+      // Select nested child directly (Figma-style dive in)
+      bloc.add(const SelectLayerEvent('i2'));
+      await Future.delayed(Duration.zero);
+
+      final selectedChild = bloc.state.singleSelectedLayer;
+      expect(selectedChild, isNotNull);
+      expect(selectedChild!.id, 'i2');
+      expect(selectedChild.name, 'Item 2');
+    });
+
+    test('EditorBloc dynamically recalculates TextLayer bounds to hug text when font size changes', () async {
+      final textLayer = TextLayer(
+        id: 't-hug',
+        name: 'Heading',
+        content: 'Hello World',
+        x: 50,
+        y: 50,
+        width: 100,
+        height: 20,
+        fontSize: 16,
+      );
+
+      final customProject = project.copyWith(
+        pages: [
+          project.pages[0].copyWith(layers: [textLayer]),
+        ],
+      );
+
+      final bloc = EditorBloc(initialProject: customProject);
+      
+      // Update font size from 16 to 48
+      bloc.add(UpdateLayerEvent(textLayer.copyWith(fontSize: 48)));
+      await Future.delayed(Duration.zero);
+
+      final updatedText = bloc.state.activePage.layers.firstWhere((l) => l.id == 't-hug') as TextLayer;
+      expect(updatedText.fontSize, 48.0);
+      expect(updatedText.width > 150.0, isTrue); // Auto-expands to hug large text
+      expect(updatedText.height > 40.0, isTrue);
+    });
+
+    test('EditorBloc moves layers in tree and inside/outside Auto Layout containers', () async {
+      final bloc = EditorBloc(initialProject: project);
+
+      // Create Auto Layout from txt-1
+      bloc.add(const SelectLayerEvent('txt-1'));
+      bloc.add(const CreateAutoLayoutFromSelectionEvent());
+      await Future.delayed(Duration.zero);
+
+      final autoLayout = bloc.state.activePage.layers.firstWhere((l) => l is AutoLayoutLayer) as AutoLayoutLayer;
+      expect(autoLayout.children.length, 1);
+
+      // Move shp-1 from root into the autoLayout container
+      bloc.add(MoveLayerTreeEvent(
+        layerId: 'shp-1',
+        targetParentId: autoLayout.id,
+        targetIndex: 1,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final updatedAutoLayout = bloc.state.activePage.layers.firstWhere((l) => l is AutoLayoutLayer) as AutoLayoutLayer;
+      expect(updatedAutoLayout.children.length, 2);
+      expect(updatedAutoLayout.children.any((c) => c.id == 'shp-1'), isTrue);
+      expect(bloc.state.activePage.layers.any((l) => l.id == 'shp-1'), isFalse);
+
+      // Move shp-1 back out to top-level
+      bloc.add(const MoveLayerTreeEvent(
+        layerId: 'shp-1',
+        targetParentId: null,
+        targetIndex: 0,
+      ));
+      await Future.delayed(Duration.zero);
+
+      expect(bloc.state.activePage.layers.any((l) => l.id == 'shp-1'), isTrue);
+      final finalAutoLayout = bloc.state.activePage.layers.firstWhere((l) => l is AutoLayoutLayer) as AutoLayoutLayer;
+      expect(finalAutoLayout.children.length, 1);
+    });
+
+    test('EditorBloc renames project and page', () async {
+      final bloc = EditorBloc(initialProject: project);
+
+      bloc.add(const RenameProjectEvent('New Design System'));
+      await Future.delayed(Duration.zero);
+      expect(bloc.state.project.name, 'New Design System');
+
+      bloc.add(const RenamePageEvent(0, 'Hero Screen'));
+      await Future.delayed(Duration.zero);
+      expect(bloc.state.project.pages[0].name, 'Hero Screen');
     });
 
     test('Component definition resolves in component instance layer', () {
@@ -160,3 +348,4 @@ void main() {
     });
   });
 }
+

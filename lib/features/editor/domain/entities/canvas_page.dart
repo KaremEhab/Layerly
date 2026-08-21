@@ -16,6 +16,8 @@ class CanvasPage extends Equatable {
   final bool showGrid;
   final bool showGuides;
   final bool showSafeArea;
+  final double horizontalPadding;
+  final double verticalPadding;
 
   const CanvasPage({
     required this.id,
@@ -23,22 +25,24 @@ class CanvasPage extends Equatable {
     this.width = 1080.0,
     this.height = 1080.0,
     this.backgroundType = BackgroundType.gradient,
-    this.backgroundColor = const Color(0xFF090A0D),
+    this.backgroundColor = const Color(0xFF0D0B14),
     this.backgroundGradient = const RadialGradient(
       center: Alignment(0.4, -0.6),
       radius: 1.2,
       colors: [
         Color(0xFF2C194D),
         Color(0xFF13141B),
-        Color(0xFF090A0D),
+        Color(0xFF0D0B14),
       ],
       stops: [0.0, 0.5, 1.0],
     ),
     this.backgroundImagePath,
     this.layers = const [],
     this.showGrid = false,
-    this.showGuides = true,
+    this.showGuides = false,
     this.showSafeArea = false,
+    this.horizontalPadding = 20.0,
+    this.verticalPadding = 20.0,
   });
 
   CanvasPage copyWith({
@@ -54,6 +58,8 @@ class CanvasPage extends Equatable {
     bool? showGrid,
     bool? showGuides,
     bool? showSafeArea,
+    double? horizontalPadding,
+    double? verticalPadding,
   }) {
     return CanvasPage(
       id: id ?? this.id,
@@ -68,6 +74,8 @@ class CanvasPage extends Equatable {
       showGrid: showGrid ?? this.showGrid,
       showGuides: showGuides ?? this.showGuides,
       showSafeArea: showSafeArea ?? this.showSafeArea,
+      horizontalPadding: horizontalPadding ?? this.horizontalPadding,
+      verticalPadding: verticalPadding ?? this.verticalPadding,
     );
   }
 
@@ -85,5 +93,7 @@ class CanvasPage extends Equatable {
         showGrid,
         showGuides,
         showSafeArea,
+        horizontalPadding,
+        verticalPadding,
       ];
 }

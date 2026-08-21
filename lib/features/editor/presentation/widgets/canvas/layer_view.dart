@@ -11,15 +11,22 @@ import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
+import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 
 class LayerView extends StatelessWidget {
   final Layer layer;
   final ComponentDefinition? Function(String id)? getComponentDefinition;
+  final Function(String layerId, bool isMulti)? onSelectLayer;
+  final List<String> selectedLayerIds;
+  final double scale;
 
   const LayerView({
     super.key,
     required this.layer,
     this.getComponentDefinition,
+    this.onSelectLayer,
+    this.selectedLayerIds = const [],
+    this.scale = 1.0,
   });
 
   @override
@@ -41,6 +48,8 @@ class LayerView extends StatelessWidget {
       content = _buildIconLayer(layer as IconLayer);
     } else if (layer is ComponentInstanceLayer) {
       content = _buildComponentInstanceLayer(layer as ComponentInstanceLayer);
+    } else if (layer is AutoLayoutLayer) {
+      content = _buildAutoLayoutLayer(layer as AutoLayoutLayer);
     } else {
       content = const SizedBox.shrink();
     }
@@ -50,6 +59,7 @@ class LayerView extends StatelessWidget {
       child: content,
     );
   }
+
 
   Widget _buildTextLayer(TextLayer layer) {
     TextStyle style;
@@ -450,14 +460,14 @@ class LayerView extends StatelessWidget {
 
             // Promo Banner
             Container(
-              height: 72,
+              height: 48,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF7E3FF2), Color(0xFFA970FF)],
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: const Row(
                 children: [
                   Expanded(
@@ -466,13 +476,125 @@ class LayerView extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 12,
                       ),
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
+                  Icon(Icons.arrow_forward_ios, color: Colors.white, size: 12),
                 ],
               ),
+            ),
+            const SizedBox(height: 14),
+
+            // Save everyday section
+            const Text(
+              'Save everyday',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F6F9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFD54F).withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.electric_scooter, color: Colors.deepOrange, size: 24),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Go on 2 wheels →',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
+                        ),
+                        const Text(
+                          'Take an electric bike',
+                          style: TextStyle(fontSize: 8, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F6F9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF81C784).withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.car_rental, color: Colors.teal, size: 24),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Add a stop or 5 →',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
+                        ),
+                        const Text(
+                          'Pick up something',
+                          style: TextStyle(fontSize: 8, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Bottom Navigation Bar
+            Container(
+              padding: const EdgeInsets.only(top: 8),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFFEEEEEE), width: 1)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _MockTabItem(icon: Icons.home, label: 'Home', isSelected: true),
+                  _MockTabItem(icon: Icons.grid_view_rounded, label: 'Services'),
+                  _MockTabItem(icon: Icons.receipt_long_rounded, label: 'Activity'),
+                  _MockTabItem(icon: Icons.person_rounded, label: 'Account'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Android 3-Button Nav Bar
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Text('|||', style: TextStyle(color: Colors.black45, fontSize: 11, fontWeight: FontWeight.w900)),
+                Icon(Icons.crop_square_rounded, size: 12, color: Colors.black45),
+                Icon(Icons.arrow_back_ios_new_rounded, size: 10, color: Colors.black45),
+              ],
             ),
           ],
         ),
@@ -557,4 +679,178 @@ class LayerView extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildAutoLayoutLayer(AutoLayoutLayer layer) {
+    // Dynamically calculate required bounds to guarantee zero Flex overflow
+    double requiredMainAxis = 0;
+    double maxCrossAxis = 0;
+    final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
+
+    for (int i = 0; i < layer.children.length; i++) {
+      final child = layer.children[i];
+      if (isHorizontal) {
+        requiredMainAxis += child.width;
+        if (child.height > maxCrossAxis) maxCrossAxis = child.height;
+      } else {
+        requiredMainAxis += child.height;
+        if (child.width > maxCrossAxis) maxCrossAxis = child.width;
+      }
+      if (i > 0) requiredMainAxis += layer.gap;
+    }
+
+    final effectiveWidth = isHorizontal
+        ? (requiredMainAxis + layer.paddingHorizontal * 2).clamp(layer.width, double.infinity)
+        : (maxCrossAxis + layer.paddingHorizontal * 2).clamp(layer.width, double.infinity);
+
+    final effectiveHeight = isHorizontal
+        ? (maxCrossAxis + layer.paddingVertical * 2).clamp(layer.height, double.infinity)
+        : (requiredMainAxis + layer.paddingVertical * 2).clamp(layer.height, double.infinity);
+
+    return Container(
+      width: effectiveWidth,
+      height: effectiveHeight,
+      constraints: BoxConstraints(
+        minWidth: layer.width,
+        minHeight: layer.height,
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: layer.paddingHorizontal,
+        vertical: layer.paddingVertical,
+      ),
+      decoration: BoxDecoration(
+        color: layer.backgroundColor ?? Colors.transparent,
+        borderRadius: BorderRadius.circular(layer.cornerRadius),
+        border: layer.strokeWidth > 0 && layer.strokeColor != null
+            ? Border.all(color: layer.strokeColor!, width: layer.strokeWidth)
+            : null,
+      ),
+      child: Flex(
+        direction: isHorizontal ? Axis.horizontal : Axis.vertical,
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: _getFlexMainAxis(layer.distribution),
+        crossAxisAlignment: _getFlexCrossAxis(layer.alignment),
+        children: [
+          for (int i = 0; i < layer.children.length; i++) ...[
+            if (i > 0)
+              SizedBox(
+                width: isHorizontal ? layer.gap : 0,
+                height: isHorizontal ? 0 : layer.gap,
+              ),
+            () {
+              final child = layer.children[i];
+              final isChildSelected = selectedLayerIds.contains(child.id);
+
+              Widget childView = LayerView(
+                layer: child,
+                getComponentDefinition: getComponentDefinition,
+                onSelectLayer: onSelectLayer,
+                selectedLayerIds: selectedLayerIds,
+                scale: scale,
+              );
+
+              if (isChildSelected) {
+                childView = Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    childView,
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0xFFA970FF),
+                            width: 1.5 / scale.clamp(0.5, 2.0),
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            child is ShapeLayer
+                                ? child.cornerRadius
+                                : (child is AutoLayoutLayer ? child.cornerRadius : 4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return SizedBox(
+                width: child.width,
+                height: child.height,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onDoubleTap: () {
+                    // Double-clicking dives directly into this inner child layer!
+                    onSelectLayer?.call(child.id, false);
+                  },
+                  child: childView,
+                ),
+              );
+            }(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  MainAxisAlignment _getFlexMainAxis(AutoLayoutDistribution dist) {
+    switch (dist) {
+      case AutoLayoutDistribution.start:
+        return MainAxisAlignment.start;
+      case AutoLayoutDistribution.center:
+        return MainAxisAlignment.center;
+      case AutoLayoutDistribution.end:
+        return MainAxisAlignment.end;
+      case AutoLayoutDistribution.spaceBetween:
+        return MainAxisAlignment.spaceBetween;
+    }
+  }
+
+  CrossAxisAlignment _getFlexCrossAxis(AutoLayoutAlignment align) {
+    switch (align) {
+      case AutoLayoutAlignment.start:
+        return CrossAxisAlignment.start;
+      case AutoLayoutAlignment.center:
+        return CrossAxisAlignment.center;
+      case AutoLayoutAlignment.end:
+        return CrossAxisAlignment.end;
+      case AutoLayoutAlignment.stretch:
+        return CrossAxisAlignment.stretch;
+    }
+  }
 }
+
+class _MockTabItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+
+  const _MockTabItem({
+    required this.icon,
+    required this.label,
+    this.isSelected = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: isSelected ? Colors.black : Colors.black45,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.black : Colors.black45,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+

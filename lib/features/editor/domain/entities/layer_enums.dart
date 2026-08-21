@@ -6,6 +6,26 @@ enum LayerType {
   deviceMockup,
   group,
   componentInstance,
+  autoLayout,
+}
+
+enum AutoLayoutDirection {
+  horizontal,
+  vertical,
+}
+
+enum AutoLayoutAlignment {
+  start,
+  center,
+  end,
+  stretch,
+}
+
+enum AutoLayoutDistribution {
+  start,
+  center,
+  end,
+  spaceBetween,
 }
 
 enum ShapeType {
@@ -43,3 +63,4 @@ enum BackgroundType {
   gradient,
   image,
 }
+

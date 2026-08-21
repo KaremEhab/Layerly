@@ -53,16 +53,20 @@ class SnappingService {
     final double targetCenterY = targetY + targetHeight / 2;
     final double targetBottom = targetY + targetHeight;
 
-    // 1. Canvas Reference Points
+    // 1. Canvas Reference Points & Page Margins
     final List<double> verticalSnapPoints = [
       0.0,
+      if (page.horizontalPadding > 0) page.horizontalPadding,
       page.width / 2,
+      if (page.horizontalPadding > 0) page.width - page.horizontalPadding,
       page.width,
     ];
 
     final List<double> horizontalSnapPoints = [
       0.0,
+      if (page.verticalPadding > 0) page.verticalPadding,
       page.height / 2,
+      if (page.verticalPadding > 0) page.height - page.verticalPadding,
       page.height,
     ];
 

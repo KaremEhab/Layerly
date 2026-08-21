@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/canvas_project.dart';
 import '../../domain/entities/canvas_page.dart';
 import '../../domain/entities/layer.dart';
+import '../../domain/entities/auto_layout_layer.dart';
 import '../../domain/entities/component_definition.dart';
 import '../../domain/services/snapping_service.dart';
 
@@ -42,19 +43,29 @@ class EditorState extends Equatable {
   Layer? get singleSelectedLayer {
     if (selectedLayerIds.length == 1) {
       final id = selectedLayerIds.first;
-      try {
-        return activePageLayers.firstWhere((l) => l.id == id);
-      } catch (_) {
-        return null;
-      }
+      return _findLayerRecursively(activePageLayers, id);
     }
     return null;
   }
 
   List<Layer> get selectedLayers {
-    return activePageLayers
-        .where((l) => selectedLayerIds.contains(l.id))
-        .toList();
+    final result = <Layer>[];
+    for (final id in selectedLayerIds) {
+      final found = _findLayerRecursively(activePageLayers, id);
+      if (found != null) result.add(found);
+    }
+    return result;
+  }
+
+  static Layer? _findLayerRecursively(List<Layer> list, String id) {
+    for (final l in list) {
+      if (l.id == id) return l;
+      if (l is AutoLayoutLayer) {
+        final nested = _findLayerRecursively(l.children, id);
+        if (nested != null) return nested;
+      }
+    }
+    return null;
   }
 
   ComponentDefinition? getComponentDefinition(String id) {

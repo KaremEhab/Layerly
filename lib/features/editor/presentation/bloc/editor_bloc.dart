@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_project.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
@@ -10,6 +12,7 @@ import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
+import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/services/snapping_service.dart';
 import 'package:layerly/core/utils/uuid_generator.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -45,6 +48,14 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<DeletePageEvent>(_onDeletePage);
     on<ReorderPageEvent>(_onReorderPage);
     on<UpdatePageBackgroundEvent>(_onUpdatePageBackground);
+    on<RenameProjectEvent>(_onRenameProject);
+    on<RenamePageEvent>(_onRenamePage);
+    on<UpdatePagePaddingEvent>(_onUpdatePagePadding);
+    on<CreateAutoLayoutFromSelectionEvent>(_onCreateAutoLayoutFromSelection);
+    on<UpdateAutoLayoutEvent>(_onUpdateAutoLayout);
+    on<RemoveAutoLayoutEvent>(_onRemoveAutoLayout);
+    on<MoveLayerTreeEvent>(_onMoveLayerTree);
+    on<DetachComponentInstanceEvent>(_onDetachComponentInstance);
     on<RegisterComponentDefinitionEvent>(_onRegisterComponentDefinition);
     on<UpdateComponentDefinitionEvent>(_onUpdateComponentDefinition);
     on<SetZoomEvent>(_onSetZoom);
@@ -55,6 +66,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<UndoEvent>(_onUndo);
     on<RedoEvent>(_onRedo);
   }
+
 
   List<CanvasProject> _pushHistory(CanvasProject project, List<CanvasProject> history) {
     final updated = List<CanvasProject>.from(history);
@@ -76,7 +88,9 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
 
   void _onSelectLayer(SelectLayerEvent event, Emitter<EditorState> emit) {
     if (event.layerId == null) {
-      emit(state.copyWith(selectedLayerIds: []));
+      if (state.selectedLayerIds.isNotEmpty) {
+        emit(state.copyWith(selectedLayerIds: []));
+      }
       return;
     }
 
@@ -89,6 +103,9 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       }
       emit(state.copyWith(selectedLayerIds: current));
     } else {
+      if (state.selectedLayerIds.length == 1 && state.selectedLayerIds.first == event.layerId) {
+        return; // Already selected, avoid unnecessary state churn
+      }
       emit(state.copyWith(selectedLayerIds: [event.layerId!]));
     }
   }
@@ -105,8 +122,12 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
   }
 
   void _onAddLayer(AddLayerEvent event, Emitter<EditorState> emit) {
+    Layer layerToAdd = event.layer;
+    if (layerToAdd is TextLayer) {
+      layerToAdd = _recalculateTextDimensions(layerToAdd);
+    }
     final activePage = state.activePage;
-    final updatedLayers = List<Layer>.from(activePage.layers)..add(event.layer);
+    final updatedLayers = List<Layer>.from(activePage.layers)..add(layerToAdd);
     final updatedPage = activePage.copyWith(layers: updatedLayers);
 
     final updatedPages = List<CanvasPage>.from(state.project.pages);
@@ -124,12 +145,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
 
   void _onUpdateLayer(UpdateLayerEvent event, Emitter<EditorState> emit) {
     final activePage = state.activePage;
-    final updatedLayers = activePage.layers.map((layer) {
-      if (layer.id == event.layer.id) {
-        return event.layer;
-      }
-      return layer;
-    }).toList();
+    final updatedLayers = _updateLayerInTree(activePage.layers, event.layer);
 
     final updatedPage = activePage.copyWith(layers: updatedLayers);
     final updatedPages = List<CanvasPage>.from(state.project.pages);
@@ -146,9 +162,27 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
   }
 
   void _onMoveLayerDelta(MoveLayerDeltaEvent event, Emitter<EditorState> emit) {
+    if (event.isFinal && (event.layerId.isEmpty || (event.dx == 0 && event.dy == 0))) {
+      emit(state.copyWith(
+        activeSnapGuides: [],
+        isInteracting: false,
+        undoStack: _pushHistory(state.project, state.undoStack),
+        redoStack: [],
+      ));
+      return;
+    }
+
     final activePage = state.activePage;
     final layerIndex = activePage.layers.indexWhere((l) => l.id == event.layerId);
-    if (layerIndex == -1) return;
+    if (layerIndex == -1) {
+      if (event.isFinal) {
+        emit(state.copyWith(
+          activeSnapGuides: [],
+          isInteracting: false,
+        ));
+      }
+      return;
+    }
 
     final layer = activePage.layers[layerIndex];
     if (layer.locked) return;
@@ -167,9 +201,18 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       snapEnabled: state.snapEnabled,
     );
 
+    // Clamp layer within page margins so items strictly follow padding limits
+    final double minX = activePage.horizontalPadding;
+    final double maxX = (activePage.width - activePage.horizontalPadding - layer.width).clamp(minX, activePage.width);
+    final double minY = activePage.verticalPadding;
+    final double maxY = (activePage.height - activePage.verticalPadding - layer.height).clamp(minY, activePage.height);
+
+    final double clampedX = snap.snappedX.clamp(minX, maxX);
+    final double clampedY = snap.snappedY.clamp(minY, maxY);
+
     final updatedLayer = layer.copyWithTransform(
-      x: snap.snappedX,
-      y: snap.snappedY,
+      x: clampedX,
+      y: clampedY,
     );
 
     final updatedLayers = List<Layer>.from(activePage.layers);
@@ -676,21 +719,561 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       return l.copyWithTransform(name: l.name);
     }).toList();
 
+    // Strip leading number if present for clean naming
+    String baseName = originalPage.name;
+    final regex = RegExp(r'^\d+\s*[-–—]?\s*');
+    if (regex.hasMatch(baseName)) {
+      baseName = baseName.replaceFirst(regex, '');
+    }
+
     final duplicatedPage = originalPage.copyWith(
       id: UuidGenerator.generate(),
-      name: '${originalPage.name} Copy',
+      name: '$baseName Copy',
       layers: clonedLayers,
     );
 
-    final updatedPages = List<CanvasPage>.from(state.project.pages);
-    updatedPages.insert(event.pageIndex + 1, duplicatedPage);
+    final updatedPages = List<CanvasPage>.from(state.project.pages)..add(duplicatedPage);
+    final newIndex = updatedPages.length - 1;
 
     emit(state.copyWith(
       project: state.project.copyWith(
         pages: updatedPages,
-        activePageIndex: event.pageIndex + 1,
+        activePageIndex: newIndex,
       ),
       selectedLayerIds: [],
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onRenameProject(RenameProjectEvent event, Emitter<EditorState> emit) {
+    if (event.newName.trim().isEmpty) return;
+    emit(state.copyWith(
+      project: state.project.copyWith(name: event.newName.trim()),
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onRenamePage(RenamePageEvent event, Emitter<EditorState> emit) {
+    if (event.pageIndex < 0 || event.pageIndex >= state.project.pages.length) return;
+    if (event.newName.trim().isEmpty) return;
+
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    final currentPage = updatedPages[event.pageIndex];
+    updatedPages[event.pageIndex] = currentPage.copyWith(name: event.newName.trim());
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onUpdatePagePadding(UpdatePagePaddingEvent event, Emitter<EditorState> emit) {
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    final activeIndex = state.project.activePageIndex;
+    final currentPage = updatedPages[activeIndex];
+
+    final double oldPadH = currentPage.horizontalPadding;
+    final double oldPadV = currentPage.verticalPadding;
+    final double newPadH = event.horizontal;
+    final double newPadV = event.vertical;
+
+    final double deltaH = newPadH - oldPadH;
+    final double deltaV = newPadV - oldPadV;
+
+    // Shift layers according to margin changes so items dynamically follow the margins
+    final updatedLayers = currentPage.layers.map((layer) {
+      if (layer.locked) return layer;
+
+      double newX = layer.x;
+      double newY = layer.y;
+
+      final double centerX = currentPage.width / 2;
+      final double centerY = currentPage.height / 2;
+
+      // Horizontal shift based on whether layer was left-anchored, right-anchored, or center
+      if (layer.x + layer.width / 2 < centerX) {
+        // Left side item -> moves with left margin
+        newX = layer.x + deltaH;
+      } else {
+        // Right side item -> moves with right margin
+        newX = layer.x - deltaH;
+      }
+
+      // Vertical shift based on top vs bottom anchor
+      if (layer.y + layer.height / 2 < centerY) {
+        // Top side item -> moves with top margin
+        newY = layer.y + deltaV;
+      } else {
+        // Bottom side item -> moves with bottom margin
+        newY = layer.y - deltaV;
+      }
+
+      // Clamp strictly within the new page margins
+      final double minX = newPadH;
+      final double maxX = (currentPage.width - newPadH - layer.width).clamp(minX, currentPage.width);
+      final double minY = newPadV;
+      final double maxY = (currentPage.height - newPadV - layer.height).clamp(minY, currentPage.height);
+
+      newX = newX.clamp(minX, maxX);
+      newY = newY.clamp(minY, maxY);
+
+      return layer.copyWithTransform(x: newX, y: newY);
+    }).toList();
+
+    updatedPages[activeIndex] = currentPage.copyWith(
+      horizontalPadding: newPadH,
+      verticalPadding: newPadV,
+      layers: updatedLayers,
+    );
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onCreateAutoLayoutFromSelection(
+    CreateAutoLayoutFromSelectionEvent event,
+    Emitter<EditorState> emit,
+  ) {
+    if (state.selectedLayers.isEmpty) return;
+
+    final selected = List<Layer>.from(state.selectedLayers);
+    if (selected.length == 1 && selected.first is AutoLayoutLayer) return;
+
+    double minX = selected.first.x;
+    double minY = selected.first.y;
+    double maxX = selected.first.x + selected.first.width;
+    double maxY = selected.first.y + selected.first.height;
+
+    for (final l in selected) {
+      if (l.x < minX) minX = l.x;
+      if (l.y < minY) minY = l.y;
+      if (l.x + l.width > maxX) maxX = l.x + l.width;
+      if (l.y + l.height > maxY) maxY = l.y + l.height;
+    }
+
+    // Smart Direction Detection: Analyze spatial arrangement of items relative to each other
+    // Compare horizontal origin spread vs vertical origin spread
+    double minOriginX = selected.first.x;
+    double maxOriginX = selected.first.x;
+    double minOriginY = selected.first.y;
+    double maxOriginY = selected.first.y;
+
+    for (final l in selected) {
+      if (l.x < minOriginX) minOriginX = l.x;
+      if (l.x > maxOriginX) maxOriginX = l.x;
+      if (l.y < minOriginY) minOriginY = l.y;
+      if (l.y > maxOriginY) maxOriginY = l.y;
+    }
+
+    final double xSpread = maxOriginX - minOriginX;
+    final double ySpread = maxOriginY - minOriginY;
+
+    // If items are positioned under each other (ySpread > xSpread), choose vertical
+    // If items are positioned beside each other (xSpread >= ySpread), choose horizontal
+    final bool isHorizontal = xSpread > ySpread;
+
+    // Sort items by spatial order along primary axis
+    if (isHorizontal) {
+      selected.sort((a, b) => a.x.compareTo(b.x));
+    } else {
+      selected.sort((a, b) => a.y.compareTo(b.y));
+    }
+
+    // Calculate natural gap between consecutive items
+    double calculatedGap = 12.0;
+    if (selected.length > 1) {
+      if (isHorizontal) {
+        calculatedGap = (selected[1].x - (selected[0].x + selected[0].width)).clamp(0.0, 200.0);
+      } else {
+        calculatedGap = (selected[1].y - (selected[0].y + selected[0].height)).clamp(0.0, 200.0);
+      }
+    }
+
+    // Calculate total required dimensions without extra arbitrary padding
+    double totalMainAxis = 0;
+    double maxCrossAxis = 0;
+    for (int i = 0; i < selected.length; i++) {
+      totalMainAxis += isHorizontal ? selected[i].width : selected[i].height;
+      if (isHorizontal) {
+        if (selected[i].height > maxCrossAxis) maxCrossAxis = selected[i].height;
+      } else {
+        if (selected[i].width > maxCrossAxis) maxCrossAxis = selected[i].width;
+      }
+      if (i > 0) totalMainAxis += calculatedGap;
+    }
+
+    final double layoutWidth = isHorizontal ? totalMainAxis : maxCrossAxis;
+    final double layoutHeight = isHorizontal ? maxCrossAxis : totalMainAxis;
+
+    final autoLayoutId = UuidGenerator.generate();
+    final autoLayout = AutoLayoutLayer(
+      id: autoLayoutId,
+      name: 'Auto Layout (${selected.length} items)',
+      x: minX,
+      y: minY,
+      width: layoutWidth.clamp(20.0, state.activePage.width),
+      height: layoutHeight.clamp(20.0, state.activePage.height),
+      direction: isHorizontal ? AutoLayoutDirection.horizontal : AutoLayoutDirection.vertical,
+      gap: calculatedGap,
+      paddingHorizontal: 0.0,
+      paddingVertical: 0.0,
+      alignment: isHorizontal ? AutoLayoutAlignment.center : AutoLayoutAlignment.start,
+      distribution: AutoLayoutDistribution.start,
+      children: selected.map((l) => l.copyWithTransform(x: 0, y: 0)).toList(),
+    );
+
+    final selectedIds = selected.map((l) => l.id).toSet();
+    final pageLayers = List<Layer>.from(state.activePage.layers);
+
+    // Insert at the first index of selected layers to maintain layer stack order
+    final insertIndex = pageLayers.indexWhere((l) => selectedIds.contains(l.id));
+    final remainingLayers = pageLayers.where((l) => !selectedIds.contains(l.id)).toList();
+
+    if (insertIndex != -1 && insertIndex <= remainingLayers.length) {
+      remainingLayers.insert(insertIndex, autoLayout);
+    } else {
+      remainingLayers.add(autoLayout);
+    }
+
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    final activeIndex = state.project.activePageIndex;
+    updatedPages[activeIndex] = state.activePage.copyWith(layers: remainingLayers);
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      selectedLayerIds: [autoLayoutId],
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onUpdateAutoLayout(UpdateAutoLayoutEvent event, Emitter<EditorState> emit) {
+    final updatedLayers = _updateAutoLayoutInTree(state.activePage.layers, event.layerId, event);
+
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    final activeIndex = state.project.activePageIndex;
+    updatedPages[activeIndex] = state.activePage.copyWith(layers: updatedLayers);
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onRemoveAutoLayout(RemoveAutoLayoutEvent event, Emitter<EditorState> emit) {
+    final layers = List<Layer>.from(state.activePage.layers);
+    final index = layers.indexWhere((l) => l.id == event.layerId);
+    if (index == -1) return;
+
+    final currentLayer = layers[index];
+    if (currentLayer is! AutoLayoutLayer) return;
+
+    final unpackedLayers = <Layer>[];
+
+    if (currentLayer.direction == AutoLayoutDirection.horizontal) {
+      double currentX = currentLayer.x + currentLayer.paddingHorizontal;
+      for (final child in currentLayer.children) {
+        double childY;
+        switch (currentLayer.alignment) {
+          case AutoLayoutAlignment.start:
+            childY = currentLayer.y + currentLayer.paddingVertical;
+            break;
+          case AutoLayoutAlignment.end:
+            childY = currentLayer.y + currentLayer.height - currentLayer.paddingVertical - child.height;
+            break;
+          case AutoLayoutAlignment.center:
+          case AutoLayoutAlignment.stretch:
+            childY = currentLayer.y + (currentLayer.height - child.height) / 2;
+            break;
+        }
+
+        unpackedLayers.add(child.copyWithTransform(
+          x: currentX,
+          y: childY,
+        ));
+
+        currentX += child.width + currentLayer.gap;
+      }
+    } else {
+      double currentY = currentLayer.y + currentLayer.paddingVertical;
+      for (final child in currentLayer.children) {
+        double childX;
+        switch (currentLayer.alignment) {
+          case AutoLayoutAlignment.start:
+            childX = currentLayer.x + currentLayer.paddingHorizontal;
+            break;
+          case AutoLayoutAlignment.end:
+            childX = currentLayer.x + currentLayer.width - currentLayer.paddingHorizontal - child.width;
+            break;
+          case AutoLayoutAlignment.center:
+          case AutoLayoutAlignment.stretch:
+            childX = currentLayer.x + (currentLayer.width - child.width) / 2;
+            break;
+        }
+
+        unpackedLayers.add(child.copyWithTransform(
+          x: childX,
+          y: currentY,
+        ));
+
+        currentY += child.height + currentLayer.gap;
+      }
+    }
+
+    layers.removeAt(index);
+    layers.insertAll(index, unpackedLayers);
+
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    final activeIndex = state.project.activePageIndex;
+    updatedPages[activeIndex] = state.activePage.copyWith(layers: layers);
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      selectedLayerIds: unpackedLayers.map((l) => l.id).toList(),
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onMoveLayerTree(MoveLayerTreeEvent event, Emitter<EditorState> emit) {
+    var layers = List<Layer>.from(state.activePage.layers);
+
+    // 1. Extract layer from its current source (top-level or nested inside AutoLayout)
+    final extraction = _extractLayerFromTree(layers, event.layerId);
+    if (extraction.layer == null) return;
+    final extractedLayer = extraction.layer!;
+    layers = extraction.updatedLayers;
+
+    // 2. Insert into destination
+    if (event.targetParentId == null) {
+      // Top level
+      final targetIndex = event.targetIndex.clamp(0, layers.length);
+      layers.insert(targetIndex, extractedLayer);
+    } else {
+      // Inside an AutoLayout container
+      layers = _insertLayerIntoParentTree(
+        layers,
+        event.targetParentId!,
+        extractedLayer,
+        event.targetIndex,
+      );
+    }
+
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    final activeIndex = state.project.activePageIndex;
+    updatedPages[activeIndex] = state.activePage.copyWith(layers: layers);
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      selectedLayerIds: [extractedLayer.id],
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  ({Layer? layer, List<Layer> updatedLayers}) _extractLayerFromTree(
+    List<Layer> list,
+    String targetId,
+  ) {
+    Layer? found;
+    final result = <Layer>[];
+
+    for (final item in list) {
+      if (item.id == targetId) {
+        found = item;
+      } else if (item is AutoLayoutLayer) {
+        final nested = _extractLayerFromTree(item.children, targetId);
+        if (nested.layer != null) {
+          found = nested.layer;
+          final updated = item.copyWith(children: nested.updatedLayers);
+          result.add(_recalculateAutoLayoutDimensions(updated));
+        } else {
+          result.add(item);
+        }
+      } else {
+        result.add(item);
+      }
+    }
+
+    return (layer: found, updatedLayers: result);
+  }
+
+  List<Layer> _insertLayerIntoParentTree(
+    List<Layer> list,
+    String parentId,
+    Layer layerToInsert,
+    int targetIndex,
+  ) {
+    return list.map((item) {
+      if (item is AutoLayoutLayer) {
+        if (item.id == parentId) {
+          final newChildren = List<Layer>.from(item.children);
+          final idx = targetIndex.clamp(0, newChildren.length);
+          newChildren.insert(idx, layerToInsert);
+          final updated = item.copyWith(children: newChildren);
+          return _recalculateAutoLayoutDimensions(updated);
+        } else {
+          final updated = item.copyWith(
+            children: _insertLayerIntoParentTree(
+              item.children,
+              parentId,
+              layerToInsert,
+              targetIndex,
+            ),
+          );
+          return _recalculateAutoLayoutDimensions(updated);
+        }
+      }
+      return item;
+    }).toList();
+  }
+
+  AutoLayoutLayer _recalculateAutoLayoutDimensions(AutoLayoutLayer container) {
+    if (container.children.isEmpty) return container;
+
+    final isHorizontal = container.direction == AutoLayoutDirection.horizontal;
+    double totalMainAxis = 0;
+    double maxCrossAxis = 0;
+
+    for (int i = 0; i < container.children.length; i++) {
+      final child = container.children[i];
+      if (isHorizontal) {
+        totalMainAxis += child.width;
+        if (child.height > maxCrossAxis) maxCrossAxis = child.height;
+      } else {
+        totalMainAxis += child.height;
+        if (child.width > maxCrossAxis) maxCrossAxis = child.width;
+      }
+      if (i > 0) totalMainAxis += container.gap;
+    }
+
+    final newWidth = isHorizontal
+        ? (totalMainAxis + container.paddingHorizontal * 2)
+        : (maxCrossAxis + container.paddingHorizontal * 2);
+
+    final newHeight = isHorizontal
+        ? (maxCrossAxis + container.paddingVertical * 2)
+        : (totalMainAxis + container.paddingVertical * 2);
+
+    return container.copyWith(
+      width: newWidth.clamp(20.0, 5000.0),
+      height: newHeight.clamp(20.0, 5000.0),
+    );
+  }
+
+  List<Layer> _updateAutoLayoutInTree(
+    List<Layer> list,
+    String targetId,
+    UpdateAutoLayoutEvent event,
+  ) {
+    return list.map((item) {
+      if (item is AutoLayoutLayer) {
+        if (item.id == targetId) {
+          final updated = item.copyWith(
+            direction: event.direction,
+            gap: event.gap,
+            paddingHorizontal: event.paddingHorizontal,
+            paddingVertical: event.paddingVertical,
+            alignment: event.alignment,
+            distribution: event.distribution,
+          );
+          return _recalculateAutoLayoutDimensions(updated);
+        } else {
+          final updatedChildren = _updateAutoLayoutInTree(item.children, targetId, event);
+          final updated = item.copyWith(children: updatedChildren);
+          return _recalculateAutoLayoutDimensions(updated);
+        }
+      }
+      return item;
+    }).toList();
+  }
+
+  TextLayer _recalculateTextDimensions(TextLayer textLayer) {
+    final style = TextStyle(
+      fontFamily: textLayer.fontFamily,
+      fontSize: textLayer.fontSize,
+      fontWeight: textLayer.fontWeight,
+      fontStyle: textLayer.fontStyle,
+      letterSpacing: textLayer.letterSpacing,
+      height: textLayer.lineHeight,
+    );
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: textLayer.content.isEmpty ? ' ' : textLayer.content,
+        style: style,
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: textLayer.textAlign,
+    )..layout();
+
+    final paddingH = (textLayer.padding?.horizontal ?? 0.0);
+    final paddingV = (textLayer.padding?.vertical ?? 0.0);
+
+    final measuredWidth = (textPainter.width + paddingH + 6.0).ceilToDouble().clamp(20.0, 5000.0);
+    final measuredHeight = (textPainter.height + paddingV + 4.0).ceilToDouble().clamp(16.0, 5000.0);
+
+    return textLayer.copyWith(
+      width: measuredWidth,
+      height: measuredHeight,
+    );
+  }
+
+  List<Layer> _updateLayerInTree(List<Layer> list, Layer updatedLayer) {
+    return list.map((item) {
+      if (item.id == updatedLayer.id) {
+        Layer finalLayer = updatedLayer;
+        if (finalLayer is TextLayer) {
+          finalLayer = _recalculateTextDimensions(finalLayer);
+        } else if (finalLayer is AutoLayoutLayer) {
+          finalLayer = _recalculateAutoLayoutDimensions(finalLayer);
+        }
+        return finalLayer;
+      } else if (item is AutoLayoutLayer) {
+        final updatedChildren = _updateLayerInTree(item.children, updatedLayer);
+        final updated = item.copyWith(children: updatedChildren);
+        return _recalculateAutoLayoutDimensions(updated);
+      }
+      return item;
+    }).toList();
+  }
+
+  void _onDetachComponentInstance(DetachComponentInstanceEvent event, Emitter<EditorState> emit) {
+    final layers = List<Layer>.from(state.activePage.layers);
+    final index = layers.indexWhere((l) => l.id == event.layerId);
+    if (index == -1) return;
+
+    final currentLayer = layers[index];
+    if (currentLayer is! ComponentInstanceLayer) return;
+
+    final def = state.getComponentDefinition(currentLayer.componentDefinitionId);
+    if (def == null) return;
+
+    final detachedLayers = def.layers.map((l) {
+      return l.copyWithTransform(
+        x: currentLayer.x + l.x,
+        y: currentLayer.y + l.y,
+        name: '${currentLayer.name} - ${l.name}',
+      );
+    }).toList();
+
+    layers.removeAt(index);
+    layers.insertAll(index, detachedLayers);
+
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    final activeIndex = state.project.activePageIndex;
+    updatedPages[activeIndex] = state.activePage.copyWith(layers: layers);
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      selectedLayerIds: detachedLayers.map((l) => l.id).toList(),
       undoStack: _pushHistory(state.project, state.undoStack),
       redoStack: [],
     ));
@@ -799,11 +1382,29 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
   }
 
   void _onToggleGrid(ToggleGridEvent event, Emitter<EditorState> emit) {
-    emit(state.copyWith(showGrid: !state.showGrid));
+    final activePage = state.activePage;
+    final newShowGrid = !activePage.showGrid;
+    final updatedPage = activePage.copyWith(showGrid: newShowGrid);
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    updatedPages[state.project.activePageIndex] = updatedPage;
+
+    emit(state.copyWith(
+      showGrid: newShowGrid,
+      project: state.project.copyWith(pages: updatedPages),
+    ));
   }
 
   void _onToggleGuides(ToggleGuidesEvent event, Emitter<EditorState> emit) {
-    emit(state.copyWith(showGuides: !state.showGuides));
+    final activePage = state.activePage;
+    final newShowGuides = !activePage.showGuides;
+    final updatedPage = activePage.copyWith(showGuides: newShowGuides);
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    updatedPages[state.project.activePageIndex] = updatedPage;
+
+    emit(state.copyWith(
+      showGuides: newShowGuides,
+      project: state.project.copyWith(pages: updatedPages),
+    ));
   }
 
   void _onToggleSnap(ToggleSnapEvent event, Emitter<EditorState> emit) {

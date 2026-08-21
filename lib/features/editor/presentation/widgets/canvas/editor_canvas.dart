@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:layerly/core/constants/app_colors.dart';
+import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/page_renderer.dart';
 
 class EditorCanvas extends StatefulWidget {
-  const EditorCanvas({super.key});
+  final bool isLockedTop;
+
+  const EditorCanvas({
+    super.key,
+    this.isLockedTop = true,
+  });
 
   @override
   State<EditorCanvas> createState() => _EditorCanvasState();
@@ -20,9 +27,11 @@ class _EditorCanvasState extends State<EditorCanvas> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _centerCanvas();
-    });
+    if (!widget.isLockedTop) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _centerCanvas();
+      });
+    }
   }
 
   void _centerCanvas() {
@@ -57,6 +66,8 @@ class _EditorCanvasState extends State<EditorCanvas> {
     if (event.logicalKey == LogicalKeyboardKey.delete ||
         event.logicalKey == LogicalKeyboardKey.backspace) {
       context.read<EditorBloc>().add(const DeleteSelectedLayersEvent());
+    } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+      context.read<EditorBloc>().add(const ClearSelectionEvent());
     } else if (isControlPressed && event.logicalKey == LogicalKeyboardKey.keyZ) {
       if (isShiftPressed) {
         context.read<EditorBloc>().add(const RedoEvent());
@@ -67,6 +78,15 @@ class _EditorCanvasState extends State<EditorCanvas> {
       context.read<EditorBloc>().add(const RedoEvent());
     } else if (isControlPressed && event.logicalKey == LogicalKeyboardKey.keyD) {
       context.read<EditorBloc>().add(const DuplicateSelectedLayersEvent());
+    } else if (isControlPressed && event.logicalKey == LogicalKeyboardKey.keyG) {
+      if (isShiftPressed) {
+        final selected = context.read<EditorBloc>().state.singleSelectedLayer;
+        if (selected != null && selected.type == LayerType.componentInstance) {
+          context.read<EditorBloc>().add(DetachComponentInstanceEvent(selected.id));
+        }
+      } else {
+        context.read<EditorBloc>().add(const CreateAutoLayoutFromSelectionEvent());
+      }
     } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
       _nudgeSelected(-1, 0, isShiftPressed ? 10 : 1);
     } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
@@ -105,54 +125,86 @@ class _EditorCanvasState extends State<EditorCanvas> {
               _focusNode.requestFocus();
               context.read<EditorBloc>().add(const ClearSelectionEvent());
             },
-            child: Container(
-              color: const Color(0xFF0B0C10),
-              child: Stack(
-                children: [
-                  // Dot Grid Canvas Texture
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _DotGridPainter(),
-                    ),
-                  ),
+            child: widget.isLockedTop
+                ? _buildLockedTopCanvas(context, state)
+                : _buildFreeInfiniteCanvas(context, state),
+          );
+        },
+      ),
+    );
+  }
 
-                  // Interactive Viewport with Pan and Zoom
-                  InteractiveViewer(
-                    transformationController: _transformController,
-                    minScale: 0.1,
-                    maxScale: 3.5,
-                    boundaryMargin: const EdgeInsets.all(2000),
-                    constrained: false,
-                    onInteractionUpdate: (details) {
-                      final scale = _transformController.value.getMaxScaleOnAxis();
-                      if ((scale - state.zoom).abs() > 0.05) {
-                        context.read<EditorBloc>().add(SetZoomEvent(scale));
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(200),
-                      child: Center(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.7),
-                                blurRadius: 40,
-                                spreadRadius: 10,
-                                offset: const Offset(0, 15),
-                              ),
-                              BoxShadow(
-                                color: const Color(0xFFA970FF).withValues(alpha: 0.1),
-                                blurRadius: 60,
-                                spreadRadius: 0,
-                              ),
-                            ],
-                          ),
+  // 1. Locked on top design container (Non-fullscreen mode as shown in 2nd image)
+  Widget _buildLockedTopCanvas(BuildContext context, EditorState state) {
+    final activePage = state.activePage;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Fit within horizontal margins and available vertical height
+        final availableWidth = (constraints.maxWidth - 32.0).clamp(100.0, 10000.0);
+        final availableHeight = (constraints.maxHeight - 16.0).clamp(100.0, 10000.0);
+        final pageRatio = activePage.width / activePage.height;
+
+        double fitWidth = availableWidth;
+        double fitHeight = fitWidth / pageRatio;
+
+        if (fitHeight > availableHeight) {
+          fitHeight = availableHeight;
+          fitWidth = fitHeight * pageRatio;
+        }
+
+        final double scale = fitWidth / activePage.width;
+
+        return Container(
+          color: AppColors.canvasBackground,
+          child: Stack(
+            children: [
+              // Dot Grid Canvas Texture
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _DotGridPainter(),
+                ),
+              ),
+
+              // Locked-to-top design container
+              Positioned(
+                top: 8,
+                left: (constraints.maxWidth - fitWidth) / 2,
+                width: fitWidth,
+                height: fitHeight,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        blurRadius: 30,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 8),
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFFA970FF).withValues(alpha: 0.12),
+                        blurRadius: 45,
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: SizedBox(
+                      width: fitWidth,
+                      height: fitHeight,
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        alignment: Alignment.center,
+                        child: SizedBox(
+                          width: activePage.width,
+                          height: activePage.height,
                           child: PageRenderer(
                             page: activePage,
                             selectedLayerIds: state.selectedLayerIds,
                             activeGuides: state.activeSnapGuides,
-                            scale: state.zoom,
+                            scale: scale,
                             getComponentDefinition: (id) =>
                                 state.getComponentDefinition(id),
                             onSelectLayer: (layerId, isMulti) {
@@ -165,8 +217,8 @@ class _EditorCanvasState extends State<EditorCanvas> {
                               context.read<EditorBloc>().add(
                                     MoveLayerDeltaEvent(
                                       layerId: layerId,
-                                      dx: details.delta.dx,
-                                      dy: details.delta.dy,
+                                      dx: details.delta.dx / scale,
+                                      dy: details.delta.dy / scale,
                                       isFinal: false,
                                     ),
                                   );
@@ -186,8 +238,8 @@ class _EditorCanvasState extends State<EditorCanvas> {
                                     ResizeLayerHandleEvent(
                                       layerId: layerId,
                                       handle: handle,
-                                      dx: details.delta.dx,
-                                      dy: details.delta.dy,
+                                      dx: details.delta.dx / scale,
+                                      dy: details.delta.dy / scale,
                                       isFinal: false,
                                     ),
                                   );
@@ -217,11 +269,136 @@ class _EditorCanvasState extends State<EditorCanvas> {
                       ),
                     ),
                   ),
-                ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. Free Infinite Canvas with Pan & Zoom (Fullscreen mode)
+  Widget _buildFreeInfiniteCanvas(BuildContext context, EditorState state) {
+    final activePage = state.activePage;
+
+    return Container(
+      color: AppColors.canvasBackground,
+      child: Stack(
+        children: [
+          // Dot Grid Canvas Texture
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _DotGridPainter(),
+            ),
+          ),
+
+          // Interactive Viewport with Pan and Zoom
+          InteractiveViewer(
+            transformationController: _transformController,
+            minScale: 0.1,
+            maxScale: 3.5,
+            boundaryMargin: const EdgeInsets.all(2000),
+            constrained: false,
+            onInteractionUpdate: (details) {
+              final scale = _transformController.value.getMaxScaleOnAxis();
+              if ((scale - state.zoom).abs() > 0.05) {
+                context.read<EditorBloc>().add(SetZoomEvent(scale));
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(200),
+              child: Center(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        blurRadius: 40,
+                        spreadRadius: 10,
+                        offset: const Offset(0, 15),
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFFA970FF).withValues(alpha: 0.1),
+                        blurRadius: 60,
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: PageRenderer(
+                      page: activePage,
+                      selectedLayerIds: state.selectedLayerIds,
+                      activeGuides: state.activeSnapGuides,
+                      scale: state.zoom,
+                      getComponentDefinition: (id) =>
+                          state.getComponentDefinition(id),
+                      onSelectLayer: (layerId, isMulti) {
+                        _focusNode.requestFocus();
+                        context.read<EditorBloc>().add(
+                              SelectLayerEvent(layerId, isMultiSelect: isMulti),
+                            );
+                      },
+                      onMoveLayer: (layerId, details) {
+                        context.read<EditorBloc>().add(
+                              MoveLayerDeltaEvent(
+                                layerId: layerId,
+                                dx: details.delta.dx,
+                                dy: details.delta.dy,
+                                isFinal: false,
+                              ),
+                            );
+                      },
+                      onMoveLayerEnd: (layerId, details) {
+                        context.read<EditorBloc>().add(
+                              MoveLayerDeltaEvent(
+                                layerId: layerId,
+                                dx: 0,
+                                dy: 0,
+                                isFinal: true,
+                              ),
+                            );
+                      },
+                      onResizeLayer: (layerId, handle, details) {
+                        context.read<EditorBloc>().add(
+                              ResizeLayerHandleEvent(
+                                layerId: layerId,
+                                handle: handle,
+                                dx: details.delta.dx,
+                                dy: details.delta.dy,
+                                isFinal: false,
+                              ),
+                            );
+                      },
+                      onResizeLayerEnd: (layerId, handle, details) {
+                        context.read<EditorBloc>().add(
+                              ResizeLayerHandleEvent(
+                                layerId: layerId,
+                                handle: handle,
+                                dx: 0,
+                                dy: 0,
+                                isFinal: true,
+                              ),
+                            );
+                      },
+                      onRotateLayer: (layerId, angle, isFinal) {
+                        context.read<EditorBloc>().add(
+                              RotateLayerEvent(
+                                layerId: layerId,
+                                angle: angle,
+                                isFinal: isFinal,
+                              ),
+                            );
+                      },
+                    ),
+                  ),
+                ),
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -231,7 +408,7 @@ class _DotGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF262833).withValues(alpha: 0.45)
+      ..color = AppColors.canvasDot.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
 
     const double spacing = 28.0;

@@ -33,11 +33,13 @@ class TransformBox extends StatelessWidget {
       children: [
         // Selection Border
         Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: const Color(0xFFA970FF),
-                width: 1.5 / scale.clamp(0.5, 2.0),
+          child: IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: const Color(0xFFA970FF),
+                  width: 1.5 / scale.clamp(0.5, 2.0),
+                ),
               ),
             ),
           ),
@@ -48,42 +50,46 @@ class TransformBox extends StatelessWidget {
           top: -28,
           left: 0,
           right: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFF15161B),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: const Color(0xFFA970FF), width: 1),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black45,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
+          child: IgnorePointer(
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF15161B),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0xFFA970FF), width: 1),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black45,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '${layer.width.toInt()} × ${layer.height.toInt()}  |  X: ${layer.x.toInt()}, Y: ${layer.y.toInt()}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'monospace',
                   ),
-                ],
-              ),
-              child: Text(
-                '${layer.width.toInt()} × ${layer.height.toInt()}  |  X: ${layer.x.toInt()}, Y: ${layer.y.toInt()}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'monospace',
                 ),
               ),
             ),
           ),
         ),
 
-        // Rotation stem line & dial
+        // Rotation stem line
         Positioned(
           top: -rotationStemHeight,
           left: layer.width / 2 - 0.5,
-          child: Container(
-            width: 1.5,
-            height: rotationStemHeight,
-            color: const Color(0xFFA970FF),
+          child: IgnorePointer(
+            child: Container(
+              width: 1.5,
+              height: rotationStemHeight,
+              color: const Color(0xFFA970FF),
+            ),
           ),
         ),
         Positioned(
@@ -130,19 +136,21 @@ class TransformBox extends StatelessWidget {
 
   Widget _buildLockedBorder() {
     return Positioned.fill(
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: const Color(0xFFFF5C5C),
-            width: 1.5,
-            strokeAlign: BorderSide.strokeAlignOutside,
+      child: IgnorePointer(
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: const Color(0xFFFF5C5C),
+              width: 1.5,
+              strokeAlign: BorderSide.strokeAlignOutside,
+            ),
           ),
-        ),
-        child: const Align(
-          alignment: Alignment.topRight,
-          child: Padding(
-            padding: EdgeInsets.all(4.0),
-            child: Icon(Icons.lock, color: Color(0xFFFF5C5C), size: 14),
+          child: const Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: EdgeInsets.all(4.0),
+              child: Icon(Icons.lock, color: Color(0xFFFF5C5C), size: 14),
+            ),
           ),
         ),
       ),

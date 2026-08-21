@@ -274,6 +274,100 @@ class UpdateComponentDefinitionEvent extends EditorEvent {
   List<Object?> get props => [definition];
 }
 
+// Project / Page Metadata Events
+class RenameProjectEvent extends EditorEvent {
+  final String newName;
+  const RenameProjectEvent(this.newName);
+
+  @override
+  List<Object?> get props => [newName];
+}
+
+class RenamePageEvent extends EditorEvent {
+  final int pageIndex;
+  final String newName;
+  const RenamePageEvent(this.pageIndex, this.newName);
+
+  @override
+  List<Object?> get props => [pageIndex, newName];
+}
+
+class UpdatePagePaddingEvent extends EditorEvent {
+  final double horizontal;
+  final double vertical;
+  const UpdatePagePaddingEvent({required this.horizontal, required this.vertical});
+
+  @override
+  List<Object?> get props => [horizontal, vertical];
+}
+
+// Auto Layout Events
+class CreateAutoLayoutFromSelectionEvent extends EditorEvent {
+  const CreateAutoLayoutFromSelectionEvent();
+}
+
+class UpdateAutoLayoutEvent extends EditorEvent {
+  final String layerId;
+  final AutoLayoutDirection? direction;
+  final double? gap;
+  final double? paddingHorizontal;
+  final double? paddingVertical;
+  final AutoLayoutAlignment? alignment;
+  final AutoLayoutDistribution? distribution;
+
+  const UpdateAutoLayoutEvent({
+    required this.layerId,
+    this.direction,
+    this.gap,
+    this.paddingHorizontal,
+    this.paddingVertical,
+    this.alignment,
+    this.distribution,
+  });
+
+  @override
+  List<Object?> get props => [
+        layerId,
+        direction,
+        gap,
+        paddingHorizontal,
+        paddingVertical,
+        alignment,
+        distribution,
+      ];
+}
+
+class RemoveAutoLayoutEvent extends EditorEvent {
+  final String layerId;
+  const RemoveAutoLayoutEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
+class MoveLayerTreeEvent extends EditorEvent {
+  final String layerId;
+  final String? targetParentId;
+  final int targetIndex;
+
+  const MoveLayerTreeEvent({
+    required this.layerId,
+    this.targetParentId,
+    required this.targetIndex,
+  });
+
+  @override
+  List<Object?> get props => [layerId, targetParentId, targetIndex];
+}
+
+class DetachComponentInstanceEvent extends EditorEvent {
+  final String layerId;
+  const DetachComponentInstanceEvent(this.layerId);
+
+  @override
+  List<Object?> get props => [layerId];
+}
+
 // Viewport / Studio options
 class SetZoomEvent extends EditorEvent {
   final double zoom;
@@ -311,3 +405,4 @@ class UndoEvent extends EditorEvent {
 class RedoEvent extends EditorEvent {
   const RedoEvent();
 }
+

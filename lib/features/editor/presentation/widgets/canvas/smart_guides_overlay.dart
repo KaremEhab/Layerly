@@ -19,9 +19,11 @@ class SmartGuidesOverlay extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return CustomPaint(
-      size: Size(pageWidth, pageHeight),
-      painter: _SmartGuidesPainter(guides),
+    return IgnorePointer(
+      child: CustomPaint(
+        size: Size(pageWidth, pageHeight),
+        painter: _SmartGuidesPainter(guides),
+      ),
     );
   }
 }
