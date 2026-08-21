@@ -180,7 +180,10 @@ class PageRenderer extends StatelessWidget {
             onSelectLayer?.call(layer.id, false);
           },
           onSecondaryTapDown: (details) {
-            onSelectLayer?.call(layer.id, false);
+            final isChildOrSelfSelected = isSelected || _isAnyChildSelected(layer, selectedLayerIds);
+            if (!isChildOrSelfSelected) {
+              onSelectLayer?.call(layer.id, false);
+            }
             onContextMenu?.call(layer.id, details.globalPosition);
           },
           onLongPress: () {
@@ -201,6 +204,17 @@ class PageRenderer extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  bool _isAnyChildSelected(Layer layer, List<String> selectedIds) {
+    if (layer is AutoLayoutLayer) {
+      for (final child in layer.children) {
+        if (selectedIds.contains(child.id) || _isAnyChildSelected(child, selectedIds)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }
 

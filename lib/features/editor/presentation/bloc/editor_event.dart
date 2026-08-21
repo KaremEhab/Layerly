@@ -322,6 +322,8 @@ class UpdateAutoLayoutEvent extends EditorEvent {
   final double? paddingVertical;
   final AutoLayoutAlignment? alignment;
   final AutoLayoutDistribution? distribution;
+  final AutoLayoutSizingMode? horizontalSizing;
+  final AutoLayoutSizingMode? verticalSizing;
 
   const UpdateAutoLayoutEvent({
     required this.layerId,
@@ -331,6 +333,8 @@ class UpdateAutoLayoutEvent extends EditorEvent {
     this.paddingVertical,
     this.alignment,
     this.distribution,
+    this.horizontalSizing,
+    this.verticalSizing,
   });
 
   @override
@@ -342,6 +346,8 @@ class UpdateAutoLayoutEvent extends EditorEvent {
         paddingVertical,
         alignment,
         distribution,
+        horizontalSizing,
+        verticalSizing,
       ];
 }
 

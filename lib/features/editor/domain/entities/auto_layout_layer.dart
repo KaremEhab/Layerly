@@ -14,6 +14,8 @@ class AutoLayoutLayer extends Layer {
   final double cornerRadius;
   final Color? strokeColor;
   final double strokeWidth;
+  final AutoLayoutSizingMode horizontalSizing;
+  final AutoLayoutSizingMode verticalSizing;
 
   const AutoLayoutLayer({
     required super.id,
@@ -33,6 +35,8 @@ class AutoLayoutLayer extends Layer {
     this.paddingVertical = 16.0,
     this.alignment = AutoLayoutAlignment.center,
     this.distribution = AutoLayoutDistribution.start,
+    this.horizontalSizing = AutoLayoutSizingMode.hug,
+    this.verticalSizing = AutoLayoutSizingMode.hug,
     this.children = const [],
     this.backgroundColor,
     this.cornerRadius = 12.0,
@@ -71,6 +75,8 @@ class AutoLayoutLayer extends Layer {
       paddingVertical: paddingVertical,
       alignment: alignment,
       distribution: distribution,
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
       children: children,
       backgroundColor: backgroundColor,
       cornerRadius: cornerRadius,
@@ -96,6 +102,8 @@ class AutoLayoutLayer extends Layer {
     double? paddingVertical,
     AutoLayoutAlignment? alignment,
     AutoLayoutDistribution? distribution,
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
     List<Layer>? children,
     Color? backgroundColor,
     double? cornerRadius,
@@ -120,6 +128,8 @@ class AutoLayoutLayer extends Layer {
       paddingVertical: paddingVertical ?? this.paddingVertical,
       alignment: alignment ?? this.alignment,
       distribution: distribution ?? this.distribution,
+      horizontalSizing: horizontalSizing ?? this.horizontalSizing,
+      verticalSizing: verticalSizing ?? this.verticalSizing,
       children: children ?? this.children,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       cornerRadius: cornerRadius ?? this.cornerRadius,
@@ -189,6 +199,8 @@ class AutoLayoutLayer extends Layer {
         paddingVertical,
         alignment,
         distribution,
+        horizontalSizing,
+        verticalSizing,
         children,
         backgroundColor,
         cornerRadius,

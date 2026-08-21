@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_project.dart';
@@ -14,6 +15,7 @@ import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   group('Editor Engine Domain & Logic Tests', () {
     late CanvasProject project;
@@ -391,6 +393,128 @@ void main() {
       expect(bloc.state.selectedLayerIds.length, 2);
       expect(bloc.state.selectedLayerIds, containsAll(['txt-1', 'shp-1']));
     });
+
+    test('EditorBloc supports Auto Layout Sizing Modes (hug, fill, fixed)', () async {
+      const autoLayout = AutoLayoutLayer(
+        id: 'al-test',
+        name: 'Card Layout',
+        x: 20,
+        y: 20,
+        width: 100,
+        height: 100,
+        horizontalSizing: AutoLayoutSizingMode.hug,
+        verticalSizing: AutoLayoutSizingMode.hug,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        gap: 8,
+        children: [
+          ShapeLayer(id: 'c1', name: 'Child 1', x: 0, y: 0, width: 60, height: 30),
+          ShapeLayer(id: 'c2', name: 'Child 2', x: 0, y: 0, width: 80, height: 40),
+        ],
+      );
+
+      final customProject = project.copyWith(
+        pages: [
+          project.pages[0].copyWith(layers: [autoLayout]),
+        ],
+      );
+
+      final bloc = EditorBloc(initialProject: customProject);
+
+      // 1. Initial Hug sizing
+      final initialLayout = bloc.state.activePage.layers.first as AutoLayoutLayer;
+      expect(initialLayout.horizontalSizing, AutoLayoutSizingMode.hug);
+      expect(initialLayout.verticalSizing, AutoLayoutSizingMode.hug);
+
+      // 2. Change width sizing to fixed 320
+      bloc.add(const UpdateAutoLayoutEvent(
+        layerId: 'al-test',
+        horizontalSizing: AutoLayoutSizingMode.fixed,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final fixedLayout = bloc.state.activePage.layers.first as AutoLayoutLayer;
+      // 3. Change width sizing to fill (takes full page margin width: 1080 - 2 * 60 = 960)
+      bloc.add(const UpdateAutoLayoutEvent(
+        layerId: 'al-test',
+        horizontalSizing: AutoLayoutSizingMode.fill,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final fillWLayout = bloc.state.activePage.layers.first as AutoLayoutLayer;
+      expect(fillWLayout.horizontalSizing, AutoLayoutSizingMode.fill);
+      final expectedWidth = bloc.state.activePage.width - bloc.state.activePage.horizontalPadding * 2;
+      expect(fillWLayout.width, expectedWidth);
+      expect(fillWLayout.x, bloc.state.activePage.horizontalPadding);
+
+      // 4. Change height sizing to fill (takes full page margin height: 1920 - 2 * 60 = 1800)
+      bloc.add(const UpdateAutoLayoutEvent(
+        layerId: 'al-test',
+        verticalSizing: AutoLayoutSizingMode.fill,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final fillHLayout = bloc.state.activePage.layers.first as AutoLayoutLayer;
+      expect(fillHLayout.verticalSizing, AutoLayoutSizingMode.fill);
+      final expectedHeight = bloc.state.activePage.height - bloc.state.activePage.verticalPadding * 2;
+      expect(fillHLayout.height, expectedHeight);
+      expect(fillHLayout.y, bloc.state.activePage.verticalPadding);
+    });
+
+    test('EditorBloc supports moving a layout inside another layout in the tree', () async {
+      const parentLayout = AutoLayoutLayer(
+        id: 'parent-layout',
+        name: 'Vertical Main Layout',
+        x: 40,
+        y: 40,
+        width: 300,
+        height: 400,
+        children: [
+          ShapeLayer(id: 'header-icon', name: 'Icon', x: 0, y: 0, width: 24, height: 24),
+        ],
+      );
+
+      const childLayout = AutoLayoutLayer(
+        id: 'child-layout',
+        name: 'Horizontal Row Layout',
+        x: 40,
+        y: 460,
+        width: 200,
+        height: 60,
+        children: [
+          ShapeLayer(id: 'row-icon', name: 'Check', x: 0, y: 0, width: 16, height: 16),
+          TextLayer(id: 'row-text', name: 'Text', x: 0, y: 0, width: 80, height: 20, content: 'Item 1'),
+        ],
+      );
+
+      final customProject = project.copyWith(
+        pages: [
+          project.pages[0].copyWith(layers: [parentLayout, childLayout]),
+        ],
+      );
+
+      final bloc = EditorBloc(initialProject: customProject);
+      expect(bloc.state.activePage.layers.length, 2);
+
+      // Move childLayout inside parentLayout at index 1
+      bloc.add(const MoveLayerTreeEvent(
+        layerId: 'child-layout',
+        targetParentId: 'parent-layout',
+        targetIndex: 1,
+      ));
+      await Future.delayed(Duration.zero);
+
+      // Top level should now have 1 layer (parentLayout), containing childLayout inside
+      expect(bloc.state.activePage.layers.length, 1);
+      final updatedParent = bloc.state.activePage.layers.first as AutoLayoutLayer;
+      expect(updatedParent.children.length, 2);
+      expect(updatedParent.children[1].id, 'child-layout');
+      expect(updatedParent.children[1] is AutoLayoutLayer, isTrue);
+
+      final nestedLayout = updatedParent.children[1] as AutoLayoutLayer;
+      expect(nestedLayout.children.length, 2);
+      expect(nestedLayout.children[0].id, 'row-icon');
+      expect(nestedLayout.children[1].id, 'row-text');
+    });
   });
 }
-

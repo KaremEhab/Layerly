@@ -18,6 +18,7 @@ import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
+import 'package:layerly/features/editor/presentation/widgets/canvas/figma_context_menu.dart';
 
 class PropertiesPanel extends StatelessWidget {
   const PropertiesPanel({super.key});
@@ -400,8 +401,25 @@ class PropertiesPanel extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
-              const Icon(Icons.more_horiz_rounded, color: AppColors.textMuted, size: 18),
+              InkWell(
+                onTap: () {
+                  final renderBox = context.findRenderObject() as RenderBox?;
+                  final globalPos = renderBox != null
+                      ? renderBox.localToGlobal(Offset(renderBox.size.width - 240, 160))
+                      : const Offset(200, 200);
+                  showFigmaContextMenu(
+                    context: context,
+                    globalPosition: globalPos,
+                    state: context.read<EditorBloc>().state,
+                    bloc: context.read<EditorBloc>(),
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(Icons.more_horiz_rounded, color: AppColors.textSecondary, size: 20),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -413,13 +431,28 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: _buildStepperPill(
                   value: layer.gap.toInt(),
+                  overrideText: layer.distribution == AutoLayoutDistribution.spaceBetween ? 'Auto' : null,
                   onDecrement: () {
-                    final newGap = (layer.gap - 1).clamp(0.0, maxGap);
-                    onUpdate(layer.copyWith(gap: newGap));
+                    if (layer.distribution == AutoLayoutDistribution.spaceBetween) {
+                      onUpdate(layer.copyWith(
+                        distribution: AutoLayoutDistribution.start,
+                        gap: 12.0,
+                      ));
+                    } else {
+                      final newGap = (layer.gap - 1).clamp(0.0, maxGap);
+                      onUpdate(layer.copyWith(gap: newGap));
+                    }
                   },
                   onIncrement: () {
-                    final newGap = (layer.gap + 1).clamp(0.0, maxGap);
-                    onUpdate(layer.copyWith(gap: newGap));
+                    if (layer.distribution == AutoLayoutDistribution.spaceBetween) {
+                      onUpdate(layer.copyWith(
+                        distribution: AutoLayoutDistribution.start,
+                        gap: 16.0,
+                      ));
+                    } else {
+                      final newGap = (layer.gap + 1).clamp(0.0, maxGap);
+                      onUpdate(layer.copyWith(gap: newGap));
+                    }
                   },
                 ),
               ),
@@ -913,6 +946,7 @@ class PropertiesPanel extends StatelessWidget {
 
   Widget _buildStepperPill({
     required int value,
+    String? overrideText,
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
   }) {
@@ -931,7 +965,7 @@ class PropertiesPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                value.toString(),
+                overrideText ?? value.toString(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,

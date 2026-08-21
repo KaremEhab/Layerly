@@ -28,6 +28,12 @@ enum AutoLayoutDistribution {
   spaceBetween,
 }
 
+enum AutoLayoutSizingMode {
+  hug,
+  fill,
+  fixed,
+}
+
 enum ShapeType {
   rectangle,
   roundedRectangle,

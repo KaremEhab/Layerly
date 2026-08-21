@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -309,12 +310,35 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       newY = layer.y;
     }
 
-    final updatedLayer = layer.copyWithTransform(
-      x: newX,
-      y: newY,
-      width: newW,
-      height: newH,
-    );
+    final updatedLayer = layer is AutoLayoutLayer
+        ? layer.copyWith(
+            x: newX,
+            y: newY,
+            width: newW,
+            height: newH,
+            horizontalSizing: (event.handle == ResizeHandle.centerLeft ||
+                    event.handle == ResizeHandle.centerRight ||
+                    event.handle == ResizeHandle.topLeft ||
+                    event.handle == ResizeHandle.topRight ||
+                    event.handle == ResizeHandle.bottomLeft ||
+                    event.handle == ResizeHandle.bottomRight)
+                ? AutoLayoutSizingMode.fixed
+                : layer.horizontalSizing,
+            verticalSizing: (event.handle == ResizeHandle.topCenter ||
+                    event.handle == ResizeHandle.bottomCenter ||
+                    event.handle == ResizeHandle.topLeft ||
+                    event.handle == ResizeHandle.topRight ||
+                    event.handle == ResizeHandle.bottomLeft ||
+                    event.handle == ResizeHandle.bottomRight)
+                ? AutoLayoutSizingMode.fixed
+                : layer.verticalSizing,
+          )
+        : layer.copyWithTransform(
+            x: newX,
+            y: newY,
+            width: newW,
+            height: newH,
+          );
 
     final updatedLayers = _updateLayerInTree(activePage.layers, updatedLayer);
     final updatedPage = activePage.copyWith(layers: updatedLayers);
@@ -957,7 +981,17 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
   }
 
   void _onUpdateAutoLayout(UpdateAutoLayoutEvent event, Emitter<EditorState> emit) {
-    final updatedLayers = _updateAutoLayoutInTree(state.activePage.layers, event.layerId, event);
+    final activePage = state.activePage;
+    final updatedLayers = _updateAutoLayoutInTree(
+      activePage.layers,
+      event.layerId,
+      event,
+      parentAvailableWidth: activePage.width - activePage.horizontalPadding * 2,
+      parentAvailableHeight: activePage.height - activePage.verticalPadding * 2,
+      isTopLevel: true,
+      pageHorizontalPadding: activePage.horizontalPadding,
+      pageVerticalPadding: activePage.verticalPadding,
+    );
 
     final updatedPages = List<CanvasPage>.from(state.project.pages);
     final activeIndex = state.project.activePageIndex;
@@ -1046,7 +1080,17 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
   }
 
   void _onMoveLayerTree(MoveLayerTreeEvent event, Emitter<EditorState> emit) {
+    if (event.targetParentId == event.layerId) return;
+
     var layers = List<Layer>.from(state.activePage.layers);
+
+    // Prevent moving a container into its own descendant
+    if (event.targetParentId != null) {
+      final dragLayer = state.findLayerById(event.layerId);
+      if (dragLayer is AutoLayoutLayer && _isLayerDescendant(dragLayer, event.targetParentId!)) {
+        return;
+      }
+    }
 
     // 1. Extract layer from its current source (top-level or nested inside AutoLayout)
     final extraction = _extractLayerFromTree(layers, event.layerId);
@@ -1079,6 +1123,16 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       undoStack: _pushHistory(state.project, state.undoStack),
       redoStack: [],
     ));
+  }
+
+  bool _isLayerDescendant(AutoLayoutLayer parent, String targetId) {
+    for (final child in parent.children) {
+      if (child.id == targetId) return true;
+      if (child is AutoLayoutLayer && _isLayerDescendant(child, targetId)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   ({Layer? layer, List<Layer> updatedLayers}) _extractLayerFromTree(
@@ -1138,60 +1192,234 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     }).toList();
   }
 
-  static AutoLayoutLayer _recalculateAutoLayoutDimensions(AutoLayoutLayer container) {
-    if (container.children.isEmpty) return container;
-
+  static AutoLayoutLayer _recalculateAutoLayoutDimensions(
+    AutoLayoutLayer container, {
+    double? parentAvailableWidth,
+    double? parentAvailableHeight,
+    bool isTopLevel = false,
+    double pageHorizontalPadding = 16.0,
+    double pageVerticalPadding = 16.0,
+  }) {
     final isHorizontal = container.direction == AutoLayoutDirection.horizontal;
     double totalMainAxis = 0;
     double maxCrossAxis = 0;
 
     for (int i = 0; i < container.children.length; i++) {
       final child = container.children[i];
+      final childWidth = child is TextLayer ? _recalculateTextDimensions(child).width : child.width;
+      final childHeight = child is TextLayer ? _recalculateTextDimensions(child).height : child.height;
+
       if (isHorizontal) {
-        totalMainAxis += child.width;
-        if (child.height > maxCrossAxis) maxCrossAxis = child.height;
+        totalMainAxis += childWidth;
+        if (childHeight > maxCrossAxis) maxCrossAxis = childHeight;
       } else {
-        totalMainAxis += child.height;
-        if (child.width > maxCrossAxis) maxCrossAxis = child.width;
+        totalMainAxis += childHeight;
+        if (childWidth > maxCrossAxis) maxCrossAxis = childWidth;
       }
       if (i > 0) totalMainAxis += container.gap;
     }
 
-    final newWidth = isHorizontal
+    final hugWidth = isHorizontal
         ? (totalMainAxis + container.paddingHorizontal * 2)
         : (maxCrossAxis + container.paddingHorizontal * 2);
 
-    final newHeight = isHorizontal
+    final hugHeight = isHorizontal
         ? (maxCrossAxis + container.paddingVertical * 2)
         : (totalMainAxis + container.paddingVertical * 2);
 
+    double newWidth;
+    double newX = container.x;
+    switch (container.horizontalSizing) {
+      case AutoLayoutSizingMode.fixed:
+        newWidth = container.width > 0 ? container.width : hugWidth;
+        break;
+      case AutoLayoutSizingMode.fill:
+        if (parentAvailableWidth != null) {
+          newWidth = parentAvailableWidth;
+          if (isTopLevel) {
+            newX = pageHorizontalPadding;
+          }
+        } else {
+          newWidth = container.width > 0 ? container.width : hugWidth;
+        }
+        break;
+      case AutoLayoutSizingMode.hug:
+        newWidth = hugWidth;
+        break;
+    }
+
+    double newHeight;
+    double newY = container.y;
+    switch (container.verticalSizing) {
+      case AutoLayoutSizingMode.fixed:
+        newHeight = container.height > 0 ? container.height : hugHeight;
+        break;
+      case AutoLayoutSizingMode.fill:
+        if (parentAvailableHeight != null) {
+          newHeight = parentAvailableHeight;
+          if (isTopLevel) {
+            newY = pageVerticalPadding;
+          }
+        } else {
+          newHeight = container.height > 0 ? container.height : hugHeight;
+        }
+        break;
+      case AutoLayoutSizingMode.hug:
+        newHeight = hugHeight;
+        break;
+    }
+
+    // Recalculate any nested AutoLayoutLayer children that have fill sizing
+    final innerContentWidth = math.max(10.0, newWidth - container.paddingHorizontal * 2);
+    final innerContentHeight = math.max(10.0, newHeight - container.paddingVertical * 2);
+
+    List<Layer> updatedChildren = container.children.map((child) {
+      if (child is AutoLayoutLayer) {
+        double childAvailableWidth = innerContentWidth;
+        double childAvailableHeight = innerContentHeight;
+
+        if (isHorizontal) {
+          childAvailableHeight = innerContentHeight;
+          if (child.horizontalSizing == AutoLayoutSizingMode.fill) {
+            double nonFillWidth = 0;
+            int fillCount = 0;
+            for (final c in container.children) {
+              if (c is AutoLayoutLayer && c.horizontalSizing == AutoLayoutSizingMode.fill) {
+                fillCount++;
+              } else {
+                nonFillWidth += c is TextLayer ? _recalculateTextDimensions(c).width : c.width;
+              }
+            }
+            final totalGaps = math.max(0, container.children.length - 1) * container.gap;
+            final remaining = innerContentWidth - nonFillWidth - totalGaps;
+            childAvailableWidth = math.max(20.0, remaining / math.max(1, fillCount));
+          }
+        } else {
+          childAvailableWidth = innerContentWidth;
+          if (child.verticalSizing == AutoLayoutSizingMode.fill) {
+            double nonFillHeight = 0;
+            int fillCount = 0;
+            for (final c in container.children) {
+              if (c is AutoLayoutLayer && c.verticalSizing == AutoLayoutSizingMode.fill) {
+                fillCount++;
+              } else {
+                nonFillHeight += c is TextLayer ? _recalculateTextDimensions(c).height : c.height;
+              }
+            }
+            final totalGaps = math.max(0, container.children.length - 1) * container.gap;
+            final remaining = innerContentHeight - nonFillHeight - totalGaps;
+            childAvailableHeight = math.max(20.0, remaining / math.max(1, fillCount));
+          }
+        }
+
+        return _recalculateAutoLayoutDimensions(
+          child,
+          parentAvailableWidth: childAvailableWidth,
+          parentAvailableHeight: childAvailableHeight,
+          isTopLevel: false,
+        );
+      }
+      return child;
+    }).toList();
+
     return container.copyWith(
+      x: newX,
+      y: newY,
       width: newWidth.clamp(20.0, 5000.0),
       height: newHeight.clamp(20.0, 5000.0),
+      children: updatedChildren,
     );
   }
 
   List<Layer> _updateAutoLayoutInTree(
     List<Layer> list,
     String targetId,
-    UpdateAutoLayoutEvent event,
-  ) {
+    UpdateAutoLayoutEvent event, {
+    double? parentAvailableWidth,
+    double? parentAvailableHeight,
+    bool isTopLevel = true,
+    double pageHorizontalPadding = 16.0,
+    double pageVerticalPadding = 16.0,
+  }) {
     return list.map((item) {
       if (item is AutoLayoutLayer) {
         if (item.id == targetId) {
+          final isHorizontal = (event.direction ?? item.direction) == AutoLayoutDirection.horizontal;
+          double totalMain = 0;
+          double maxCross = 0;
+          final effectiveGap = event.gap ?? item.gap;
+          final effectivePadH = event.paddingHorizontal ?? item.paddingHorizontal;
+          final effectivePadV = event.paddingVertical ?? item.paddingVertical;
+
+          for (int i = 0; i < item.children.length; i++) {
+            final c = item.children[i];
+            final cWidth = c is TextLayer ? _recalculateTextDimensions(c).width : c.width;
+            final cHeight = c is TextLayer ? _recalculateTextDimensions(c).height : c.height;
+            if (isHorizontal) {
+              totalMain += cWidth;
+              if (cHeight > maxCross) maxCross = cHeight;
+            } else {
+              totalMain += cHeight;
+              if (cWidth > maxCross) maxCross = cWidth;
+            }
+            if (i > 0) totalMain += effectiveGap;
+          }
+          final measuredHugW = isHorizontal ? (totalMain + effectivePadH * 2) : (maxCross + effectivePadH * 2);
+          final measuredHugH = isHorizontal ? (maxCross + effectivePadV * 2) : (totalMain + effectivePadV * 2);
+
+          // If switching to fixed or if current width is invalid, preserve measured hug size as fixed size
+          double updatedWidth = item.width;
+          if (event.horizontalSizing == AutoLayoutSizingMode.fixed &&
+              (item.horizontalSizing != AutoLayoutSizingMode.fixed || item.width <= 0)) {
+            updatedWidth = measuredHugW;
+          }
+
+          double updatedHeight = item.height;
+          if (event.verticalSizing == AutoLayoutSizingMode.fixed &&
+              (item.verticalSizing != AutoLayoutSizingMode.fixed || item.height <= 0)) {
+            updatedHeight = measuredHugH;
+          }
+
           final updated = item.copyWith(
+            width: updatedWidth,
+            height: updatedHeight,
             direction: event.direction,
             gap: event.gap,
             paddingHorizontal: event.paddingHorizontal,
             paddingVertical: event.paddingVertical,
             alignment: event.alignment,
             distribution: event.distribution,
+            horizontalSizing: event.horizontalSizing,
+            verticalSizing: event.verticalSizing,
           );
-          return _recalculateAutoLayoutDimensions(updated);
+          return _recalculateAutoLayoutDimensions(
+            updated,
+            parentAvailableWidth: parentAvailableWidth,
+            parentAvailableHeight: parentAvailableHeight,
+            isTopLevel: isTopLevel,
+            pageHorizontalPadding: pageHorizontalPadding,
+            pageVerticalPadding: pageVerticalPadding,
+          );
         } else {
-          final updatedChildren = _updateAutoLayoutInTree(item.children, targetId, event);
+          final innerW = math.max(10.0, item.width - item.paddingHorizontal * 2);
+          final innerH = math.max(10.0, item.height - item.paddingVertical * 2);
+          final updatedChildren = _updateAutoLayoutInTree(
+            item.children,
+            targetId,
+            event,
+            parentAvailableWidth: innerW,
+            parentAvailableHeight: innerH,
+            isTopLevel: false,
+          );
           final updated = item.copyWith(children: updatedChildren);
-          return _recalculateAutoLayoutDimensions(updated);
+          return _recalculateAutoLayoutDimensions(
+            updated,
+            parentAvailableWidth: parentAvailableWidth,
+            parentAvailableHeight: parentAvailableHeight,
+            isTopLevel: isTopLevel,
+            pageHorizontalPadding: pageHorizontalPadding,
+            pageVerticalPadding: pageVerticalPadding,
+          );
         }
       }
       return item;
@@ -1220,8 +1448,8 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     final paddingH = (textLayer.padding?.horizontal ?? 0.0);
     final paddingV = (textLayer.padding?.vertical ?? 0.0);
 
-    // Exact intrinsic width and height hugging without excess margin
-    final measuredWidth = (textPainter.width + paddingH).ceilToDouble().clamp(1.0, 5000.0);
+    // Intrinsic width and height with ample metric buffer so font rasterization never clips
+    final measuredWidth = (textPainter.width * 1.06 + paddingH + 8.0).ceilToDouble().clamp(1.0, 5000.0);
     final measuredHeight = (textPainter.height + paddingV).ceilToDouble().clamp(1.0, 5000.0);
 
     return textLayer.copyWith(
