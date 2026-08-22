@@ -20,7 +20,7 @@ import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/vector_layer.dart';
-import 'package:layerly/core/utils/svg_vector_parser.dart';
+
 import 'package:layerly/features/editor/presentation/widgets/canvas/vector_node_editor.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -1650,40 +1650,6 @@ class PropertiesPanel extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (isSvg) ...[
-                // Vector Color Tint Swatch
-                _buildColorSwatch(
-                  context,
-                  layer.tintColor ?? Colors.white,
-                  (c) => context.read<EditorBloc>().add(UpdateLayerEvent(layer.copyWith(tintColor: c))),
-                ),
-                const SizedBox(width: 6),
-                // Edit SVG XML button
-                InkWell(
-                  onTap: () => _showSvgCodeEditorDialog(context, layer),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF55EFC4).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF55EFC4).withValues(alpha: 0.5)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.code_rounded, size: 12, color: Color(0xFF55EFC4)),
-                        SizedBox(width: 4),
-                        Text(
-                          'SVG Code',
-                          style: TextStyle(color: Color(0xFF55EFC4), fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-              ],
               InkWell(
                 onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
                 borderRadius: BorderRadius.circular(12),
@@ -1710,59 +1676,6 @@ class PropertiesPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          if (isSvg) ...[
-            // Figma Vector Node Conversion Action
-            InkWell(
-              onTap: () {
-                final vectorLayer = SvgVectorParser.convertImageLayerToVector(layer);
-                final bloc = context.read<EditorBloc>();
-                bloc.add(const DeleteSelectedLayersEvent());
-                bloc.add(AddLayerEvent(vectorLayer));
-                bloc.add(SelectLayerEvent(vectorLayer.id));
-                showVectorNodeEditorSheet(
-                  context,
-                  vectorLayer,
-                  onUpdate: (u) => bloc.add(UpdateLayerEvent(u)),
-                );
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6C5CE7), Color(0xFF0984E3)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.polyline_rounded, size: 14, color: Colors.white),
-                    SizedBox(width: 6),
-                    Text(
-                      '❖ Edit as Figma Vectors (Nodes & Paths)',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
           Row(
             children: [
               Expanded(
