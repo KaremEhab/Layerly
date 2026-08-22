@@ -7,12 +7,9 @@ import 'package:layerly/core/utils/uuid_generator.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
-import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
-import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
-import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
+import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
-import 'package:layerly/features/editor/presentation/widgets/panels/layers_panel.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/components_picker_sheet.dart';
@@ -216,111 +213,226 @@ class BottomToolbox extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
           decoration: BoxDecoration(
-            color: const Color(0xFF1B1927),
+            color: const Color(0xFF161522),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
+                color: Colors.black.withValues(alpha: 0.6),
                 blurRadius: 32,
                 offset: const Offset(0, 12),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Insert Shape',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              // Drag Handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildInsertItem(
-                    ctx,
-                    Icons.rectangle_outlined,
-                    'Rectangle',
-                    () {
+                  const Text(
+                    'Insert Shape & Frame',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => Navigator.pop(ctx),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF22202E),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Figma-style shape & frame menu items
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildFigmaMenuItem(
+                    ctx: ctx,
+                    icon: Icons.crop_free_rounded,
+                    title: 'Frame',
+                    subtitle: 'Freeform container for layers',
+                    shortcut: 'F',
+                    onTap: () {
+                      bloc.add(
+                        AddLayerEvent(
+                          AutoLayoutLayer(
+                            id: UuidGenerator.generate(),
+                            name: 'Frame',
+                            direction: AutoLayoutDirection.none,
+                            x: 120,
+                            y: 160,
+                            width: 340,
+                            height: 260,
+                            backgroundColor: const Color(0xFF1E1C2B),
+                            cornerRadius: 16,
+                            strokeColor: const Color(0xFF37334F),
+                            strokeWidth: 1.5,
+                            horizontalSizing: AutoLayoutSizingMode.fixed,
+                            verticalSizing: AutoLayoutSizingMode.fixed,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 10, color: Color(0xFF242135)),
+                  _buildFigmaMenuItem(
+                    ctx: ctx,
+                    icon: Icons.crop_square_rounded,
+                    title: 'Rectangle',
+                    shortcut: 'R',
+                    onTap: () {
                       bloc.add(
                         AddLayerEvent(
                           ShapeLayer(
                             id: UuidGenerator.generate(),
                             name: 'Rectangle',
                             shapeType: ShapeType.rectangle,
-                            x: 200,
+                            x: 180,
                             y: 200,
                             width: 240,
-                            height: 160,
-                            fill: AppColors.surfaceSecondary,
+                            height: 150,
+                            fill: const Color(0xFF262438),
                             cornerRadius: 12,
-                            strokeColor: AppColors.border,
+                            strokeColor: const Color(0xFF3B3754),
                             strokeWidth: 1.5,
                           ),
                         ),
                       );
                     },
                   ),
-                  _buildInsertItem(ctx, Icons.circle_outlined, 'Circle', () {
-                    bloc.add(
-                      AddLayerEvent(
-                        ShapeLayer(
-                          id: UuidGenerator.generate(),
-                          name: 'Circle',
-                          shapeType: ShapeType.circle,
-                          x: 200,
-                          y: 200,
-                          width: 180,
-                          height: 180,
-                          fill: AppColors.primary,
-                        ),
-                      ),
-                    );
-                  }),
-                  _buildInsertItem(
-                    ctx,
-                    Icons.change_history_rounded,
-                    'Triangle',
-                    () {
+                  _buildFigmaMenuItem(
+                    ctx: ctx,
+                    icon: Icons.horizontal_rule_rounded,
+                    title: 'Line',
+                    shortcut: 'L',
+                    onTap: () {
                       bloc.add(
                         AddLayerEvent(
                           ShapeLayer(
                             id: UuidGenerator.generate(),
-                            name: 'Triangle',
-                            shapeType: ShapeType.triangle,
-                            x: 200,
-                            y: 200,
-                            width: 180,
-                            height: 180,
-                            fill: AppColors.primaryLight,
+                            name: 'Line',
+                            shapeType: ShapeType.line,
+                            x: 180,
+                            y: 240,
+                            width: 220,
+                            height: 4,
+                            strokeWidth: 3.0,
+                            fill: const Color(0xFF8B5CF6),
                           ),
                         ),
                       );
                     },
                   ),
-                  _buildInsertItem(
-                    ctx,
-                    Icons.horizontal_rule_rounded,
-                    'Line',
-                    () {
+                  _buildFigmaMenuItem(
+                    ctx: ctx,
+                    icon: Icons.arrow_outward_rounded,
+                    title: 'Arrow',
+                    shortcut: 'Shift+L',
+                    onTap: () {
                       bloc.add(
                         AddLayerEvent(
                           ShapeLayer(
                             id: UuidGenerator.generate(),
-                            name: 'Line Divider',
-                            shapeType: ShapeType.line,
+                            name: 'Arrow',
+                            shapeType: ShapeType.arrow,
+                            x: 180,
+                            y: 200,
+                            width: 220,
+                            height: 24,
+                            strokeWidth: 3.0,
+                            fill: const Color(0xFF6C5CE7),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildFigmaMenuItem(
+                    ctx: ctx,
+                    icon: Icons.circle_outlined,
+                    title: 'Ellipse',
+                    shortcut: 'O',
+                    onTap: () {
+                      bloc.add(
+                        AddLayerEvent(
+                          ShapeLayer(
+                            id: UuidGenerator.generate(),
+                            name: 'Ellipse',
+                            shapeType: ShapeType.circle,
                             x: 200,
                             y: 200,
-                            width: 200,
-                            height: 4,
-                            fill: AppColors.primary,
+                            width: 180,
+                            height: 180,
+                            fill: const Color(0xFF6C5CE7),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildFigmaMenuItem(
+                    ctx: ctx,
+                    icon: Icons.change_history_rounded,
+                    title: 'Polygon',
+                    subtitle: 'Triangle',
+                    onTap: () {
+                      bloc.add(
+                        AddLayerEvent(
+                          ShapeLayer(
+                            id: UuidGenerator.generate(),
+                            name: 'Polygon',
+                            shapeType: ShapeType.triangle,
+                            x: 200,
+                            y: 200,
+                            width: 180,
+                            height: 180,
+                            fill: const Color(0xFF8B5CF6),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildFigmaMenuItem(
+                    ctx: ctx,
+                    icon: Icons.star_border_rounded,
+                    title: 'Star',
+                    onTap: () {
+                      bloc.add(
+                        AddLayerEvent(
+                          ShapeLayer(
+                            id: UuidGenerator.generate(),
+                            name: 'Star',
+                            shapeType: ShapeType.star,
+                            x: 200,
+                            y: 200,
+                            width: 180,
+                            height: 180,
+                            fill: const Color(0xFFFFB800),
                           ),
                         ),
                       );
@@ -330,6 +442,74 @@ class BottomToolbox extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFigmaMenuItem({
+    required BuildContext ctx,
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    String? shortcut,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: () {
+        Navigator.pop(ctx);
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: Colors.white70),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Row(
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      '• $subtitle',
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (shortcut != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF221F33),
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(color: const Color(0xFF332E4A)),
+                ),
+                child: Text(
+                  shortcut,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -598,43 +778,6 @@ class BottomToolbox extends StatelessWidget {
       ),
     ),
   );
-}
-
-  Widget _buildInsertItem(
-    BuildContext ctx,
-    IconData icon,
-    String label,
-    VoidCallback onInsert,
-  ) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(ctx);
-        onInsert();
-      },
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceSecondary,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.primary, size: 24),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

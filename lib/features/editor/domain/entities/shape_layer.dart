@@ -10,6 +10,9 @@ class ShapeLayer extends Layer {
   final double strokeWidth;
   final double cornerRadius;
   final List<BoxShadow>? shadows;
+  final StrokePosition strokePosition;
+  final ArrowHeadStyle startHead;
+  final ArrowHeadStyle endHead;
 
   const ShapeLayer({
     required super.id,
@@ -30,6 +33,9 @@ class ShapeLayer extends Layer {
     this.strokeWidth = 0.0,
     this.cornerRadius = 12.0,
     this.shadows,
+    this.strokePosition = StrokePosition.center,
+    this.startHead = ArrowHeadStyle.none,
+    this.endHead = ArrowHeadStyle.lineArrow,
   }) : super(type: LayerType.shape);
 
   @override
@@ -78,6 +84,9 @@ class ShapeLayer extends Layer {
     double? strokeWidth,
     double? cornerRadius,
     List<BoxShadow>? shadows,
+    StrokePosition? strokePosition,
+    ArrowHeadStyle? startHead,
+    ArrowHeadStyle? endHead,
   }) {
     return ShapeLayer(
       id: id ?? this.id,
@@ -98,6 +107,9 @@ class ShapeLayer extends Layer {
       strokeWidth: strokeWidth ?? this.strokeWidth,
       cornerRadius: cornerRadius ?? this.cornerRadius,
       shadows: shadows ?? this.shadows,
+      strokePosition: strokePosition ?? this.strokePosition,
+      startHead: startHead ?? this.startHead,
+      endHead: endHead ?? this.endHead,
     );
   }
 
@@ -111,5 +123,8 @@ class ShapeLayer extends Layer {
         strokeWidth,
         cornerRadius,
         shadows,
+        strokePosition,
+        startHead,
+        endHead,
       ];
 }

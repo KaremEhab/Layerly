@@ -23,8 +23,14 @@ class LayerView extends StatelessWidget {
   final Function(String layerId, bool isMulti)? onSelectLayer;
   final List<String> selectedLayerIds;
   final double scale;
-  final Function(String layerId, ResizeHandle handle, DragUpdateDetails details)? onResizeLayer;
-  final Function(String layerId, ResizeHandle handle, DragEndDetails details)? onResizeLayerEnd;
+  final Function(
+    String layerId,
+    ResizeHandle handle,
+    DragUpdateDetails details,
+  )?
+  onResizeLayer;
+  final Function(String layerId, ResizeHandle handle, DragEndDetails details)?
+  onResizeLayerEnd;
   final Function(String layerId, double angle, bool isFinal)? onRotateLayer;
 
   const LayerView({
@@ -66,12 +72,8 @@ class LayerView extends StatelessWidget {
       content = const SizedBox.shrink();
     }
 
-    return Opacity(
-      opacity: layer.opacity.clamp(0.0, 1.0),
-      child: content,
-    );
+    return Opacity(opacity: layer.opacity.clamp(0.0, 1.0), child: content);
   }
-
 
   Widget _buildTextLayer(TextLayer layer) {
     TextStyle style;
@@ -114,7 +116,10 @@ class LayerView extends StatelessWidget {
       textWidget = ShaderMask(
         shaderCallback: (bounds) => layer.textGradient!.createShader(bounds),
         child: Text.rich(
-          TextSpanParser.parseToTextSpan(layer.content, style.copyWith(color: Colors.white)),
+          TextSpanParser.parseToTextSpan(
+            layer.content,
+            style.copyWith(color: Colors.white),
+          ),
           textAlign: layer.textAlign,
           softWrap: false,
           overflow: TextOverflow.visible,
@@ -162,10 +167,7 @@ class LayerView extends StatelessWidget {
           color: layer.gradient == null ? layer.fill : null,
           gradient: layer.gradient,
           border: layer.strokeColor != null && layer.strokeWidth > 0
-              ? Border.all(
-                  color: layer.strokeColor!,
-                  width: layer.strokeWidth,
-                )
+              ? Border.all(color: layer.strokeColor!, width: layer.strokeWidth)
               : null,
           boxShadow: layer.shadows,
         ),
@@ -179,11 +181,62 @@ class LayerView extends StatelessWidget {
         alignment: Alignment.center,
         child: Container(
           width: layer.width,
-          height: layer.strokeWidth > 0 ? layer.strokeWidth : layer.height,
+          height: layer.strokeWidth > 0
+              ? layer.strokeWidth
+              : math.max(2.0, layer.height),
           decoration: BoxDecoration(
             color: layer.fill,
             borderRadius: BorderRadius.circular(layer.cornerRadius),
             boxShadow: layer.shadows,
+          ),
+        ),
+      );
+    }
+
+    if (layer.shapeType == ShapeType.triangle) {
+      return SizedBox(
+        width: layer.width,
+        height: layer.height,
+        child: CustomPaint(
+          painter: _PolygonShapePainter(
+            fillColor: layer.fill,
+            strokeColor: layer.strokeColor,
+            strokeWidth: layer.strokeWidth,
+            gradient: layer.gradient,
+            sides: 3,
+          ),
+        ),
+      );
+    }
+
+    if (layer.shapeType == ShapeType.star) {
+      return SizedBox(
+        width: layer.width,
+        height: layer.height,
+        child: CustomPaint(
+          painter: _StarShapePainter(
+            fillColor: layer.fill,
+            strokeColor: layer.strokeColor,
+            strokeWidth: layer.strokeWidth,
+            gradient: layer.gradient,
+            points: 5,
+          ),
+        ),
+      );
+    }
+
+    if (layer.shapeType == ShapeType.arrow) {
+      return SizedBox(
+        width: layer.width,
+        height: layer.height,
+        child: CustomPaint(
+          painter: _ArrowShapePainter(
+            color: layer.fill,
+            strokeColor: layer.strokeColor,
+            strokeWidth: layer.strokeWidth > 0 ? layer.strokeWidth : 3.0,
+            startHead: layer.startHead,
+            endHead: layer.endHead,
+            strokePosition: layer.strokePosition,
           ),
         ),
       );
@@ -197,10 +250,7 @@ class LayerView extends StatelessWidget {
         gradient: layer.gradient,
         borderRadius: BorderRadius.circular(layer.cornerRadius),
         border: layer.strokeColor != null && layer.strokeWidth > 0
-            ? Border.all(
-                color: layer.strokeColor!,
-                width: layer.strokeWidth,
-              )
+            ? Border.all(color: layer.strokeColor!, width: layer.strokeWidth)
             : null,
         boxShadow: layer.shadows,
       ),
@@ -272,7 +322,9 @@ class LayerView extends StatelessWidget {
       width: layer.width,
       height: layer.height,
       decoration: BoxDecoration(
-        borderRadius: layer.borderRadius > 0 ? BorderRadius.circular(layer.borderRadius) : null,
+        borderRadius: layer.borderRadius > 0
+            ? BorderRadius.circular(layer.borderRadius)
+            : null,
         border: layer.borderColor != null && layer.borderWidth > 0
             ? Border.all(color: layer.borderColor!, width: layer.borderWidth)
             : null,
@@ -353,28 +405,31 @@ class LayerView extends StatelessWidget {
           children: [
             // Inner Screen Content (or Simulated Uber/App UI)
             if (layer.screenImagePath != null)
-              Builder(builder: (ctx) {
-                final file = File(layer.screenImagePath!);
-                if (file.existsSync()) {
-                  if (layer.screenImagePath!.toLowerCase().endsWith('.svg')) {
-                    return SvgPicture.file(
-                      file,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                    );
-                  } else {
-                    return Image.file(
-                      file,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      errorBuilder: (ctx, err, stack) => _buildSimulatedAppScreen(),
-                    );
+              Builder(
+                builder: (ctx) {
+                  final file = File(layer.screenImagePath!);
+                  if (file.existsSync()) {
+                    if (layer.screenImagePath!.toLowerCase().endsWith('.svg')) {
+                      return SvgPicture.file(
+                        file,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                      );
+                    } else {
+                      return Image.file(
+                        file,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (ctx, err, stack) =>
+                            _buildSimulatedAppScreen(),
+                      );
+                    }
                   }
-                }
-                return _buildSimulatedAppScreen();
-              })
+                  return _buildSimulatedAppScreen();
+                },
+              )
             else
               _buildSimulatedAppScreen(),
 
@@ -404,9 +459,7 @@ class LayerView extends StatelessWidget {
     return SizedBox(
       width: layer.width,
       height: layer.height,
-      child: CustomPaint(
-        painter: _VectorCanvasPainter(layer: layer),
-      ),
+      child: CustomPaint(painter: _VectorCanvasPainter(layer: layer)),
     );
   }
 
@@ -433,7 +486,11 @@ class LayerView extends StatelessWidget {
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.directions_car, size: 16, color: Colors.black),
+                        Icon(
+                          Icons.directions_car,
+                          size: 16,
+                          color: Colors.black,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           'Rides',
@@ -453,7 +510,11 @@ class LayerView extends StatelessWidget {
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.lunch_dining, size: 16, color: Colors.black54),
+                        Icon(
+                          Icons.lunch_dining,
+                          size: 16,
+                          color: Colors.black54,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           'Eats',
@@ -491,7 +552,11 @@ class LayerView extends StatelessWidget {
                     ),
                   ),
                   Spacer(),
-                  Icon(Icons.access_time_filled, size: 14, color: Colors.black54),
+                  Icon(
+                    Icons.access_time_filled,
+                    size: 14,
+                    color: Colors.black54,
+                  ),
                   SizedBox(width: 4),
                   Text(
                     'Now',
@@ -586,17 +651,27 @@ class LayerView extends StatelessWidget {
                         Container(
                           height: 45,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFD54F).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFFFFD54F,
+                            ).withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Center(
-                            child: Icon(Icons.electric_scooter, color: Colors.deepOrange, size: 24),
+                            child: Icon(
+                              Icons.electric_scooter,
+                              color: Colors.deepOrange,
+                              size: 24,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 4),
                         const Text(
                           'Go on 2 wheels →',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                         const Text(
                           'Take an electric bike',
@@ -620,17 +695,27 @@ class LayerView extends StatelessWidget {
                         Container(
                           height: 45,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF81C784).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFF81C784,
+                            ).withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Center(
-                            child: Icon(Icons.car_rental, color: Colors.teal, size: 24),
+                            child: Icon(
+                              Icons.car_rental,
+                              color: Colors.teal,
+                              size: 24,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 4),
                         const Text(
                           'Add a stop or 5 →',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                         const Text(
                           'Pick up something',
@@ -648,14 +733,26 @@ class LayerView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.only(top: 8),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFEEEEEE), width: 1)),
+                border: Border(
+                  top: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+                ),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _MockTabItem(icon: Icons.home, label: 'Home', isSelected: true),
-                  _MockTabItem(icon: Icons.grid_view_rounded, label: 'Services'),
-                  _MockTabItem(icon: Icons.receipt_long_rounded, label: 'Activity'),
+                  _MockTabItem(
+                    icon: Icons.home,
+                    label: 'Home',
+                    isSelected: true,
+                  ),
+                  _MockTabItem(
+                    icon: Icons.grid_view_rounded,
+                    label: 'Services',
+                  ),
+                  _MockTabItem(
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Activity',
+                  ),
                   _MockTabItem(icon: Icons.person_rounded, label: 'Account'),
                 ],
               ),
@@ -666,9 +763,24 @@ class LayerView extends StatelessWidget {
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Text('|||', style: TextStyle(color: Colors.black45, fontSize: 11, fontWeight: FontWeight.w900)),
-                Icon(Icons.crop_square_rounded, size: 12, color: Colors.black45),
-                Icon(Icons.arrow_back_ios_new_rounded, size: 10, color: Colors.black45),
+                Text(
+                  '|||',
+                  style: TextStyle(
+                    color: Colors.black45,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Icon(
+                  Icons.crop_square_rounded,
+                  size: 12,
+                  color: Colors.black45,
+                ),
+                Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 10,
+                  color: Colors.black45,
+                ),
               ],
             ),
           ],
@@ -692,7 +804,11 @@ class LayerView extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.black87),
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
           ],
         ),
@@ -792,12 +908,25 @@ class LayerView extends StatelessWidget {
     final paddingV = textLayer.padding?.vertical ?? 0.0;
 
     return Size(
-      (textPainter.width * 1.06 + paddingH + 8.0).ceilToDouble().clamp(1.0, 5000.0),
+      (textPainter.width * 1.06 + paddingH + 8.0).ceilToDouble().clamp(
+        1.0,
+        5000.0,
+      ),
       (textPainter.height + paddingV).ceilToDouble().clamp(1.0, 5000.0),
     );
   }
 
-  static Size measureAutoLayoutSize(AutoLayoutLayer layer, {double? parentWidth, double? parentHeight}) {
+  static Size measureAutoLayoutSize(
+    AutoLayoutLayer layer, {
+    double? parentWidth,
+    double? parentHeight,
+  }) {
+    if (layer.direction == AutoLayoutDirection.none) {
+      double maxW = layer.width > 0 ? layer.width : 340.0;
+      double maxH = layer.height > 0 ? layer.height : 260.0;
+      return Size(maxW.clamp(1.0, 5000.0), maxH.clamp(1.0, 5000.0));
+    }
+
     double requiredMainAxis = 0;
     double maxCrossAxis = 0;
     final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
@@ -806,7 +935,9 @@ class LayerView extends StatelessWidget {
       final child = layer.children[i];
       final childSize = child is TextLayer
           ? measureTextSize(child)
-          : (child is AutoLayoutLayer ? measureAutoLayoutSize(child) : Size(child.width, child.height));
+          : (child is AutoLayoutLayer
+                ? measureAutoLayoutSize(child)
+                : Size(child.width, child.height));
       if (isHorizontal) {
         requiredMainAxis += childSize.width;
         if (childSize.height > maxCrossAxis) maxCrossAxis = childSize.height;
@@ -831,7 +962,9 @@ class LayerView extends StatelessWidget {
         finalWidth = layer.width > 0 ? layer.width : hugWidth.ceilToDouble();
         break;
       case AutoLayoutSizingMode.fill:
-        finalWidth = parentWidth ?? (layer.width > 0 ? layer.width : hugWidth.ceilToDouble());
+        finalWidth =
+            parentWidth ??
+            (layer.width > 0 ? layer.width : hugWidth.ceilToDouble());
         break;
       case AutoLayoutSizingMode.hug:
         finalWidth = hugWidth.ceilToDouble();
@@ -841,44 +974,137 @@ class LayerView extends StatelessWidget {
     double finalHeight;
     switch (layer.verticalSizing) {
       case AutoLayoutSizingMode.fixed:
-        finalHeight = layer.height > 0 ? layer.height : hugHeight.ceilToDouble();
+        finalHeight = layer.height > 0
+            ? layer.height
+            : hugHeight.ceilToDouble();
         break;
       case AutoLayoutSizingMode.fill:
-        finalHeight = parentHeight ?? (layer.height > 0 ? layer.height : hugHeight.ceilToDouble());
+        finalHeight =
+            parentHeight ??
+            (layer.height > 0 ? layer.height : hugHeight.ceilToDouble());
         break;
       case AutoLayoutSizingMode.hug:
         finalHeight = hugHeight.ceilToDouble();
         break;
     }
 
-    return Size(
-      finalWidth.clamp(1.0, 5000.0),
-      finalHeight.clamp(1.0, 5000.0),
-    );
+    return Size(finalWidth.clamp(1.0, 5000.0), finalHeight.clamp(1.0, 5000.0));
   }
 
   Widget _buildAutoLayoutLayer(AutoLayoutLayer layer) {
     final size = measureAutoLayoutSize(layer);
+
+    if (layer.direction == AutoLayoutDirection.none) {
+      return Container(
+        width: size.width,
+        height: size.height,
+        clipBehavior: Clip.none,
+        decoration: BoxDecoration(
+          color: layer.backgroundColor ?? Colors.transparent,
+          borderRadius: BorderRadius.circular(layer.cornerRadius),
+          border: layer.strokeWidth > 0 && layer.strokeColor != null
+              ? Border.all(
+                  color: layer.strokeColor!,
+                  width: layer.strokeWidth,
+                  strokeAlign: switch (layer.strokePosition) {
+                    StrokePosition.inside => BorderSide.strokeAlignInside,
+                    StrokePosition.center => BorderSide.strokeAlignCenter,
+                    StrokePosition.outside => BorderSide.strokeAlignOutside,
+                  },
+                )
+              : null,
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            for (int i = 0; i < layer.children.length; i++) ...[
+              () {
+                final child = layer.children[i];
+                final isChildSelected = selectedLayerIds.contains(child.id);
+
+                Widget childView = LayerView(
+                  layer: child,
+                  getComponentDefinition: getComponentDefinition,
+                  onSelectLayer: onSelectLayer,
+                  selectedLayerIds: selectedLayerIds,
+                  scale: scale,
+                  onResizeLayer: onResizeLayer,
+                  onResizeLayerEnd: onResizeLayerEnd,
+                  onRotateLayer: onRotateLayer,
+                );
+
+                if (isChildSelected) {
+                  childView = Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      childView,
+                      TransformBox(
+                        layer: child,
+                        scale: scale,
+                        onResize: (handle, details) {
+                          onResizeLayer?.call(child.id, handle, details);
+                        },
+                        onResizeEnd: (handle, details) {
+                          onResizeLayerEnd?.call(child.id, handle, details);
+                        },
+                        onRotate: (angle, isFinal) {
+                          onRotateLayer?.call(child.id, angle, isFinal);
+                        },
+                      ),
+                    ],
+                  );
+                }
+
+                return Positioned(
+                  left: child.x,
+                  top: child.y,
+                  width: child.width,
+                  height: child.height,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      onSelectLayer?.call(child.id, false);
+                    },
+                    child: childView,
+                  ),
+                );
+              }(),
+            ],
+          ],
+        ),
+      );
+    }
+
     final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
     final innerW = math.max(0.0, size.width - layer.paddingHorizontal * 2);
     final innerH = math.max(0.0, size.height - layer.paddingVertical * 2);
 
     // Calculate dynamic auto gap when spaceBetween is active
     double effectiveGap = layer.gap;
-    if (layer.distribution == AutoLayoutDistribution.spaceBetween && layer.children.length > 1) {
+    if (layer.distribution == AutoLayoutDistribution.spaceBetween &&
+        layer.children.length > 1) {
       double totalChildrenSize = 0;
       for (final child in layer.children) {
         final cSize = child is TextLayer
             ? measureTextSize(child)
-            : (child is AutoLayoutLayer ? measureAutoLayoutSize(child) : Size(child.width, child.height));
+            : (child is AutoLayoutLayer
+                  ? measureAutoLayoutSize(child)
+                  : Size(child.width, child.height));
         totalChildrenSize += isHorizontal ? cSize.width : cSize.height;
       }
       final available = isHorizontal ? innerW : innerH;
-      effectiveGap = math.max(0.0, (available - totalChildrenSize) / (layer.children.length - 1));
+      effectiveGap = math.max(
+        0.0,
+        (available - totalChildrenSize) / (layer.children.length - 1),
+      );
     }
 
-    final alignX = isHorizontal ? _getDistOffset(layer.distribution) : _getAlignOffset(layer.alignment);
-    final alignY = isHorizontal ? _getAlignOffset(layer.alignment) : _getDistOffset(layer.distribution);
+    final alignX = isHorizontal
+        ? _getDistOffset(layer.distribution)
+        : _getAlignOffset(layer.alignment);
+    final alignY = isHorizontal
+        ? _getAlignOffset(layer.alignment)
+        : _getDistOffset(layer.distribution);
     final boxAlignment = Alignment(alignX, alignY);
 
     return Container(
@@ -930,17 +1156,23 @@ class LayerView extends StatelessWidget {
                   final childSize = child is TextLayer
                       ? measureTextSize(child)
                       : (child is AutoLayoutLayer
-                          ? measureAutoLayoutSize(
-                              child,
-                              parentWidth: innerW,
-                              parentHeight: innerH,
-                            )
-                          : Size(child.width, child.height));
+                            ? measureAutoLayoutSize(
+                                child,
+                                parentWidth: innerW,
+                                parentHeight: innerH,
+                              )
+                            : Size(child.width, child.height));
                   final childLayer = child is TextLayer
-                      ? child.copyWith(width: childSize.width, height: childSize.height)
+                      ? child.copyWith(
+                          width: childSize.width,
+                          height: childSize.height,
+                        )
                       : (child is AutoLayoutLayer
-                          ? child.copyWith(width: childSize.width, height: childSize.height)
-                          : child);
+                            ? child.copyWith(
+                                width: childSize.width,
+                                height: childSize.height,
+                              )
+                            : child);
 
                   Widget childView = LayerView(
                     layer: childLayer,
@@ -1067,11 +1299,7 @@ class _MockTabItem extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: isSelected ? Colors.black : Colors.black45,
-        ),
+        Icon(icon, size: 16, color: isSelected ? Colors.black : Colors.black45),
         const SizedBox(height: 2),
         Text(
           label,
@@ -1113,8 +1341,12 @@ class _VectorCanvasPainter extends CustomPainter {
         final py = p.y * size.height;
 
         if (p.isSmooth && (p.handleInX != null || prev.handleOutX != null)) {
-          final cp1x = (prev.handleOutX != null) ? prev.handleOutX! * size.width : prev.x * size.width;
-          final cp1y = (prev.handleOutY != null) ? prev.handleOutY! * size.height : prev.y * size.height;
+          final cp1x = (prev.handleOutX != null)
+              ? prev.handleOutX! * size.width
+              : prev.x * size.width;
+          final cp1y = (prev.handleOutY != null)
+              ? prev.handleOutY! * size.height
+              : prev.y * size.height;
           final cp2x = (p.handleInX != null) ? p.handleInX! * size.width : px;
           final cp2y = (p.handleInY != null) ? p.handleInY! * size.height : py;
           path.cubicTo(cp1x, cp1y, cp2x, cp2y, px, py);
@@ -1126,11 +1358,20 @@ class _VectorCanvasPainter extends CustomPainter {
       if (elem.isClosed) {
         final last = points.last;
         final first = points.first;
-        if (first.isSmooth && (first.handleInX != null || last.handleOutX != null)) {
-          final cp1x = (last.handleOutX != null) ? last.handleOutX! * size.width : last.x * size.width;
-          final cp1y = (last.handleOutY != null) ? last.handleOutY! * size.height : last.y * size.height;
-          final cp2x = (first.handleInX != null) ? first.handleInX! * size.width : startX;
-          final cp2y = (first.handleInY != null) ? first.handleInY! * size.height : startY;
+        if (first.isSmooth &&
+            (first.handleInX != null || last.handleOutX != null)) {
+          final cp1x = (last.handleOutX != null)
+              ? last.handleOutX! * size.width
+              : last.x * size.width;
+          final cp1y = (last.handleOutY != null)
+              ? last.handleOutY! * size.height
+              : last.y * size.height;
+          final cp2x = (first.handleInX != null)
+              ? first.handleInX! * size.width
+              : startX;
+          final cp2y = (first.handleInY != null)
+              ? first.handleInY! * size.height
+              : startY;
           path.cubicTo(cp1x, cp1y, cp2x, cp2y, startX, startY);
         } else {
           path.close();
@@ -1148,7 +1389,9 @@ class _VectorCanvasPainter extends CustomPainter {
       // Stroke
       if (elem.strokeColor != null && elem.strokeWidth > 0) {
         final strokePaint = Paint()
-          ..color = elem.strokeColor!.withValues(alpha: elem.opacity.clamp(0.0, 1.0))
+          ..color = elem.strokeColor!.withValues(
+            alpha: elem.opacity.clamp(0.0, 1.0),
+          )
           ..strokeWidth = elem.strokeWidth
           ..strokeCap = elem.strokeCap
           ..strokeJoin = elem.strokeJoin
@@ -1160,4 +1403,273 @@ class _VectorCanvasPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _VectorCanvasPainter oldDelegate) => true;
+}
+
+class _PolygonShapePainter extends CustomPainter {
+  final Color fillColor;
+  final Color? strokeColor;
+  final double strokeWidth;
+  final Gradient? gradient;
+  final int sides;
+
+  _PolygonShapePainter({
+    required this.fillColor,
+    this.strokeColor,
+    this.strokeWidth = 0,
+    this.gradient,
+    this.sides = 3,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+
+    // Equilateral/Isosceles triangle pointing up
+    path.moveTo(w / 2, 0);
+    path.lineTo(w, h);
+    path.lineTo(0, h);
+    path.close();
+
+    final paint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
+
+    if (gradient != null) {
+      paint.shader = gradient!.createShader(Offset.zero & size);
+    }
+
+    canvas.drawPath(path, paint);
+
+    if (strokeColor != null && strokeWidth > 0) {
+      final strokePaint = Paint()
+        ..color = strokeColor!
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(path, strokePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PolygonShapePainter oldDelegate) =>
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.strokeColor != strokeColor ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.gradient != gradient ||
+      oldDelegate.sides != sides;
+}
+
+class _StarShapePainter extends CustomPainter {
+  final Color fillColor;
+  final Color? strokeColor;
+  final double strokeWidth;
+  final Gradient? gradient;
+  final int points;
+
+  _StarShapePainter({
+    required this.fillColor,
+    this.strokeColor,
+    this.strokeWidth = 0,
+    this.gradient,
+    this.points = 5,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path();
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final outerRadius = math.min(cx, cy);
+    final innerRadius = outerRadius * 0.42;
+
+    final double step = math.pi / points;
+    double angle = -math.pi / 2;
+
+    for (int i = 0; i < points * 2; i++) {
+      final r = (i % 2 == 0) ? outerRadius : innerRadius;
+      final x = cx + math.cos(angle) * r;
+      final y = cy + math.sin(angle) * r;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+      angle += step;
+    }
+    path.close();
+
+    final paint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
+
+    if (gradient != null) {
+      paint.shader = gradient!.createShader(Offset.zero & size);
+    }
+
+    canvas.drawPath(path, paint);
+
+    if (strokeColor != null && strokeWidth > 0) {
+      final strokePaint = Paint()
+        ..color = strokeColor!
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(path, strokePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StarShapePainter oldDelegate) =>
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.strokeColor != strokeColor ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.gradient != gradient;
+}
+
+class _ArrowShapePainter extends CustomPainter {
+  final Color color;
+  final Color? strokeColor;
+  final double strokeWidth;
+  final ArrowHeadStyle startHead;
+  final ArrowHeadStyle endHead;
+  final StrokePosition strokePosition;
+
+  _ArrowShapePainter({
+    required this.color,
+    this.strokeColor,
+    required this.strokeWidth,
+    this.startHead = ArrowHeadStyle.none,
+    this.endHead = ArrowHeadStyle.lineArrow,
+    this.strokePosition = StrokePosition.center,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final effectiveColor = strokeColor ?? color;
+
+    final strokeCap = switch (startHead) {
+      ArrowHeadStyle.round => StrokeCap.round,
+      ArrowHeadStyle.square => StrokeCap.square,
+      _ => StrokeCap.butt,
+    };
+
+    final strokePaint = Paint()
+      ..color = effectiveColor
+      ..strokeWidth = strokeWidth
+      ..strokeCap = strokeCap
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final fillPaint = Paint()
+      ..color = effectiveColor
+      ..style = PaintingStyle.fill;
+
+    // Center the arrow vertically along the middle of the layer
+    final y = size.height / 2;
+    final p0 = Offset(0, y);
+    final p1 = Offset(size.width, y);
+
+    final delta = p1 - p0;
+    final angle = math.atan2(delta.dy, delta.dx);
+    // Arrowhead size with prominent, balanced tip proportions matching Figma
+    final double headSize = (strokeWidth * 5.5).clamp(16.0, 80.0);
+
+    // Draw main line shaft
+    canvas.drawLine(p0, p1, strokePaint);
+
+    // Draw Start Terminal
+    _drawHead(
+      canvas,
+      p0,
+      angle + math.pi,
+      startHead,
+      strokePaint,
+      fillPaint,
+      headSize,
+    );
+
+    // Draw End Terminal
+    _drawHead(canvas, p1, angle, endHead, strokePaint, fillPaint, headSize);
+  }
+
+  void _drawHead(
+    Canvas canvas,
+    Offset point,
+    double angle,
+    ArrowHeadStyle style,
+    Paint strokePaint,
+    Paint fillPaint,
+    double headSize,
+  ) {
+    if (style == ArrowHeadStyle.none ||
+        style == ArrowHeadStyle.round ||
+        style == ArrowHeadStyle.square) {
+      return;
+    }
+
+    canvas.save();
+    canvas.translate(point.dx, point.dy);
+    canvas.rotate(angle);
+
+    final path = Path();
+    switch (style) {
+      case ArrowHeadStyle.lineArrow:
+        path.moveTo(-headSize, -headSize * 0.62);
+        path.lineTo(0, 0);
+        path.lineTo(-headSize, headSize * 0.62);
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      case ArrowHeadStyle.triangleArrow:
+        path.moveTo(0, 0);
+        path.lineTo(-headSize, -headSize * 0.58);
+        path.lineTo(-headSize, headSize * 0.58);
+        path.close();
+        canvas.drawPath(path, fillPaint);
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      case ArrowHeadStyle.reversedTriangle:
+        path.moveTo(-headSize, 0);
+        path.lineTo(0, -headSize * 0.58);
+        path.lineTo(0, headSize * 0.58);
+        path.close();
+        canvas.drawPath(path, fillPaint);
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      case ArrowHeadStyle.circleArrow:
+        final r = headSize * 0.42;
+        canvas.drawCircle(Offset(-r, 0), r, fillPaint);
+        canvas.drawCircle(Offset(-r, 0), r, strokePaint);
+        break;
+
+      case ArrowHeadStyle.diamondArrow:
+        final d = headSize * 0.55;
+        path.moveTo(0, 0);
+        path.lineTo(-d, -d * 0.65);
+        path.lineTo(-d * 2, 0);
+        path.lineTo(-d, d * 0.65);
+        path.close();
+        canvas.drawPath(path, fillPaint);
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      default:
+        break;
+    }
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArrowShapePainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.strokeColor != strokeColor ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.startHead != startHead ||
+      oldDelegate.endHead != endHead ||
+      oldDelegate.strokePosition != strokePosition;
 }

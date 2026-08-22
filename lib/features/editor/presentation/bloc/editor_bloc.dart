@@ -189,7 +189,29 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     final activePage = state.activePage;
     final layerIndex = activePage.layers.indexWhere((l) => l.id == event.layerId);
     if (layerIndex == -1) {
-      if (event.isFinal) {
+      final treeLayer = state.findLayerById(event.layerId);
+      if (treeLayer != null && !treeLayer.locked) {
+        final updatedLayer = treeLayer.copyWithTransform(
+          x: treeLayer.x + event.dx,
+          y: treeLayer.y + event.dy,
+        );
+        final updatedLayers = _updateLayerInTree(activePage.layers, updatedLayer);
+        final updatedPage = activePage.copyWith(layers: updatedLayers);
+        final updatedPages = List<CanvasPage>.from(state.project.pages);
+        updatedPages[state.project.activePageIndex] = updatedPage;
+        final updatedProject = state.project.copyWith(pages: updatedPages);
+
+        emit(state.copyWith(
+          project: updatedProject,
+          activeSnapGuides: [],
+          activeSpacingMeasurements: [],
+          isInteracting: !event.isFinal,
+          undoStack: event.isFinal
+              ? _pushHistory(state.project, state.undoStack)
+              : state.undoStack,
+          redoStack: event.isFinal ? [] : state.redoStack,
+        ));
+      } else if (event.isFinal) {
         emit(state.copyWith(
           activeSnapGuides: [],
           activeSpacingMeasurements: [],
@@ -311,6 +333,12 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     }
     if (newH < minSize) {
       newH = minSize;
+      newY = layer.y;
+    }
+
+    if (layer is ShapeLayer && (layer.shapeType == ShapeType.arrow || layer.shapeType == ShapeType.line)) {
+      // Arrow / Line: Only adjust width (length), keep height and Y constant
+      newH = layer.height;
       newY = layer.y;
     }
 
@@ -711,6 +739,12 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       );
       return _recalculateTextDimensions(scaled);
     } else if (layer is ShapeLayer) {
+      if (layer.shapeType == ShapeType.arrow || layer.shapeType == ShapeType.line) {
+        // When scaling the arrow, increase the width only, not the height nor stroke width
+        return layer.copyWith(
+          width: (layer.width * factor).clamp(1.0, 50000.0),
+        );
+      }
       return layer.copyWith(
         width: (layer.width * factor).clamp(1.0, 50000.0),
         height: (layer.height * factor).clamp(1.0, 50000.0),

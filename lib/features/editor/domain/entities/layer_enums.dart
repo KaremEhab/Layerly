@@ -13,6 +13,7 @@ enum LayerType {
 enum AutoLayoutDirection {
   horizontal,
   vertical,
+  none,
 }
 
 enum AutoLayoutAlignment {
@@ -76,5 +77,16 @@ enum StrokePosition {
   inside,
   center,
   outside,
+}
+
+enum ArrowHeadStyle {
+  none,
+  round,
+  square,
+  lineArrow,
+  triangleArrow,
+  reversedTriangle,
+  circleArrow,
+  diamondArrow,
 }
 

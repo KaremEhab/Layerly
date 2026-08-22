@@ -516,10 +516,11 @@ class PropertiesPanel extends StatelessWidget {
               const Spacer(),
               InkWell(
                 onTap: () {
-                  final nextDir =
-                      layer.direction == AutoLayoutDirection.horizontal
-                      ? AutoLayoutDirection.vertical
-                      : AutoLayoutDirection.horizontal;
+                  final nextDir = switch (layer.direction) {
+                    AutoLayoutDirection.horizontal => AutoLayoutDirection.vertical,
+                    AutoLayoutDirection.vertical => AutoLayoutDirection.none,
+                    AutoLayoutDirection.none => AutoLayoutDirection.horizontal,
+                  };
                   onUpdate(layer.copyWith(direction: nextDir));
                 },
                 borderRadius: BorderRadius.circular(12),
@@ -536,9 +537,11 @@ class PropertiesPanel extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        layer.direction == AutoLayoutDirection.horizontal
-                            ? 'Horizontal'
-                            : 'Vertical',
+                        switch (layer.direction) {
+                          AutoLayoutDirection.horizontal => 'Horizontal',
+                          AutoLayoutDirection.vertical => 'Vertical',
+                          AutoLayoutDirection.none => 'Freeform (Frame)',
+                        },
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -1549,6 +1552,12 @@ class PropertiesPanel extends StatelessWidget {
     ShapeLayer layer, {
     required ValueChanged<ShapeLayer> onUpdate,
   }) {
+    final isArrowOrLine = layer.shapeType == ShapeType.arrow || layer.shapeType == ShapeType.line;
+
+    if (isArrowOrLine) {
+      return _buildArrowLineCard(context, layer, onUpdate: onUpdate);
+    }
+
     return Container(
       constraints: const BoxConstraints(minHeight: 104),
       decoration: BoxDecoration(
@@ -1616,6 +1625,444 @@ class PropertiesPanel extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildArrowLineCard(
+    BuildContext context,
+    ShapeLayer layer, {
+    required ValueChanged<ShapeLayer> onUpdate,
+  }) {
+    final effectiveColor = layer.strokeColor ?? layer.fill;
+    final currentWeight = layer.strokeWidth > 0 ? layer.strokeWidth : 2.0;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 104),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Top Header Row: Icon, Title ('Stroke'), Color swatch, More button
+          Row(
+            children: [
+              _buildTypeIconBox(Icons.arrow_outward_rounded),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Stroke',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              _buildColorSwatch(context, effectiveColor, (c) {
+                onUpdate(layer.copyWith(fill: c, strokeColor: c));
+              }),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () => _showArrowEndpointsBottomSheet(context, layer, onUpdate),
+                borderRadius: BorderRadius.circular(10),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: MoreRingsIcon(
+                    color: AppColors.textMuted,
+                    size: 18,
+                    ringRadius: 2.1,
+                    strokeWidth: 1.4,
+                    spacing: 1.0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 2. Position & Stroke Size (Weight) Row only
+          Row(
+            children: [
+              // Position Dropdown (Inside, Center, Outside)
+              Expanded(
+                flex: 3,
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<StrokePosition>(
+                      value: layer.strokePosition,
+                      dropdownColor: AppColors.surfaceElevated,
+                      isExpanded: true,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.textSecondary,
+                        size: 18,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: StrokePosition.inside,
+                          child: Text(
+                            'Inside',
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: StrokePosition.center,
+                          child: Text(
+                            'Center',
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: StrokePosition.outside,
+                          child: Text(
+                            'Outside',
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          onUpdate(layer.copyWith(strokePosition: val));
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Weight (Stroke Size) Stepper Pill
+              Expanded(
+                flex: 3,
+                child: _buildStepperPill(
+                  value: currentWeight.toInt(),
+                  onDecrement: () {
+                    final newW = (currentWeight - 1).clamp(1.0, 100.0);
+                    onUpdate(layer.copyWith(strokeWidth: newW));
+                  },
+                  onIncrement: () {
+                    final newW = (currentWeight + 1).clamp(1.0, 100.0);
+                    onUpdate(layer.copyWith(strokeWidth: newW));
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showArrowEndpointsBottomSheet(
+    BuildContext context,
+    ShapeLayer initialLayer,
+    ValueChanged<ShapeLayer> onUpdate, {
+    bool isStart = true,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final headStyles = [
+              (ArrowHeadStyle.none, 'None', 'Flat butt end cap'),
+              (ArrowHeadStyle.round, 'Round', 'Smooth rounded cap'),
+              (ArrowHeadStyle.square, 'Square', 'Projecting square cap'),
+              (ArrowHeadStyle.lineArrow, 'Line arrow', 'Open chevron arrow'),
+              (ArrowHeadStyle.triangleArrow, 'Triangle arrow', 'Closed solid triangle'),
+              (ArrowHeadStyle.reversedTriangle, 'Reversed triangle', 'Inverted triangle'),
+              (ArrowHeadStyle.circleArrow, 'Circle arrow', 'Solid round terminal'),
+              (ArrowHeadStyle.diamondArrow, 'Diamond arrow', 'Solid diamond terminal'),
+            ];
+
+            return SafeArea(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.75,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161522),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      blurRadius: 32,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 12, 16, 12),
+                      child: Column(
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 36,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.white24,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Terminal Endpoints',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () => Navigator.pop(sheetCtx),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF22202E),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Divider(height: 1, color: Color(0xFF242135)),
+
+                    // Switcher Tabs for Start Point vs End Point + Reverse Button
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 38,
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1F1D2E),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => setModalState(() => isStart = true),
+                                      borderRadius: BorderRadius.circular(9),
+                                      child: Container(
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: isStart ? const Color(0xFF6C5CE7) : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(9),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            _buildHeadPreviewIcon(initialLayer.startHead, isStart: true),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Start Point',
+                                              style: TextStyle(
+                                                color: isStart ? Colors.white : AppColors.textSecondary,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => setModalState(() => isStart = false),
+                                      borderRadius: BorderRadius.circular(9),
+                                      child: Container(
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: !isStart ? const Color(0xFF6C5CE7) : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(9),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            _buildHeadPreviewIcon(initialLayer.endHead, isStart: false),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'End Point',
+                                              style: TextStyle(
+                                                color: !isStart ? Colors.white : AppColors.textSecondary,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Reverse / Swap Button
+                          InkWell(
+                            onTap: () {
+                              initialLayer = initialLayer.copyWith(
+                                startHead: initialLayer.endHead,
+                                endHead: initialLayer.startHead,
+                              );
+                              onUpdate(initialLayer);
+                              setModalState(() {});
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              height: 38,
+                              width: 38,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1F1D2E),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFF2C283F)),
+                              ),
+                              child: const Icon(
+                                Icons.sync_alt_rounded,
+                                color: Color(0xFFA78BFA),
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Options List matching 2nd image
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: headStyles.length,
+                        separatorBuilder: (c, i) => const Divider(height: 1, color: Color(0xFF221F33)),
+                        itemBuilder: (ctx, index) {
+                          final item = headStyles[index];
+                          final style = item.$1;
+                          final title = item.$2;
+                          final subtitle = item.$3;
+
+                          final isSelected = isStart
+                              ? initialLayer.startHead == style
+                              : initialLayer.endHead == style;
+
+                          return InkWell(
+                            onTap: () {
+                              if (isStart) {
+                                initialLayer = initialLayer.copyWith(startHead: style);
+                              } else {
+                                initialLayer = initialLayer.copyWith(endHead: style);
+                              }
+                              onUpdate(initialLayer);
+                              setModalState(() {});
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 24,
+                                    child: isSelected
+                                        ? const Icon(Icons.check_rounded, color: Color(0xFFA78BFA), size: 18)
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildHeadPreviewIcon(style, isStart: isStart),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: TextStyle(
+                                            color: isSelected ? Colors.white : Colors.white70,
+                                            fontSize: 14,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                          ),
+                                        ),
+                                        Text(
+                                          subtitle,
+                                          style: const TextStyle(
+                                            color: AppColors.textMuted,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _getHeadLabel(ArrowHeadStyle style) {
+    return switch (style) {
+      ArrowHeadStyle.none => 'None',
+      ArrowHeadStyle.round => 'Round',
+      ArrowHeadStyle.square => 'Square',
+      ArrowHeadStyle.lineArrow => 'Line arrow',
+      ArrowHeadStyle.triangleArrow => 'Triangle',
+      ArrowHeadStyle.reversedTriangle => 'Rev triangle',
+      ArrowHeadStyle.circleArrow => 'Circle',
+      ArrowHeadStyle.diamondArrow => 'Diamond',
+    };
+  }
+
+  Widget _buildHeadPreviewIcon(ArrowHeadStyle style, {required bool isStart}) {
+    return SizedBox(
+      width: 24,
+      height: 16,
+      child: CustomPaint(
+        painter: _EndpointPreviewPainter(style: style, isStart: isStart),
       ),
     );
   }
@@ -3761,3 +4208,92 @@ class _RepeatableActionButtonState extends State<_RepeatableActionButton> {
     );
   }
 }
+
+class _EndpointPreviewPainter extends CustomPainter {
+  final ArrowHeadStyle style;
+  final bool isStart;
+
+  _EndpointPreviewPainter({required this.style, required this.isStart});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = switch (style) {
+        ArrowHeadStyle.round => StrokeCap.round,
+        ArrowHeadStyle.square => StrokeCap.square,
+        _ => StrokeCap.butt,
+      };
+
+    final fillPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final y = size.height / 2;
+    // Line shaft
+    canvas.drawLine(Offset(0, y), Offset(size.width, y), strokePaint);
+
+    final p = isStart ? Offset(0, y) : Offset(size.width, y);
+    final angle = isStart ? math.pi : 0.0;
+    const headSize = 6.0;
+
+    if (style == ArrowHeadStyle.none || style == ArrowHeadStyle.round || style == ArrowHeadStyle.square) {
+      return;
+    }
+
+    canvas.save();
+    canvas.translate(p.dx, p.dy);
+    canvas.rotate(angle);
+
+    final path = Path();
+    switch (style) {
+      case ArrowHeadStyle.lineArrow:
+        path.moveTo(-headSize, -headSize * 0.6);
+        path.lineTo(0, 0);
+        path.lineTo(-headSize, headSize * 0.6);
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      case ArrowHeadStyle.triangleArrow:
+        path.moveTo(0, 0);
+        path.lineTo(-headSize, -headSize * 0.55);
+        path.lineTo(-headSize, headSize * 0.55);
+        path.close();
+        canvas.drawPath(path, fillPaint);
+        break;
+
+      case ArrowHeadStyle.reversedTriangle:
+        path.moveTo(-headSize, 0);
+        path.lineTo(0, -headSize * 0.55);
+        path.lineTo(0, headSize * 0.55);
+        path.close();
+        canvas.drawPath(path, fillPaint);
+        break;
+
+      case ArrowHeadStyle.circleArrow:
+        canvas.drawCircle(const Offset(-3, 0), 2.5, fillPaint);
+        break;
+
+      case ArrowHeadStyle.diamondArrow:
+        path.moveTo(0, 0);
+        path.lineTo(-3, -2.5);
+        path.lineTo(-6, 0);
+        path.lineTo(-3, 2.5);
+        path.close();
+        canvas.drawPath(path, fillPaint);
+        break;
+
+      default:
+        break;
+    }
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _EndpointPreviewPainter oldDelegate) =>
+      oldDelegate.style != style || oldDelegate.isStart != isStart;
+}
+

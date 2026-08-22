@@ -731,5 +731,132 @@ void main() {
       final halfText = halfLayout.children.whereType<TextLayer>().first;
       expect(halfText.fontSize, 20.0);
     });
+
+    test('EditorBloc supports Freeform Frame containers and moving nested layers freely', () async {
+      final child1 = TextLayer(id: 'c1', name: 'Child 1', x: 20, y: 30, width: 100, height: 40, content: 'Child 1');
+      final child2 = ShapeLayer(id: 'c2', name: 'Child 2', shapeType: ShapeType.star, x: 150, y: 80, width: 60, height: 60);
+
+      final frame = AutoLayoutLayer(
+        id: 'frame-1',
+        name: 'Frame',
+        direction: AutoLayoutDirection.none,
+        x: 100,
+        y: 100,
+        width: 350,
+        height: 250,
+        children: [child1, child2],
+      );
+
+      final customProject = project.copyWith(
+        pages: [
+          project.pages[0].copyWith(layers: [frame]),
+        ],
+      );
+
+      final bloc = EditorBloc(initialProject: customProject);
+
+      // Verify positioned children in freeform mode preserves original coordinates
+      final loadedFrame = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(loadedFrame.direction, AutoLayoutDirection.none);
+      expect(loadedFrame.positionedChildren.first.x, 20.0);
+      expect(loadedFrame.positionedChildren.first.y, 30.0);
+
+      // Move nested child within frame
+      bloc.add(const MoveLayerDeltaEvent(layerId: 'c1', dx: 15, dy: 25, isFinal: true));
+      await Future.delayed(Duration.zero);
+
+      final updatedFrame = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      final movedChild = updatedFrame.children.firstWhere((c) => c.id == 'c1');
+      expect(movedChild.x, 35.0);
+      expect(movedChild.y, 55.0);
+    });
+
+    test('ShapeLayer supports creating all shape types', () {
+      const shapes = [
+        ShapeType.rectangle,
+        ShapeType.roundedRectangle,
+        ShapeType.circle,
+        ShapeType.line,
+        ShapeType.triangle,
+        ShapeType.star,
+        ShapeType.arrow,
+      ];
+
+      for (final type in shapes) {
+        final shape = ShapeLayer(
+          id: 'shape-${type.name}',
+          name: type.name,
+          shapeType: type,
+          x: 10,
+          y: 10,
+          width: 100,
+          height: 100,
+        );
+        expect(shape.shapeType, type);
+      }
+    });
+
+    test('ShapeLayer supports Arrow and Line stroke position, weight, and terminal head endpoints', () async {
+      final arrow = ShapeLayer(
+        id: 'arrow-1',
+        name: 'Arrow',
+        shapeType: ShapeType.arrow,
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 200,
+        strokeWidth: 4.0,
+        strokePosition: StrokePosition.inside,
+        startHead: ArrowHeadStyle.none,
+        endHead: ArrowHeadStyle.triangleArrow,
+      );
+
+      final bloc = EditorBloc(initialProject: project);
+      bloc.add(AddLayerEvent(arrow));
+      await Future.delayed(Duration.zero);
+
+      var layer = bloc.state.activePageLayers.whereType<ShapeLayer>().firstWhere((l) => l.id == 'arrow-1');
+      expect(layer.strokeWidth, 4.0);
+      expect(layer.strokePosition, StrokePosition.inside);
+      expect(layer.startHead, ArrowHeadStyle.none);
+      expect(layer.endHead, ArrowHeadStyle.triangleArrow);
+
+      // Update endpoints and stroke position
+      final updated = layer.copyWith(
+        strokePosition: StrokePosition.center,
+        strokeWidth: 6.0,
+        startHead: ArrowHeadStyle.circleArrow,
+        endHead: ArrowHeadStyle.diamondArrow,
+      );
+      bloc.add(UpdateLayerEvent(updated));
+      await Future.delayed(Duration.zero);
+
+      layer = bloc.state.activePageLayers.whereType<ShapeLayer>().firstWhere((l) => l.id == 'arrow-1');
+      expect(layer.strokeWidth, 6.0);
+      expect(layer.strokePosition, StrokePosition.center);
+      expect(layer.startHead, ArrowHeadStyle.circleArrow);
+      expect(layer.endHead, ArrowHeadStyle.diamondArrow);
+
+      // Swap endpoints
+      final swapped = layer.copyWith(
+        startHead: layer.endHead,
+        endHead: layer.startHead,
+      );
+      bloc.add(UpdateLayerEvent(swapped));
+      await Future.delayed(Duration.zero);
+
+      layer = bloc.state.activePageLayers.whereType<ShapeLayer>().firstWhere((l) => l.id == 'arrow-1');
+      expect(layer.startHead, ArrowHeadStyle.diamondArrow);
+      expect(layer.endHead, ArrowHeadStyle.circleArrow);
+
+      // Scale arrow by 2.0x -> Only width increases, not height nor strokeWidth
+      bloc.add(const ScaleLayerEvent(layerId: 'arrow-1', scaleFactor: 2.0));
+      await Future.delayed(Duration.zero);
+
+      final scaledArrow = bloc.state.activePageLayers.whereType<ShapeLayer>().firstWhere((l) => l.id == 'arrow-1');
+      expect(scaledArrow.width, 400.0); // 200 * 2.0
+      expect(scaledArrow.height, 200.0); // Height remains unchanged
+      expect(scaledArrow.strokeWidth, 6.0); // Stroke width remains unchanged
+    });
   });
 }

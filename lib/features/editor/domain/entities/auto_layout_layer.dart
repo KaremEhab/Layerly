@@ -148,6 +148,7 @@ class AutoLayoutLayer extends Layer {
   /// Automatically calculates child positions within this container
   List<Layer> get positionedChildren {
     if (children.isEmpty) return [];
+    if (direction == AutoLayoutDirection.none) return children;
 
     final result = <Layer>[];
     double currentOffset = direction == AutoLayoutDirection.horizontal
