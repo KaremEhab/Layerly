@@ -15,6 +15,8 @@ import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/layers_panel.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/components_picker_sheet.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/layouts_assets_sheet.dart';
 
 class BottomToolbox extends StatelessWidget {
   const BottomToolbox({super.key});
@@ -569,126 +571,11 @@ class BottomToolbox extends StatelessWidget {
   }
 
   void _showComponentsSheet(BuildContext context) {
-    final bloc = context.read<EditorBloc>();
-    final state = bloc.state;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surfaceElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Insert Reusable Component',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (state.project.components.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text(
-                    'No components saved yet. Select layers to create components.',
-                    style: TextStyle(color: AppColors.textMuted),
-                  ),
-                )
-              else
-                ...state.project.components.map(
-                  (comp) => ListTile(
-                    leading: const Icon(
-                      Icons.widgets_rounded,
-                      color: AppColors.primary,
-                    ),
-                    title: Text(
-                      comp.name,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    subtitle: Text(
-                      '${comp.layers.length} internal layers',
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      bloc.add(
-                        AddLayerEvent(
-                          ComponentInstanceLayer(
-                            id: UuidGenerator.generate(),
-                            name: comp.name,
-                            componentDefinitionId: comp.id,
-                            x: 80,
-                            y: 800,
-                            width: comp.width,
-                            height: comp.height,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+    showComponentsPickerSheet(context, bloc: context.read<EditorBloc>());
   }
 
   void _showAssetsSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surfaceElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => const SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Project Assets & Kit',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _AssetCategoryCard(
-                    icon: Icons.palette_outlined,
-                    title: 'Colors',
-                  ),
-                  _AssetCategoryCard(
-                    icon: Icons.font_download_outlined,
-                    title: 'Typography',
-                  ),
-                  _AssetCategoryCard(
-                    icon: Icons.interests_outlined,
-                    title: 'Icons',
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    showLayoutsAssetsSheet(context, bloc: context.read<EditorBloc>());
   }
 
   void _showMoreSheet(BuildContext context) {

@@ -62,6 +62,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<DetachComponentInstanceEvent>(_onDetachComponentInstance);
     on<RegisterComponentDefinitionEvent>(_onRegisterComponentDefinition);
     on<UpdateComponentDefinitionEvent>(_onUpdateComponentDefinition);
+    on<DeleteComponentDefinitionEvent>(_onDeleteComponentDefinition);
     on<SetZoomEvent>(_onSetZoom);
     on<SetPanOffsetEvent>(_onSetPanOffset);
     on<ToggleGridEvent>(_onToggleGrid);
@@ -1751,6 +1752,21 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       }
       return c;
     }).toList();
+
+    emit(state.copyWith(
+      project: state.project.copyWith(components: updatedComponents),
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onDeleteComponentDefinition(
+    DeleteComponentDefinitionEvent event,
+    Emitter<EditorState> emit,
+  ) {
+    final updatedComponents = state.project.components
+        .where((c) => c.id != event.definitionId)
+        .toList();
 
     emit(state.copyWith(
       project: state.project.copyWith(components: updatedComponents),

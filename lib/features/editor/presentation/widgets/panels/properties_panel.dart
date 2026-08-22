@@ -677,7 +677,7 @@ class PropertiesPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -706,16 +706,23 @@ class PropertiesPanel extends StatelessWidget {
                 onUpdate(layer.copyWith(color: c));
               }),
               const SizedBox(width: 6),
-              const MoreRingsIcon(
-                color: AppColors.textMuted,
-                size: 18,
-                ringRadius: 2.1,
-                strokeWidth: 1.4,
-                spacing: 1.0,
+              InkWell(
+                onTap: () => _showTextTypographyBottomSheet(context, layer, onUpdate),
+                borderRadius: BorderRadius.circular(12),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: MoreRingsIcon(
+                    color: AppColors.textSecondary,
+                    size: 18,
+                    ringRadius: 2.1,
+                    strokeWidth: 1.4,
+                    spacing: 1.0,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           // Row 2: Font Family Dropdown + Font Weight Dropdown + Font Size Stepper
           Row(
@@ -867,6 +874,516 @@ class PropertiesPanel extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // 4b. Text Typography & Spacing Bottom Sheet
+  void _showTextTypographyBottomSheet(
+    BuildContext context,
+    TextLayer initialLayer,
+    ValueChanged<TextLayer> onUpdate,
+  ) {
+    var currentLayer = initialLayer;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.76,
+            decoration: const BoxDecoration(
+              color: Color(0xFF14131A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border(
+                top: BorderSide(color: Color(0xFF2A2838), width: 1.5),
+                left: BorderSide(color: Color(0xFF2A2838), width: 1.0),
+                right: BorderSide(color: Color(0xFF2A2838), width: 1.0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Drag handle & Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
+                  child: Column(
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF9E77F6), Color(0xFF6C5CE7)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.text_fields_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Typography & Spacing',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Letter spacing, line height & alignment studio',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => Navigator.pop(modalCtx),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF22202C),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white10),
+                              ),
+                              child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(color: Color(0xFF242232), height: 1),
+
+                // 2. Scrollable Body
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      // A. Live Preview Box
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B1927),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF2E2B40)),
+                        ),
+                        child: Text(
+                          currentLayer.content.isEmpty ? 'Typography Preview' : currentLayer.content,
+                          style: TextStyle(
+                            fontFamily: currentLayer.fontFamily,
+                            fontSize: currentLayer.fontSize.clamp(12.0, 32.0),
+                            fontWeight: currentLayer.fontWeight,
+                            fontStyle: currentLayer.fontStyle,
+                            letterSpacing: currentLayer.letterSpacing,
+                            height: currentLayer.lineHeight,
+                            color: currentLayer.color,
+                            decoration: currentLayer.decoration,
+                          ),
+                          textAlign: currentLayer.textAlign,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // B. Letter Spacing (Tracking)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.space_bar_rounded, color: Color(0xFFA78BFA), size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'Letter Spacing (Tracking)',
+                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              _buildSheetMicroButton(
+                                icon: Icons.remove,
+                                onTap: () {
+                                  final val = (currentLayer.letterSpacing - 0.2).clamp(-5.0, 30.0);
+                                  currentLayer = currentLayer.copyWith(letterSpacing: double.parse(val.toStringAsFixed(2)));
+                                  onUpdate(currentLayer);
+                                  setModalState(() {});
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 70,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF221F32),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFF383350)),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '${currentLayer.letterSpacing >= 0 ? '+' : ''}${currentLayer.letterSpacing.toStringAsFixed(2)} px',
+                                  style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSheetMicroButton(
+                                icon: Icons.add,
+                                onTap: () {
+                                  final val = (currentLayer.letterSpacing + 0.2).clamp(-5.0, 30.0);
+                                  currentLayer = currentLayer.copyWith(letterSpacing: double.parse(val.toStringAsFixed(2)));
+                                  onUpdate(currentLayer);
+                                  setModalState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Slider(
+                        value: currentLayer.letterSpacing.clamp(-5.0, 20.0),
+                        min: -5.0,
+                        max: 20.0,
+                        divisions: 50,
+                        activeColor: const Color(0xFF6C5CE7),
+                        inactiveColor: const Color(0xFF262338),
+                        onChanged: (val) {
+                          currentLayer = currentLayer.copyWith(letterSpacing: double.parse(val.toStringAsFixed(2)));
+                          onUpdate(currentLayer);
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // C. Line Height (Leading)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.format_line_spacing_rounded, color: Color(0xFFA78BFA), size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'Line Height (Leading)',
+                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              _buildSheetMicroButton(
+                                icon: Icons.remove,
+                                onTap: () {
+                                  final val = (currentLayer.lineHeight - 0.1).clamp(0.5, 4.0);
+                                  currentLayer = currentLayer.copyWith(lineHeight: double.parse(val.toStringAsFixed(2)));
+                                  onUpdate(currentLayer);
+                                  setModalState(() {});
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 70,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF221F32),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFF383350)),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '${currentLayer.lineHeight.toStringAsFixed(2)} ×',
+                                  style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSheetMicroButton(
+                                icon: Icons.add,
+                                onTap: () {
+                                  final val = (currentLayer.lineHeight + 0.1).clamp(0.5, 4.0);
+                                  currentLayer = currentLayer.copyWith(lineHeight: double.parse(val.toStringAsFixed(2)));
+                                  onUpdate(currentLayer);
+                                  setModalState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Slider(
+                        value: currentLayer.lineHeight.clamp(0.6, 3.0),
+                        min: 0.6,
+                        max: 3.0,
+                        divisions: 48,
+                        activeColor: const Color(0xFF6C5CE7),
+                        inactiveColor: const Color(0xFF262338),
+                        onChanged: (val) {
+                          currentLayer = currentLayer.copyWith(lineHeight: double.parse(val.toStringAsFixed(2)));
+                          onUpdate(currentLayer);
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // D. Text Alignment
+                      const Text(
+                        'Text Alignment',
+                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _buildAlignmentTabItem(
+                            label: 'Left',
+                            icon: Icons.format_align_left_rounded,
+                            isSelected: currentLayer.textAlign == TextAlign.left || currentLayer.textAlign == TextAlign.start,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(textAlign: TextAlign.left);
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildAlignmentTabItem(
+                            label: 'Center',
+                            icon: Icons.format_align_center_rounded,
+                            isSelected: currentLayer.textAlign == TextAlign.center,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(textAlign: TextAlign.center);
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildAlignmentTabItem(
+                            label: 'Right',
+                            icon: Icons.format_align_right_rounded,
+                            isSelected: currentLayer.textAlign == TextAlign.right || currentLayer.textAlign == TextAlign.end,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(textAlign: TextAlign.right);
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildAlignmentTabItem(
+                            label: 'Justify',
+                            icon: Icons.format_align_justify_rounded,
+                            isSelected: currentLayer.textAlign == TextAlign.justify,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(textAlign: TextAlign.justify);
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // E. Text Style & Decoration
+                      const Text(
+                        'Style & Decoration',
+                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _buildStylePill(
+                            label: 'Normal',
+                            icon: Icons.format_clear_rounded,
+                            isSelected: currentLayer.fontStyle == FontStyle.normal && (currentLayer.decoration == null || currentLayer.decoration == TextDecoration.none),
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(
+                                fontStyle: FontStyle.normal,
+                                decoration: TextDecoration.none,
+                              );
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildStylePill(
+                            label: 'Italic',
+                            icon: Icons.format_italic_rounded,
+                            isSelected: currentLayer.fontStyle == FontStyle.italic,
+                            onTap: () {
+                              final next = currentLayer.fontStyle == FontStyle.italic
+                                  ? FontStyle.normal
+                                  : FontStyle.italic;
+                              currentLayer = currentLayer.copyWith(fontStyle: next);
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildStylePill(
+                            label: 'Underline',
+                            icon: Icons.format_underlined_rounded,
+                            isSelected: currentLayer.decoration == TextDecoration.underline,
+                            onTap: () {
+                              final next = currentLayer.decoration == TextDecoration.underline
+                                  ? TextDecoration.none
+                                  : TextDecoration.underline;
+                              currentLayer = currentLayer.copyWith(decoration: next);
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildStylePill(
+                            label: 'Strike',
+                            icon: Icons.strikethrough_s_rounded,
+                            isSelected: currentLayer.decoration == TextDecoration.lineThrough,
+                            onTap: () {
+                              final next = currentLayer.decoration == TextDecoration.lineThrough
+                                  ? TextDecoration.none
+                                  : TextDecoration.lineThrough;
+                              currentLayer = currentLayer.copyWith(decoration: next);
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSheetMicroButton({required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF262338),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF383350)),
+        ),
+        child: Icon(icon, color: Colors.white70, size: 14),
+      ),
+    );
+  }
+
+  Widget _buildAlignmentTabItem({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 38,
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF6C5CE7) : const Color(0xFF1E1C2B),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? const Color(0xFFA29BFE) : const Color(0xFF2E2C40),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 15, color: isSelected ? Colors.white : AppColors.textMuted),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStylePill({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 38,
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF6C5CE7) : const Color(0xFF1E1C2B),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? const Color(0xFFA29BFE) : const Color(0xFF2E2C40),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 14, color: isSelected ? Colors.white : AppColors.textMuted),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

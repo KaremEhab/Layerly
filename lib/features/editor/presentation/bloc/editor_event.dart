@@ -295,6 +295,14 @@ class UpdateComponentDefinitionEvent extends EditorEvent {
   List<Object?> get props => [definition];
 }
 
+class DeleteComponentDefinitionEvent extends EditorEvent {
+  final String definitionId;
+  const DeleteComponentDefinitionEvent(this.definitionId);
+
+  @override
+  List<Object?> get props => [definitionId];
+}
+
 // Project / Page Metadata Events
 class RenameProjectEvent extends EditorEvent {
   final String newName;
