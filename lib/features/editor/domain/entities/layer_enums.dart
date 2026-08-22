@@ -70,3 +70,9 @@ enum BackgroundType {
   image,
 }
 
+enum StrokePosition {
+  inside,
+  center,
+  outside,
+}
+

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:layerly/core/utils/text_span_parser.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
@@ -96,10 +97,11 @@ class LayerView extends StatelessWidget {
       );
     }
 
-    Widget textWidget = Text(
-      layer.content,
+    final span = TextSpanParser.parseToTextSpan(layer.content, style);
+
+    Widget textWidget = Text.rich(
+      span,
       textAlign: layer.textAlign,
-      style: style,
       softWrap: false,
       overflow: TextOverflow.visible,
     );
@@ -107,10 +109,9 @@ class LayerView extends StatelessWidget {
     if (layer.textGradient != null) {
       textWidget = ShaderMask(
         shaderCallback: (bounds) => layer.textGradient!.createShader(bounds),
-        child: Text(
-          layer.content,
+        child: Text.rich(
+          TextSpanParser.parseToTextSpan(layer.content, style.copyWith(color: Colors.white)),
           textAlign: layer.textAlign,
-          style: style.copyWith(color: Colors.white),
           softWrap: false,
           overflow: TextOverflow.visible,
         ),
@@ -829,7 +830,15 @@ class LayerView extends StatelessWidget {
         color: layer.backgroundColor ?? Colors.transparent,
         borderRadius: BorderRadius.circular(layer.cornerRadius),
         border: layer.strokeWidth > 0 && layer.strokeColor != null
-            ? Border.all(color: layer.strokeColor!, width: layer.strokeWidth)
+            ? Border.all(
+                color: layer.strokeColor!,
+                width: layer.strokeWidth,
+                strokeAlign: switch (layer.strokePosition) {
+                  StrokePosition.inside => BorderSide.strokeAlignInside,
+                  StrokePosition.center => BorderSide.strokeAlignCenter,
+                  StrokePosition.outside => BorderSide.strokeAlignOutside,
+                },
+              )
             : null,
       ),
       child: SizedBox(

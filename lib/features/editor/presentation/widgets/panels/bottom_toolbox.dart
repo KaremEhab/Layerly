@@ -13,6 +13,7 @@ import 'package:layerly/features/editor/domain/entities/component_instance_layer
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/layers_panel.dart';
+import 'package:layerly/core/widgets/more_rings_icon.dart';
 
 class BottomToolbox extends StatelessWidget {
   const BottomToolbox({super.key});
@@ -166,9 +167,9 @@ class BottomToolbox extends StatelessWidget {
 
                 // 7. More options (... rings)
                 _buildToolButton(
-                  customWidget: const CustomPaint(
-                    size: Size(20, 20),
-                    painter: _MoreRingsPainter(),
+                  customWidget: const MoreRingsIcon(
+                    size: 20,
+                    color: Colors.white,
                   ),
                   tooltip: 'More options',
                   onTap: () => _showMoreSheet(context),
@@ -994,29 +995,5 @@ class _BentoLayoutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BentoLayoutPainter oldDelegate) =>
-      oldDelegate.color != color;
-}
-
-class _MoreRingsPainter extends CustomPainter {
-  final Color color;
-  const _MoreRingsPainter({this.color = Colors.white});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.7;
-
-    final cy = size.height / 2;
-    const r = 2.4;
-
-    canvas.drawCircle(Offset(size.width * 0.22, cy), r, stroke);
-    canvas.drawCircle(Offset(size.width * 0.50, cy), r, stroke);
-    canvas.drawCircle(Offset(size.width * 0.78, cy), r, stroke);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MoreRingsPainter oldDelegate) =>
       oldDelegate.color != color;
 }

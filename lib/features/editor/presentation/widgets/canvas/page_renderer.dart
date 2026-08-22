@@ -167,6 +167,51 @@ class PageRenderer extends StatelessWidget {
       );
     }
 
+    final isInteractive = onSelectLayer != null || onMoveLayer != null || onContextMenu != null;
+
+    final interactiveWidget = isInteractive
+        ? GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: onSelectLayer != null
+                ? () {
+                    onSelectLayer?.call(layer.id, false);
+                  }
+                : null,
+            onSecondaryTapDown: onContextMenu != null
+                ? (details) {
+                    final isChildOrSelfSelected = isSelected || _isAnyChildSelected(layer, selectedLayerIds);
+                    if (!isChildOrSelfSelected) {
+                      onSelectLayer?.call(layer.id, false);
+                    }
+                    onContextMenu?.call(layer.id, details.globalPosition);
+                  }
+                : null,
+            onLongPress: onSelectLayer != null
+                ? () {
+                    onSelectLayer?.call(layer.id, true);
+                  }
+                : null,
+            onPanStart: onMoveLayer != null
+                ? (details) {
+                    if (!isSelected) {
+                      onSelectLayer?.call(layer.id, false);
+                    }
+                  }
+                : null,
+            onPanUpdate: onMoveLayer != null
+                ? (details) {
+                    onMoveLayer?.call(layer.id, details);
+                  }
+                : null,
+            onPanEnd: onMoveLayerEnd != null
+                ? (details) {
+                    onMoveLayerEnd?.call(layer.id, details);
+                  }
+                : null,
+            child: layerWidget,
+          )
+        : layerWidget;
+
     return Positioned(
       left: effectiveLayer.x,
       top: effectiveLayer.y,
@@ -174,34 +219,7 @@ class PageRenderer extends StatelessWidget {
       height: effectiveLayer.height,
       child: Transform.rotate(
         angle: effectiveLayer.rotation,
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: () {
-            onSelectLayer?.call(layer.id, false);
-          },
-          onSecondaryTapDown: (details) {
-            final isChildOrSelfSelected = isSelected || _isAnyChildSelected(layer, selectedLayerIds);
-            if (!isChildOrSelfSelected) {
-              onSelectLayer?.call(layer.id, false);
-            }
-            onContextMenu?.call(layer.id, details.globalPosition);
-          },
-          onLongPress: () {
-            onSelectLayer?.call(layer.id, true);
-          },
-          onPanStart: (details) {
-            if (!isSelected) {
-              onSelectLayer?.call(layer.id, false);
-            }
-          },
-          onPanUpdate: (details) {
-            onMoveLayer?.call(layer.id, details);
-          },
-          onPanEnd: (details) {
-            onMoveLayerEnd?.call(layer.id, details);
-          },
-          child: layerWidget,
-        ),
+        child: interactiveWidget,
       ),
     );
   }

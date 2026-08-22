@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:layerly/core/utils/text_span_parser.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_project.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
@@ -53,6 +54,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<RenameProjectEvent>(_onRenameProject);
     on<RenamePageEvent>(_onRenamePage);
     on<UpdatePagePaddingEvent>(_onUpdatePagePadding);
+    on<UpdatePageDimensionsEvent>(_onUpdatePageDimensions);
     on<CreateAutoLayoutFromSelectionEvent>(_onCreateAutoLayoutFromSelection);
     on<UpdateAutoLayoutEvent>(_onUpdateAutoLayout);
     on<RemoveAutoLayoutEvent>(_onRemoveAutoLayout);
@@ -65,6 +67,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<ToggleGridEvent>(_onToggleGrid);
     on<ToggleGuidesEvent>(_onToggleGuides);
     on<ToggleSnapEvent>(_onToggleSnap);
+    on<ScaleLayerEvent>(_onScaleLayer);
     on<UndoEvent>(_onUndo);
     on<RedoEvent>(_onRedo);
   }
@@ -640,6 +643,108 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     ));
   }
 
+  void _onScaleLayer(
+    ScaleLayerEvent event,
+    Emitter<EditorState> emit,
+  ) {
+    if (event.scaleFactor <= 0 || event.scaleFactor == 1.0) return;
+
+    final activePage = state.activePage;
+    final updatedLayers = _scaleLayerInTree(activePage.layers, event.layerId, event.scaleFactor);
+
+    final updatedPage = activePage.copyWith(layers: updatedLayers);
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    updatedPages[state.project.activePageIndex] = updatedPage;
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  List<Layer> _scaleLayerInTree(List<Layer> list, String targetId, double factor) {
+    return list.map((item) {
+      if (item.id == targetId) {
+        return _scaleLayerRecursive(item, factor);
+      } else if (item is AutoLayoutLayer) {
+        final updatedChildren = _scaleLayerInTree(item.children, targetId, factor);
+        final updated = item.copyWith(children: updatedChildren);
+        return _recalculateAutoLayoutDimensions(updated);
+      }
+      return item;
+    }).toList();
+  }
+
+  static Layer _scaleLayerRecursive(Layer layer, double factor) {
+    if (factor <= 0) return layer;
+
+    if (layer is AutoLayoutLayer) {
+      final scaledChildren = layer.children.map((c) => _scaleLayerRecursive(c, factor)).toList();
+      final scaled = layer.copyWith(
+        width: (layer.width * factor).clamp(10.0, 50000.0),
+        height: (layer.height * factor).clamp(10.0, 50000.0),
+        gap: (layer.gap * factor).clamp(0.0, 1000.0),
+        paddingHorizontal: (layer.paddingHorizontal * factor).clamp(0.0, 1000.0),
+        paddingVertical: (layer.paddingVertical * factor).clamp(0.0, 1000.0),
+        cornerRadius: (layer.cornerRadius * factor).clamp(0.0, 1000.0),
+        strokeWidth: layer.strokeWidth > 0 ? (layer.strokeWidth * factor).clamp(0.5, 500.0) : 0.0,
+        children: scaledChildren,
+      );
+      return _recalculateAutoLayoutDimensions(scaled);
+    } else if (layer is TextLayer) {
+      final scaledFontSize = (layer.fontSize * factor).clamp(1.0, 1000.0);
+      final scaledLetterSpacing = layer.letterSpacing * factor;
+      final scaledPadding = EdgeInsets.fromLTRB(
+        layer.padding.left * factor,
+        layer.padding.top * factor,
+        layer.padding.right * factor,
+        layer.padding.bottom * factor,
+      );
+      final scaledRadius = layer.backgroundRadius * factor;
+      final scaled = layer.copyWith(
+        fontSize: scaledFontSize,
+        letterSpacing: scaledLetterSpacing,
+        padding: scaledPadding,
+        backgroundRadius: scaledRadius,
+      );
+      return _recalculateTextDimensions(scaled);
+    } else if (layer is ShapeLayer) {
+      return layer.copyWith(
+        width: (layer.width * factor).clamp(1.0, 50000.0),
+        height: (layer.height * factor).clamp(1.0, 50000.0),
+        cornerRadius: (layer.cornerRadius * factor).clamp(0.0, 1000.0),
+        strokeWidth: (layer.strokeWidth * factor).clamp(0.0, 500.0),
+      );
+    } else if (layer is IconLayer) {
+      return layer.copyWith(
+        width: (layer.width * factor).clamp(4.0, 50000.0),
+        height: (layer.height * factor).clamp(4.0, 50000.0),
+      );
+    } else if (layer is ImageLayer) {
+      return layer.copyWith(
+        width: (layer.width * factor).clamp(4.0, 50000.0),
+        height: (layer.height * factor).clamp(4.0, 50000.0),
+        borderRadius: (layer.borderRadius * factor).clamp(0.0, 1000.0),
+      );
+    } else if (layer is DeviceMockupLayer) {
+      return layer.copyWith(
+        width: (layer.width * factor).clamp(20.0, 50000.0),
+        height: (layer.height * factor).clamp(20.0, 50000.0),
+      );
+    } else if (layer is ComponentInstanceLayer) {
+      return layer.copyWith(
+        width: (layer.width * factor).clamp(1.0, 50000.0),
+        height: (layer.height * factor).clamp(1.0, 50000.0),
+      );
+    }
+
+    return layer.copyWithTransform(
+      width: (layer.width * factor).clamp(1.0, 50000.0),
+      height: (layer.height * factor).clamp(1.0, 50000.0),
+    );
+  }
+
   void _onAlignSelectedLayers(
     AlignSelectedLayersEvent event,
     Emitter<EditorState> emit,
@@ -854,6 +959,26 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       horizontalPadding: newPadH,
       verticalPadding: newPadV,
       layers: updatedLayers,
+    );
+
+    emit(state.copyWith(
+      project: state.project.copyWith(pages: updatedPages),
+      undoStack: _pushHistory(state.project, state.undoStack),
+      redoStack: [],
+    ));
+  }
+
+  void _onUpdatePageDimensions(UpdatePageDimensionsEvent event, Emitter<EditorState> emit) {
+    final updatedPages = List<CanvasPage>.from(state.project.pages);
+    final activeIndex = state.project.activePageIndex;
+    final currentPage = updatedPages[activeIndex];
+
+    final double newWidth = event.width.clamp(200.0, 5000.0);
+    final double newHeight = event.height.clamp(200.0, 5000.0);
+
+    updatedPages[activeIndex] = currentPage.copyWith(
+      width: newWidth,
+      height: newHeight,
     );
 
     emit(state.copyWith(
@@ -1391,6 +1516,13 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
             distribution: event.distribution,
             horizontalSizing: event.horizontalSizing,
             verticalSizing: event.verticalSizing,
+            backgroundColor: event.backgroundColor == Colors.transparent ? null : event.backgroundColor,
+            clearBackgroundColor: event.backgroundColor == Colors.transparent,
+            cornerRadius: event.cornerRadius,
+            strokeColor: event.strokeColor == Colors.transparent ? null : event.strokeColor,
+            clearStrokeColor: event.strokeColor == Colors.transparent,
+            strokeWidth: event.strokeWidth,
+            strokePosition: event.strokePosition,
           );
           return _recalculateAutoLayoutDimensions(
             updated,
@@ -1436,11 +1568,13 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       height: textLayer.lineHeight,
     );
 
+    final parsedSpan = TextSpanParser.parseToTextSpan(
+      textLayer.content.isEmpty ? ' ' : textLayer.content,
+      style,
+    );
+
     final textPainter = TextPainter(
-      text: TextSpan(
-        text: textLayer.content.isEmpty ? ' ' : textLayer.content,
-        style: style,
-      ),
+      text: parsedSpan,
       textDirection: TextDirection.ltr,
       textAlign: textLayer.textAlign,
     )..layout();

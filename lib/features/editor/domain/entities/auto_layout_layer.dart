@@ -14,6 +14,7 @@ class AutoLayoutLayer extends Layer {
   final double cornerRadius;
   final Color? strokeColor;
   final double strokeWidth;
+  final StrokePosition strokePosition;
   final AutoLayoutSizingMode horizontalSizing;
   final AutoLayoutSizingMode verticalSizing;
 
@@ -42,6 +43,7 @@ class AutoLayoutLayer extends Layer {
     this.cornerRadius = 12.0,
     this.strokeColor,
     this.strokeWidth = 0.0,
+    this.strokePosition = StrokePosition.inside,
   }) : super(type: LayerType.autoLayout);
 
   @override
@@ -82,6 +84,7 @@ class AutoLayoutLayer extends Layer {
       cornerRadius: cornerRadius,
       strokeColor: strokeColor,
       strokeWidth: strokeWidth,
+      strokePosition: strokePosition,
     );
   }
 
@@ -106,9 +109,12 @@ class AutoLayoutLayer extends Layer {
     AutoLayoutSizingMode? verticalSizing,
     List<Layer>? children,
     Color? backgroundColor,
+    bool clearBackgroundColor = false,
     double? cornerRadius,
     Color? strokeColor,
+    bool clearStrokeColor = false,
     double? strokeWidth,
+    StrokePosition? strokePosition,
   }) {
     return AutoLayoutLayer(
       id: id,
@@ -131,10 +137,11 @@ class AutoLayoutLayer extends Layer {
       horizontalSizing: horizontalSizing ?? this.horizontalSizing,
       verticalSizing: verticalSizing ?? this.verticalSizing,
       children: children ?? this.children,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
+      backgroundColor: clearBackgroundColor ? null : (backgroundColor ?? this.backgroundColor),
       cornerRadius: cornerRadius ?? this.cornerRadius,
-      strokeColor: strokeColor ?? this.strokeColor,
+      strokeColor: clearStrokeColor ? null : (strokeColor ?? this.strokeColor),
       strokeWidth: strokeWidth ?? this.strokeWidth,
+      strokePosition: strokePosition ?? this.strokePosition,
     );
   }
 
@@ -206,5 +213,6 @@ class AutoLayoutLayer extends Layer {
         cornerRadius,
         strokeColor,
         strokeWidth,
+        strokePosition,
       ];
 }

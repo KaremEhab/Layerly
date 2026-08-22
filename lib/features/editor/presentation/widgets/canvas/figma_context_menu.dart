@@ -1,12 +1,15 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
+import 'package:layerly/core/widgets/hex_color_picker_widget.dart';
 
 void showFigmaContextMenu({
   required BuildContext context,
@@ -102,26 +105,35 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
         final isLocked = singleLayer?.locked ?? false;
         final isVisible = singleLayer?.visible ?? true;
 
-        const double menuWidth = 240.0;
-        final double estimatedHeight = hasSelection ? (isAutoLayout ? 480.0 : 340.0) : 180.0;
+        const double menuWidth = 260.0;
+        final double estimatedHeight = hasSelection ? (isAutoLayout ? 540.0 : 400.0) : 530.0;
+        final double maxAllowedHeight = math.min(estimatedHeight, (screenSize.height - 32).clamp(120.0, 560.0));
 
         double left = widget.position.dx;
         double top = widget.position.dy;
 
+        // If tap is in lower portion of the screen, place menu above anchor or shift upward
+        if (top + maxAllowedHeight > screenSize.height - 16) {
+          final aboveTop = widget.position.dy - maxAllowedHeight - 8;
+          if (aboveTop >= 16.0) {
+            top = aboveTop;
+          } else {
+            top = (screenSize.height - maxAllowedHeight - 16).clamp(16.0, screenSize.height - 100);
+          }
+        }
+
         if (left + menuWidth > screenSize.width - 16) {
           left = screenSize.width - menuWidth - 16;
         }
-        if (top + estimatedHeight > screenSize.height - 16) {
-          top = screenSize.height - estimatedHeight - 16;
-        }
-        left = left.clamp(16.0, screenSize.width - menuWidth - 16);
-        top = top.clamp(16.0, screenSize.height - estimatedHeight - 16);
+        left = left.clamp(16.0, (screenSize.width - menuWidth - 16).clamp(16.0, double.infinity));
+        top = top.clamp(16.0, (screenSize.height - 100.0).clamp(16.0, double.infinity));
+
+        final double constrainedMaxHeight = (screenSize.height - top - 16).clamp(120.0, maxAllowedHeight);
 
         return Material(
           color: Colors.transparent,
           child: Stack(
             children: [
-              // Dismiss background barrier
               Positioned.fill(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -131,7 +143,6 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                 ),
               ),
 
-              // Menu Popup Container
               Positioned(
                 left: left,
                 top: top,
@@ -148,66 +159,72 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                       ),
                     );
                   },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E24).withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          blurRadius: 28,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 10),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                      child: Container(
+                        constraints: BoxConstraints(maxHeight: constrainedMaxHeight),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E24).withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              blurRadius: 28,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 10),
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFFA970FF).withValues(alpha: 0.15),
+                              blurRadius: 20,
+                              spreadRadius: 0,
+                            ),
+                          ],
                         ),
-                        BoxShadow(
-                          color: const Color(0xFFA970FF).withValues(alpha: 0.15),
-                          blurRadius: 20,
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (hasSelection) ...[
-                          _MenuItem(
-                            icon: Icons.copy_rounded,
-                            label: 'Duplicate',
-                            shortcut: 'Ctrl+D',
-                            onTap: () => _closeAnd(() {
-                              widget.bloc.add(const DuplicateSelectedLayersEvent());
-                            }),
-                          ),
-                          _MenuItem(
-                            icon: Icons.delete_outline_rounded,
-                            label: 'Delete',
-                            shortcut: 'Del',
-                            textColor: const Color(0xFFFF5C5C),
-                            onTap: () => _closeAnd(() {
-                              widget.bloc.add(const DeleteSelectedLayersEvent());
-                            }),
-                          ),
-                          const _MenuDivider(),
-                          _MenuItem(
-                            icon: Icons.flip_to_front_rounded,
-                            label: 'Bring to front',
-                            shortcut: ']',
-                            onTap: () => _closeAnd(() {
-                              if (singleLayer != null) {
-                                widget.bloc.add(BringToFrontEvent(singleLayer.id));
-                              }
-                            }),
-                          ),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (hasSelection) ...[
+                                _MenuItem(
+                                  icon: Icons.copy_rounded,
+                                  label: 'Duplicate',
+                                  shortcut: 'Ctrl+D',
+                                  onTap: () => _closeAnd(() {
+                                    widget.bloc.add(const DuplicateSelectedLayersEvent());
+                                  }),
+                                ),
+                                _MenuItem(
+                                  icon: Icons.delete_outline_rounded,
+                                  label: 'Delete',
+                                  shortcut: 'Del',
+                                  textColor: const Color(0xFFFF5C5C),
+                                  onTap: () => _closeAnd(() {
+                                    widget.bloc.add(const DeleteSelectedLayersEvent());
+                                  }),
+                                ),
+                                _MenuScaleScrubber(
+                                  layer: singleLayer ?? selectedLayers.first,
+                                  bloc: widget.bloc,
+                                ),
+                                const _MenuDivider(),
+                                _MenuItem(
+                                  icon: Icons.flip_to_front_rounded,
+                                  label: 'Bring to front',
+                                  shortcut: ']',
+                                  onTap: () => _closeAnd(() {
+                                    if (singleLayer != null) {
+                                      widget.bloc.add(BringToFrontEvent(singleLayer.id));
+                                    }
+                                  }),
+                                ),
                           _MenuItem(
                             icon: Icons.flip_to_back_rounded,
                             label: 'Send to back',
@@ -239,6 +256,14 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                             ),
                           if (autoLayoutLayer != null) ...[
                             const _MenuDivider(),
+                            _MenuItem(
+                              icon: Icons.tune_rounded,
+                              label: 'Layout settings...',
+                              shortcut: 'Alt+S',
+                              onTap: () => _closeAnd(() {
+                                _showAutoLayoutSettingsDialog(context, autoLayoutLayer);
+                              }),
+                            ),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               child: Column(
@@ -328,6 +353,304 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                                       ));
                                     },
                                   ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Fill',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      for (final fillOption in [
+                                        null,
+                                        const Color(0xFF1E1E24),
+                                        const Color(0xFF2A2A35),
+                                        const Color(0xFF6C5CE7),
+                                        const Color(0xFF0D99FF),
+                                        const Color(0xFFFFFFFF),
+                                      ]) ...[
+                                        const SizedBox(width: 5),
+                                        InkWell(
+                                          onTap: () {
+                                            widget.bloc.add(UpdateAutoLayoutEvent(
+                                              layerId: autoLayoutLayer.id,
+                                              backgroundColor: fillOption ?? Colors.transparent,
+                                            ));
+                                          },
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Container(
+                                            width: 18,
+                                            height: 18,
+                                            decoration: BoxDecoration(
+                                              color: fillOption ?? Colors.transparent,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: autoLayoutLayer.backgroundColor == fillOption
+                                                    ? const Color(0xFF0D99FF)
+                                                    : Colors.white24,
+                                                width: autoLayoutLayer.backgroundColor == fillOption ? 2 : 1,
+                                              ),
+                                            ),
+                                            child: fillOption == null
+                                                ? const Icon(Icons.block_rounded, size: 10, color: Colors.white54)
+                                                : null,
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(width: 5),
+                                      // Custom Fill Color Picker
+                                      InkWell(
+                                        onTap: () {
+                                          _openColorPicker(
+                                            context,
+                                            autoLayoutLayer.backgroundColor ?? const Color(0xFF6C5CE7),
+                                            (c) {
+                                              widget.bloc.add(UpdateAutoLayoutEvent(
+                                                layerId: autoLayoutLayer.id,
+                                                backgroundColor: c == Colors.transparent ? null : c,
+                                              ));
+                                            },
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Container(
+                                          width: 18,
+                                          height: 18,
+                                          decoration: BoxDecoration(
+                                            gradient: const SweepGradient(
+                                              colors: [
+                                                Colors.red,
+                                                Colors.amber,
+                                                Colors.green,
+                                                Colors.cyan,
+                                                Colors.blue,
+                                                Colors.purple,
+                                                Colors.red,
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: (autoLayoutLayer.backgroundColor != null &&
+                                                      !const [
+                                                        Color(0xFF1E1E24),
+                                                        Color(0xFF2A2A35),
+                                                        Color(0xFF6C5CE7),
+                                                        Color(0xFF0D99FF),
+                                                        Color(0xFFFFFFFF),
+                                                      ].contains(autoLayoutLayer.backgroundColor))
+                                                  ? const Color(0xFF0D99FF)
+                                                  : Colors.white30,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: const Icon(Icons.colorize_rounded, size: 10, color: Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // Stroke Section: Color Presets + Custom Picker + Weight + Position (Inside, Center, Outside)
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Stroke',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      for (final strokeOption in [
+                                        null,
+                                        const Color(0xFFFFFFFF),
+                                        const Color(0xFF3A3945),
+                                        const Color(0xFF6C5CE7),
+                                        const Color(0xFF0D99FF),
+                                        const Color(0xFFFFB020),
+                                      ]) ...[
+                                        const SizedBox(width: 5),
+                                        InkWell(
+                                          onTap: () {
+                                            final currentW = autoLayoutLayer.strokeWidth > 0 ? autoLayoutLayer.strokeWidth : 1.0;
+                                            widget.bloc.add(UpdateAutoLayoutEvent(
+                                              layerId: autoLayoutLayer.id,
+                                              strokeColor: strokeOption ?? Colors.transparent,
+                                              strokeWidth: strokeOption == null ? 0.0 : currentW,
+                                            ));
+                                          },
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Container(
+                                            width: 18,
+                                            height: 18,
+                                            decoration: BoxDecoration(
+                                              color: strokeOption ?? Colors.transparent,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: (autoLayoutLayer.strokeColor == strokeOption && (strokeOption == null || autoLayoutLayer.strokeWidth > 0))
+                                                    ? const Color(0xFF0D99FF)
+                                                    : Colors.white24,
+                                                width: (autoLayoutLayer.strokeColor == strokeOption && (strokeOption == null || autoLayoutLayer.strokeWidth > 0)) ? 2 : 1,
+                                              ),
+                                            ),
+                                            child: strokeOption == null
+                                                ? const Icon(Icons.block_rounded, size: 10, color: Colors.white54)
+                                                : null,
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(width: 5),
+                                      // Custom Stroke Color Picker
+                                      InkWell(
+                                        onTap: () {
+                                          final currentW = autoLayoutLayer.strokeWidth > 0 ? autoLayoutLayer.strokeWidth : 1.0;
+                                          _openColorPicker(
+                                            context,
+                                            autoLayoutLayer.strokeColor ?? const Color(0xFF0D99FF),
+                                            (c) {
+                                              widget.bloc.add(UpdateAutoLayoutEvent(
+                                                layerId: autoLayoutLayer.id,
+                                                strokeColor: c == Colors.transparent ? null : c,
+                                                strokeWidth: c == Colors.transparent ? 0.0 : currentW,
+                                              ));
+                                            },
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Container(
+                                          width: 18,
+                                          height: 18,
+                                          decoration: BoxDecoration(
+                                            gradient: const SweepGradient(
+                                              colors: [
+                                                Colors.red,
+                                                Colors.amber,
+                                                Colors.green,
+                                                Colors.cyan,
+                                                Colors.blue,
+                                                Colors.purple,
+                                                Colors.red,
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: (autoLayoutLayer.strokeColor != null &&
+                                                      !const [
+                                                        Color(0xFFFFFFFF),
+                                                        Color(0xFF3A3945),
+                                                        Color(0xFF6C5CE7),
+                                                        Color(0xFF0D99FF),
+                                                        Color(0xFFFFB020),
+                                                      ].contains(autoLayoutLayer.strokeColor))
+                                                  ? const Color(0xFF0D99FF)
+                                                  : Colors.white30,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: const Icon(Icons.colorize_rounded, size: 10, color: Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (autoLayoutLayer.strokeColor != null && autoLayoutLayer.strokeWidth > 0) ...[
+                                    const SizedBox(height: 6),
+                                    // Stroke Weight & Position Row
+                                    Row(
+                                      children: [
+                                        // Weight Stepper
+                                        Container(
+                                          height: 24,
+                                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF2A2A35),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              InkWell(
+                                                onTap: () {
+                                                  final newW = (autoLayoutLayer.strokeWidth - 1).clamp(0.0, 50.0);
+                                                  widget.bloc.add(UpdateAutoLayoutEvent(
+                                                    layerId: autoLayoutLayer.id,
+                                                    strokeWidth: newW,
+                                                  ));
+                                                },
+                                                child: const Icon(Icons.remove, size: 12, color: Colors.white70),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '${autoLayoutLayer.strokeWidth.toInt()}px',
+                                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              InkWell(
+                                                onTap: () {
+                                                  final newW = (autoLayoutLayer.strokeWidth + 1).clamp(0.0, 50.0);
+                                                  widget.bloc.add(UpdateAutoLayoutEvent(
+                                                    layerId: autoLayoutLayer.id,
+                                                    strokeWidth: newW,
+                                                  ));
+                                                },
+                                                child: const Icon(Icons.add, size: 12, color: Colors.white70),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Stroke Position Segmented (Inside / Center / Outside)
+                                        Expanded(
+                                          child: Container(
+                                            height: 24,
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF2A2A35),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                for (final pos in StrokePosition.values)
+                                                  Expanded(
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        widget.bloc.add(UpdateAutoLayoutEvent(
+                                                          layerId: autoLayoutLayer.id,
+                                                          strokePosition: pos,
+                                                        ));
+                                                      },
+                                                      borderRadius: BorderRadius.circular(4),
+                                                      child: Container(
+                                                        decoration: BoxDecoration(
+                                                          color: autoLayoutLayer.strokePosition == pos
+                                                              ? const Color(0xFF0D99FF)
+                                                              : Colors.transparent,
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        alignment: Alignment.center,
+                                                        child: Text(
+                                                          pos.name[0].toUpperCase() + pos.name.substring(1),
+                                                          style: TextStyle(
+                                                            color: autoLayoutLayer.strokePosition == pos
+                                                                ? Colors.white
+                                                                : Colors.white60,
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -356,25 +679,165 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                             }),
                           ),
                         ] else ...[
+                          // Page Properties Header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0D99FF).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.art_track_rounded,
+                                    color: Color(0xFF0D99FF),
+                                    size: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.state.activePage.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        '${widget.state.activePage.width.toInt()} × ${widget.state.activePage.height.toInt()} px',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.5),
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const _MenuDivider(),
+                          _MenuItem(
+                            icon: Icons.edit_outlined,
+                            label: 'Rename page',
+                            onTap: () => _closeAnd(() {
+                              _showRenameDialog(context, widget.state.project.activePageIndex, widget.state.activePage.name);
+                            }),
+                          ),
+                          _MenuItem(
+                            icon: Icons.copy_rounded,
+                            label: 'Duplicate page',
+                            shortcut: 'Ctrl+D',
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(DuplicatePageEvent(widget.state.project.activePageIndex));
+                            }),
+                          ),
+                          _MenuItem(
+                            icon: Icons.add_to_photos_rounded,
+                            label: 'Add new page',
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(const AddPageEvent());
+                            }),
+                          ),
+                          if (widget.state.project.pages.length > 1)
+                            _MenuItem(
+                              icon: Icons.delete_outline_rounded,
+                              label: 'Delete page',
+                              shortcut: 'Del',
+                              textColor: const Color(0xFFFF5C5C),
+                              onTap: () => _closeAnd(() {
+                                widget.bloc.add(DeletePageEvent(widget.state.project.activePageIndex));
+                              }),
+                            ),
+                          const _MenuDivider(),
+                          const _MenuHeader(label: 'Canvas Presets'),
+                          _MenuItem(
+                            icon: Icons.crop_square_rounded,
+                            label: '1:1 Square (1080×1080)',
+                            isSelected: widget.state.activePage.width == 1080 && widget.state.activePage.height == 1080,
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(const UpdatePageDimensionsEvent(width: 1080, height: 1080));
+                            }),
+                          ),
+                          _MenuItem(
+                            icon: Icons.stay_current_portrait_rounded,
+                            label: '9:16 Story (1080×1920)',
+                            isSelected: widget.state.activePage.width == 1080 && widget.state.activePage.height == 1920,
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(const UpdatePageDimensionsEvent(width: 1080, height: 1920));
+                            }),
+                          ),
+                          _MenuItem(
+                            icon: Icons.tv_rounded,
+                            label: '16:9 Landscape (1920×1080)',
+                            isSelected: widget.state.activePage.width == 1920 && widget.state.activePage.height == 1080,
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(const UpdatePageDimensionsEvent(width: 1920, height: 1080));
+                            }),
+                          ),
+                          _MenuItem(
+                            icon: Icons.phone_iphone_rounded,
+                            label: 'Mobile Frame (393×852)',
+                            isSelected: widget.state.activePage.width == 393 && widget.state.activePage.height == 852,
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(const UpdatePageDimensionsEvent(width: 393, height: 852));
+                            }),
+                          ),
+                          _MenuItem(
+                            icon: Icons.aspect_ratio_rounded,
+                            label: 'Custom dimensions...',
+                            onTap: () => _closeAnd(() {
+                              _showDimensionsDialog(context, widget.state.activePage.width, widget.state.activePage.height);
+                            }),
+                          ),
+                          const _MenuDivider(),
+                          const _MenuHeader(label: 'View & Guides'),
+                          _MenuItem(
+                            icon: Icons.grid_on_rounded,
+                            label: widget.state.showGrid ? 'Hide grid' : 'Show grid',
+                            shortcut: "Ctrl+'",
+                            isSelected: widget.state.showGrid,
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(const ToggleGridEvent());
+                            }),
+                          ),
+                          _MenuItem(
+                            icon: Icons.straighten_rounded,
+                            label: widget.state.showGuides ? 'Hide guides' : 'Show guides',
+                            shortcut: 'Ctrl+;',
+                            isSelected: widget.state.showGuides,
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(const ToggleGuidesEvent());
+                            }),
+                          ),
+                          _MenuItem(
+                            icon: Icons.fit_screen_rounded,
+                            label: 'Reset page padding (20px)',
+                            onTap: () => _closeAnd(() {
+                              widget.bloc.add(const UpdatePagePaddingEvent(horizontal: 20, vertical: 20));
+                            }),
+                          ),
+                          const _MenuDivider(),
                           _MenuItem(
                             icon: Icons.select_all_rounded,
-                            label: 'Select all',
+                            label: 'Select all layers',
                             shortcut: 'Ctrl+A',
                             onTap: () => _closeAnd(() {
                               final allIds = widget.state.activePage.layers.map((l) => l.id).toList();
                               widget.bloc.add(SelectMultipleLayersEvent(allIds));
                             }),
                           ),
-                          _MenuItem(
-                            icon: Icons.grid_on_rounded,
-                            label: widget.state.showGrid ? 'Hide grid' : 'Show grid',
-                            shortcut: "Ctrl+'",
-                            onTap: () => _closeAnd(() {
-                              // Grid toggle handled via keyboard / inspector
-                            }),
-                          ),
                         ],
                       ],
+                    ),
                     ),
                   ),
                 ),
@@ -387,6 +850,801 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
   },
 );
 }
+
+  void _openColorPicker(BuildContext context, Color initialColor, ValueChanged<Color> onColorChanged) {
+    Color selected = initialColor == Colors.transparent ? const Color(0xFF6C5CE7) : initialColor;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        title: Row(
+          children: [
+            const Expanded(
+              child: Text('Custom Color', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            InkWell(
+              onTap: () {
+                onColorChanged(Colors.transparent);
+                Navigator.pop(ctx);
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2A35),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.block_rounded, size: 12, color: Colors.white70),
+                    SizedBox(width: 4),
+                    Text('No Fill', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: HexColorPickerWidget(
+            initialColor: selected,
+            onColorChanged: (c) {
+              selected = c;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              onColorChanged(selected);
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0D99FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showScaleDialog(BuildContext context, Layer layer) {
+    double scaleFactor = 1.0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          final isAutoLayout = layer is AutoLayoutLayer;
+          final currentW = layer.width;
+          final currentH = layer.height;
+          final newW = (currentW * scaleFactor).round();
+          final newH = (currentH * scaleFactor).round();
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E1E24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+            ),
+            title: Row(
+              children: [
+                const Icon(Icons.aspect_ratio_rounded, size: 18, color: Color(0xFF0D99FF)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Scale ${layer.name}',
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isAutoLayout) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D99FF).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF0D99FF).withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF0D99FF)),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Scales container, font sizes, gaps, padding, and all nested elements proportionally.',
+                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Percentage Stepper & Input
+                  const Text('Scale Percentage', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2A2A35),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 16, color: Colors.white70),
+                              onPressed: () {
+                                setDialogState(() {
+                                  scaleFactor = (scaleFactor - 0.1).clamp(0.1, 10.0);
+                                });
+                              },
+                            ),
+                            SizedBox(
+                              width: 50,
+                              child: Text(
+                                '${(scaleFactor * 100).round()}%',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 16, color: Colors.white70),
+                              onPressed: () {
+                                setDialogState(() {
+                                  scaleFactor = (scaleFactor + 0.1).clamp(0.1, 10.0);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2A2A32),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Dimensions', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$newW × $newH px',
+                                style: const TextStyle(color: Color(0xFF0D99FF), fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Quick Presets
+                  const Text('Quick Presets', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final preset in [0.5, 0.75, 0.9, 1.1, 1.25, 1.5, 2.0])
+                        InkWell(
+                          onTap: () {
+                            setDialogState(() {
+                              scaleFactor = preset;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: (scaleFactor - preset).abs() < 0.01 ? const Color(0xFF0D99FF) : const Color(0xFF2A2A35),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${preset}x',
+                              style: TextStyle(
+                                color: (scaleFactor - preset).abs() < 0.01 ? Colors.white : Colors.white70,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  widget.bloc.add(ScaleLayerEvent(
+                    layerId: layer.id,
+                    scaleFactor: scaleFactor,
+                  ));
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D99FF),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Apply Scale'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAutoLayoutSettingsDialog(BuildContext context, AutoLayoutLayer layer) {
+    Color? selectedBgColor = layer.backgroundColor;
+    bool hasBgFill = layer.backgroundColor != null && layer.backgroundColor != Colors.transparent;
+    double selectedCornerRadius = layer.cornerRadius;
+    Color? selectedStrokeColor = layer.strokeColor;
+    double selectedStrokeWidth = layer.strokeWidth > 0 ? layer.strokeWidth : 1.0;
+    StrokePosition selectedStrokePos = layer.strokePosition;
+    bool hasStroke = layer.strokeColor != null && layer.strokeColor != Colors.transparent && layer.strokeWidth > 0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.tune_rounded, size: 18, color: Color(0xFF0D99FF)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Layout Settings', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Background Fill Section
+                Row(
+                  children: [
+                    const Text('Background Fill', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () {
+                        setDialogState(() {
+                          hasBgFill = false;
+                          selectedBgColor = null;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2A2A35),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.block_rounded, size: 11, color: Colors.white70),
+                            SizedBox(width: 4),
+                            Text('No Fill', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ColorPicker(
+                  pickerColor: selectedBgColor ?? const Color(0xFF1E1E24),
+                  onColorChanged: (c) {
+                    setDialogState(() {
+                      selectedBgColor = c;
+                      hasBgFill = true;
+                    });
+                  },
+                  showLabel: false,
+                  enableAlpha: false,
+                  pickerAreaHeightPercent: 0.55,
+                ),
+                if (hasBgFill && selectedBgColor != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2A2A35),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: selectedBgColor,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '#${(selectedBgColor!).toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+
+                // Corner Radius Section
+                const Text('Corner Radius', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2A35),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove, size: 14, color: Colors.white70),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedCornerRadius = (selectedCornerRadius - 2).clamp(0.0, 100.0);
+                              });
+                            },
+                          ),
+                          Text('${selectedCornerRadius.toInt()} px', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          IconButton(
+                            icon: const Icon(Icons.add, size: 14, color: Colors.white70),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedCornerRadius = (selectedCornerRadius + 2).clamp(0.0, 100.0);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    for (final r in [0.0, 8.0, 12.0, 20.0]) ...[
+                      InkWell(
+                        onTap: () {
+                          setDialogState(() {
+                            selectedCornerRadius = r;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: selectedCornerRadius == r ? const Color(0xFF0D99FF) : const Color(0xFF2A2A35),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('${r.toInt()}px', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Stroke Settings Header
+                Row(
+                  children: [
+                    const Text('Stroke', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () {
+                        setDialogState(() {
+                          hasStroke = false;
+                          selectedStrokeColor = null;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2A2A35),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.block_rounded, size: 11, color: Colors.white70),
+                            SizedBox(width: 4),
+                            Text('No Stroke', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    // Weight Stepper
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2A35),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove, size: 14, color: Colors.white70),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedStrokeWidth = (selectedStrokeWidth - 1).clamp(1.0, 50.0);
+                                hasStroke = true;
+                                selectedStrokeColor ??= const Color(0xFFFFFFFF);
+                              });
+                            },
+                          ),
+                          Text('${selectedStrokeWidth.toInt()} px', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          IconButton(
+                            icon: const Icon(Icons.add, size: 14, color: Colors.white70),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedStrokeWidth = (selectedStrokeWidth + 1).clamp(1.0, 50.0);
+                                hasStroke = true;
+                                selectedStrokeColor ??= const Color(0xFFFFFFFF);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    for (final w in [1.0, 2.0, 4.0]) ...[
+                      InkWell(
+                        onTap: () {
+                          setDialogState(() {
+                            selectedStrokeWidth = w;
+                            hasStroke = true;
+                            selectedStrokeColor ??= const Color(0xFFFFFFFF);
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: selectedStrokeWidth == w && hasStroke ? const Color(0xFF0D99FF) : const Color(0xFF2A2A35),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('${w.toInt()}px', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Stroke Position (Inside / Center / Outside)
+                const Text('Stroke Position', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Container(
+                  height: 36,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A2A35),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      for (final pos in StrokePosition.values)
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                selectedStrokePos = pos;
+                                hasStroke = true;
+                                selectedStrokeColor ??= const Color(0xFFFFFFFF);
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: selectedStrokePos == pos && hasStroke
+                                    ? const Color(0xFF0D99FF)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                pos.name[0].toUpperCase() + pos.name.substring(1),
+                                style: TextStyle(
+                                  color: selectedStrokePos == pos && hasStroke ? Colors.white : Colors.white60,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Stroke Color Picker
+                const Text('Stroke Color', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                ColorPicker(
+                  pickerColor: selectedStrokeColor ?? const Color(0xFFFFFFFF),
+                  onColorChanged: (c) {
+                    setDialogState(() {
+                      selectedStrokeColor = c;
+                      hasStroke = true;
+                    });
+                  },
+                  showLabel: false,
+                  enableAlpha: false,
+                  pickerAreaHeightPercent: 0.55,
+                ),
+                if (hasStroke && selectedStrokeColor != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2A2A35),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: selectedStrokeColor,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '#${(selectedStrokeColor!).toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                widget.bloc.add(UpdateAutoLayoutEvent(
+                  layerId: layer.id,
+                  backgroundColor: hasBgFill ? selectedBgColor : Colors.transparent,
+                  cornerRadius: selectedCornerRadius,
+                  strokeColor: hasStroke ? selectedStrokeColor : Colors.transparent,
+                  strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
+                  strokePosition: selectedStrokePos,
+                ));
+                Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D99FF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, int pageIndex, String currentName) {
+    final controller = TextEditingController(text: currentName);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        title: const Text(
+          'Rename Page',
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFF2A2A32),
+            hintText: 'Enter page name',
+            hintStyle: const TextStyle(color: Colors.white38),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF0D99FF)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                widget.bloc.add(RenamePageEvent(pageIndex, controller.text.trim()));
+              }
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0D99FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDimensionsDialog(BuildContext context, double currentWidth, double currentHeight) {
+    final widthController = TextEditingController(text: currentWidth.toInt().toString());
+    final heightController = TextEditingController(text: currentHeight.toInt().toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        title: const Text(
+          'Custom Page Dimensions',
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        content: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Width (px)', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: widthController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFF2A2A32),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Text('×', style: TextStyle(color: Colors.white54, fontSize: 18)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Height (px)', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: heightController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFF2A2A32),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final w = double.tryParse(widthController.text) ?? currentWidth;
+              final h = double.tryParse(heightController.text) ?? currentHeight;
+              widget.bloc.add(UpdatePageDimensionsEvent(width: w, height: h));
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0D99FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MenuHeader extends StatelessWidget {
@@ -891,3 +2149,125 @@ class _FigmaAlignmentMatrix extends StatelessWidget {
     );
   }
 }
+
+class _MenuScaleScrubber extends StatefulWidget {
+  final Layer layer;
+  final EditorBloc bloc;
+
+  const _MenuScaleScrubber({
+    required this.layer,
+    required this.bloc,
+  });
+
+  @override
+  State<_MenuScaleScrubber> createState() => _MenuScaleScrubberState();
+}
+
+class _MenuScaleScrubberState extends State<_MenuScaleScrubber> {
+  double _currentPercent = 100.0;
+  bool _isDragging = false;
+
+  void _applyDelta(double deltaPercent) {
+    final nextPercent = (_currentPercent + deltaPercent).clamp(10.0, 500.0);
+    if (nextPercent == _currentPercent) return;
+    final factor = nextPercent / _currentPercent;
+    setState(() {
+      _currentPercent = nextPercent;
+    });
+    widget.bloc.add(ScaleLayerEvent(
+      layerId: widget.layer.id,
+      scaleFactor: factor,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: _isDragging ? const Color(0xFF2E2E3A) : const Color(0xFF25252E),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: _isDragging ? const Color(0xFF0D99FF).withValues(alpha: 0.6) : Colors.white10,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.aspect_ratio_rounded, size: 14, color: Colors.white70),
+            const SizedBox(width: 8),
+            const Text(
+              'Scale',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            // Quick Decrement
+            InkWell(
+              onTap: () => _applyDelta(-10.0),
+              borderRadius: BorderRadius.circular(4),
+              child: const Padding(
+                padding: EdgeInsets.all(2.0),
+                child: Icon(Icons.remove, size: 13, color: Colors.white60),
+              ),
+            ),
+            const SizedBox(width: 4),
+            // Draggable / Scrubbable % Badge
+            GestureDetector(
+              onHorizontalDragStart: (_) => setState(() => _isDragging = true),
+              onHorizontalDragUpdate: (details) {
+                _applyDelta(details.delta.dx * 0.75);
+              },
+              onHorizontalDragEnd: (_) => setState(() => _isDragging = false),
+              onHorizontalDragCancel: () => setState(() => _isDragging = false),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeLeftRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _isDragging ? const Color(0xFF0D99FF) : const Color(0xFF1E1E24),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: _isDragging ? const Color(0xFF0D99FF) : Colors.white24,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.swap_horiz_rounded, size: 11, color: Colors.white54),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${_currentPercent.round()}%',
+                        style: TextStyle(
+                          color: _isDragging ? Colors.white : const Color(0xFF0D99FF),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            // Quick Increment
+            InkWell(
+              onTap: () => _applyDelta(10.0),
+              borderRadius: BorderRadius.circular(4),
+              child: const Padding(
+                padding: EdgeInsets.all(2.0),
+                child: Icon(Icons.add, size: 13, color: Colors.white60),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

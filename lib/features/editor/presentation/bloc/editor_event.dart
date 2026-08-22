@@ -107,6 +107,19 @@ class ResizeLayerHandleEvent extends EditorEvent {
   List<Object?> get props => [layerId, handle, dx, dy, lockAspectRatio, isFinal];
 }
 
+class ScaleLayerEvent extends EditorEvent {
+  final String layerId;
+  final double scaleFactor;
+
+  const ScaleLayerEvent({
+    required this.layerId,
+    required this.scaleFactor,
+  });
+
+  @override
+  List<Object?> get props => [layerId, scaleFactor];
+}
+
 class RotateLayerEvent extends EditorEvent {
   final String layerId;
   final double angle; // in radians
@@ -309,6 +322,15 @@ class UpdatePagePaddingEvent extends EditorEvent {
   List<Object?> get props => [horizontal, vertical];
 }
 
+class UpdatePageDimensionsEvent extends EditorEvent {
+  final double width;
+  final double height;
+  const UpdatePageDimensionsEvent({required this.width, required this.height});
+
+  @override
+  List<Object?> get props => [width, height];
+}
+
 // Auto Layout Events
 class CreateAutoLayoutFromSelectionEvent extends EditorEvent {
   const CreateAutoLayoutFromSelectionEvent();
@@ -324,6 +346,11 @@ class UpdateAutoLayoutEvent extends EditorEvent {
   final AutoLayoutDistribution? distribution;
   final AutoLayoutSizingMode? horizontalSizing;
   final AutoLayoutSizingMode? verticalSizing;
+  final Color? backgroundColor;
+  final double? cornerRadius;
+  final Color? strokeColor;
+  final double? strokeWidth;
+  final StrokePosition? strokePosition;
 
   const UpdateAutoLayoutEvent({
     required this.layerId,
@@ -335,6 +362,11 @@ class UpdateAutoLayoutEvent extends EditorEvent {
     this.distribution,
     this.horizontalSizing,
     this.verticalSizing,
+    this.backgroundColor,
+    this.cornerRadius,
+    this.strokeColor,
+    this.strokeWidth,
+    this.strokePosition,
   });
 
   @override
@@ -348,6 +380,11 @@ class UpdateAutoLayoutEvent extends EditorEvent {
         distribution,
         horizontalSizing,
         verticalSizing,
+        backgroundColor,
+        cornerRadius,
+        strokeColor,
+        strokeWidth,
+        strokePosition,
       ];
 }
 

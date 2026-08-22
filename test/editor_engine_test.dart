@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:layerly/core/constants/app_colors.dart';
+import 'package:layerly/core/utils/text_span_parser.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_project.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
@@ -515,6 +517,219 @@ void main() {
       expect(nestedLayout.children.length, 2);
       expect(nestedLayout.children[0].id, 'row-icon');
       expect(nestedLayout.children[1].id, 'row-text');
+    });
+
+    test('EditorBloc supports updating page dimensions via UpdatePageDimensionsEvent', () async {
+      final bloc = EditorBloc(initialProject: project);
+      expect(bloc.state.activePage.width, 1080.0);
+      expect(bloc.state.activePage.height, 1080.0);
+
+      // Update to 9:16 Story preset
+      bloc.add(const UpdatePageDimensionsEvent(width: 1080, height: 1920));
+      await Future.delayed(Duration.zero);
+
+      expect(bloc.state.activePage.width, 1080.0);
+      expect(bloc.state.activePage.height, 1920.0);
+
+      // Update to 16:9 Landscape preset
+      bloc.add(const UpdatePageDimensionsEvent(width: 1920, height: 1080));
+      await Future.delayed(Duration.zero);
+
+      expect(bloc.state.activePage.width, 1920.0);
+      expect(bloc.state.activePage.height, 1080.0);
+    });
+
+    test('EditorBloc supports adding/updating Auto Layout background color', () async {
+      final bloc = EditorBloc(initialProject: project);
+
+      final t1 = TextLayer(id: 't1', name: 'Text 1', x: 20, y: 20, width: 80, height: 30, content: 'Text 1');
+      final t2 = TextLayer(id: 't2', name: 'Text 2', x: 120, y: 20, width: 80, height: 30, content: 'Text 2');
+      bloc.add(AddLayerEvent(t1));
+      bloc.add(AddLayerEvent(t2));
+      await Future.delayed(Duration.zero);
+
+      bloc.add(SelectLayerEvent(t1.id, isMultiSelect: false));
+      bloc.add(SelectLayerEvent(t2.id, isMultiSelect: true));
+      await Future.delayed(Duration.zero);
+
+      bloc.add(const CreateAutoLayoutFromSelectionEvent());
+      await Future.delayed(Duration.zero);
+
+      final autoLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(autoLayout.backgroundColor, isNull);
+
+      // Add background color
+      const newBg = Color(0xFF6C5CE7);
+      bloc.add(UpdateAutoLayoutEvent(
+        layerId: autoLayout.id,
+        backgroundColor: newBg,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final updatedLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(updatedLayout.backgroundColor, newBg);
+
+      // Remove background color (None / Transparent)
+      bloc.add(UpdateAutoLayoutEvent(
+        layerId: autoLayout.id,
+        backgroundColor: Colors.transparent,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final clearedLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(clearedLayout.backgroundColor, isNull);
+    });
+
+    test('EditorBloc supports Auto Layout stroke settings (color, weight, position)', () async {
+      final bloc = EditorBloc(initialProject: project);
+
+      final t1 = TextLayer(id: 't1', name: 'Text 1', x: 20, y: 20, width: 80, height: 30, content: 'Text 1');
+      bloc.add(AddLayerEvent(t1));
+      await Future.delayed(Duration.zero);
+
+      bloc.add(SelectLayerEvent(t1.id, isMultiSelect: false));
+      await Future.delayed(Duration.zero);
+
+      bloc.add(const CreateAutoLayoutFromSelectionEvent());
+      await Future.delayed(Duration.zero);
+
+      final autoLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(autoLayout.strokeColor, isNull);
+      expect(autoLayout.strokeWidth, 0.0);
+      expect(autoLayout.strokePosition, StrokePosition.inside);
+
+      // Add Stroke with color, weight 2.0, position outside
+      const strokeColor = Color(0xFF0D99FF);
+      bloc.add(UpdateAutoLayoutEvent(
+        layerId: autoLayout.id,
+        strokeColor: strokeColor,
+        strokeWidth: 2.0,
+        strokePosition: StrokePosition.outside,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final updatedLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(updatedLayout.strokeColor, strokeColor);
+      expect(updatedLayout.strokeWidth, 2.0);
+      expect(updatedLayout.strokePosition, StrokePosition.outside);
+
+      // Update position to center
+      bloc.add(UpdateAutoLayoutEvent(
+        layerId: autoLayout.id,
+        strokePosition: StrokePosition.center,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final centerLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(centerLayout.strokePosition, StrokePosition.center);
+
+      // Clear stroke
+      bloc.add(UpdateAutoLayoutEvent(
+        layerId: autoLayout.id,
+        strokeColor: Colors.transparent,
+        strokeWidth: 0.0,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final clearedLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(clearedLayout.strokeColor, isNull);
+      expect(clearedLayout.strokeWidth, 0.0);
+    });
+
+    test('TextSpanParser parses multi-color text spans and applies word colors', () {
+      const content = "I redesigned [color:#6C5CE7]Uber's Eats[/color] screen.";
+      const baseStyle = TextStyle(color: Colors.white, fontSize: 48);
+
+      final span = TextSpanParser.parseToTextSpan(content, baseStyle);
+      expect(span.children, isNotNull);
+      expect(span.children!.length, 3);
+      expect((span.children![0] as TextSpan).text, 'I redesigned ');
+      expect((span.children![0] as TextSpan).style?.color, Colors.white);
+      expect((span.children![1] as TextSpan).text, "Uber's Eats");
+      expect((span.children![1] as TextSpan).style?.color, const Color(0xFF6C5CE7));
+      expect((span.children![2] as TextSpan).text, ' screen.');
+      expect((span.children![2] as TextSpan).style?.color, Colors.white);
+
+      // Strip tags
+      expect(TextSpanParser.stripTags(content), "I redesigned Uber's Eats screen.");
+
+      // Apply color to another word
+      final updated = TextSpanParser.applyColorToWord(content, 'screen.', const Color(0xFFFF4757));
+      expect(updated.contains('[color:#FF4757]screen.[/color]'), isTrue);
+
+      // Clear color
+      final cleared = TextSpanParser.applyColorToWord(updated, 'screen.', null);
+      expect(cleared.contains('[color:#FF4757]'), isFalse);
+    });
+
+    test('EditorBloc supports ScaleLayerEvent proportionally scaling layers and nested AutoLayouts', () async {
+      final text = TextLayer(
+        id: 'txt-scale',
+        name: 'Scale Text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 40,
+        fontSize: 20,
+        content: 'Hello',
+      );
+      final shape = ShapeLayer(
+        id: 'shp-scale',
+        name: 'Scale Shape',
+        x: 0,
+        y: 0,
+        width: 50,
+        height: 50,
+        cornerRadius: 10,
+      );
+
+      final autoLayout = AutoLayoutLayer(
+        id: 'layout-scale',
+        name: 'Scale Layout',
+        x: 100,
+        y: 100,
+        width: 180,
+        height: 70,
+        gap: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        children: [text, shape],
+      );
+
+      final customProject = project.copyWith(
+        pages: [
+          project.pages[0].copyWith(layers: [autoLayout]),
+        ],
+      );
+
+      final bloc = EditorBloc(initialProject: customProject);
+
+      // Scale the auto layout by 2.0x
+      bloc.add(const ScaleLayerEvent(layerId: 'layout-scale', scaleFactor: 2.0));
+      await Future.delayed(Duration.zero);
+
+      final scaledLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(scaledLayout.gap, 20.0);
+      expect(scaledLayout.paddingHorizontal, 20.0);
+      expect(scaledLayout.paddingVertical, 20.0);
+
+      final scaledText = scaledLayout.children.whereType<TextLayer>().first;
+      expect(scaledText.fontSize, 40.0); // 20 * 2.0
+
+      final scaledShape = scaledLayout.children.whereType<ShapeLayer>().first;
+      expect(scaledShape.width, 100.0); // 50 * 2.0
+      expect(scaledShape.height, 100.0); // 50 * 2.0
+      expect(scaledShape.cornerRadius, 20.0); // 10 * 2.0
+
+      // Scale down by 0.5x
+      bloc.add(const ScaleLayerEvent(layerId: 'layout-scale', scaleFactor: 0.5));
+      await Future.delayed(Duration.zero);
+
+      final halfLayout = bloc.state.activePageLayers.whereType<AutoLayoutLayer>().first;
+      expect(halfLayout.gap, 10.0);
+
+      final halfText = halfLayout.children.whereType<TextLayer>().first;
+      expect(halfText.fontSize, 20.0);
     });
   });
 }

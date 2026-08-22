@@ -9,6 +9,7 @@ import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
+import 'package:layerly/core/widgets/more_rings_icon.dart';
 
 class PageStrip extends StatefulWidget {
   const PageStrip({super.key});
@@ -119,10 +120,12 @@ class _PageStripState extends State<PageStrip> {
                           ),
                           InkWell(
                             onTap: () => _showSlideOptions(context, pageIndex, pages.length > 1, displayName),
-                            child: const Icon(
-                              Icons.more_horiz_rounded,
+                            child: const MoreRingsIcon(
                               size: 16,
                               color: AppColors.textMuted,
+                              ringRadius: 1.9,
+                              strokeWidth: 1.3,
+                              spacing: 1.0,
                             ),
                           ),
                         ],

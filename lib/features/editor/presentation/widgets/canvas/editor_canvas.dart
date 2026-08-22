@@ -14,10 +14,12 @@ import 'package:layerly/features/editor/presentation/widgets/canvas/figma_contex
 
 class EditorCanvas extends StatefulWidget {
   final bool isLockedTop;
+  final bool isPreviewOnly;
 
   const EditorCanvas({
     super.key,
     this.isLockedTop = true,
+    this.isPreviewOnly = false,
   });
 
   @override
@@ -305,72 +307,86 @@ class _EditorCanvasState extends State<EditorCanvas> {
                               height: activePage.height,
                               child: PageRenderer(
                                 page: activePage,
-                                selectedLayerIds: state.selectedLayerIds,
-                                activeGuides: state.activeSnapGuides,
-                                activeSpacingMeasurements: state.activeSpacingMeasurements,
+                                selectedLayerIds: widget.isPreviewOnly ? const [] : state.selectedLayerIds,
+                                activeGuides: widget.isPreviewOnly ? const [] : state.activeSnapGuides,
+                                activeSpacingMeasurements: widget.isPreviewOnly ? const [] : state.activeSpacingMeasurements,
                                 scale: scale,
                                 getComponentDefinition: (id) =>
                                     state.getComponentDefinition(id),
-                                onContextMenu: (layerId, globalPosition) {
-                                  _openContextMenu(globalPosition);
-                                },
-                                onSelectLayer: (layerId, isMulti) {
-                                  _focusNode.requestFocus();
-                                  context.read<EditorBloc>().add(
-                                        SelectLayerEvent(layerId, isMultiSelect: isMulti),
-                                      );
-                                },
-                                onMoveLayer: (layerId, details) {
-                                  context.read<EditorBloc>().add(
-                                        MoveLayerDeltaEvent(
-                                          layerId: layerId,
-                                          dx: details.delta.dx / scale,
-                                          dy: details.delta.dy / scale,
-                                          isFinal: false,
-                                        ),
-                                      );
-                                },
-                                onMoveLayerEnd: (layerId, details) {
-                                  context.read<EditorBloc>().add(
-                                        MoveLayerDeltaEvent(
-                                          layerId: layerId,
-                                          dx: 0,
-                                          dy: 0,
-                                          isFinal: true,
-                                        ),
-                                      );
-                                },
-                                onResizeLayer: (layerId, handle, details) {
-                                  context.read<EditorBloc>().add(
-                                        ResizeLayerHandleEvent(
-                                          layerId: layerId,
-                                          handle: handle,
-                                          dx: details.delta.dx / scale,
-                                          dy: details.delta.dy / scale,
-                                          isFinal: false,
-                                        ),
-                                      );
-                                },
-                                onResizeLayerEnd: (layerId, handle, details) {
-                                  context.read<EditorBloc>().add(
-                                        ResizeLayerHandleEvent(
-                                          layerId: layerId,
-                                          handle: handle,
-                                          dx: 0,
-                                          dy: 0,
-                                          isFinal: true,
-                                        ),
-                                      );
-                                },
-                                onRotateLayer: (layerId, angle, isFinal) {
-                                  context.read<EditorBloc>().add(
-                                        RotateLayerEvent(
-                                          layerId: layerId,
-                                          angle: angle,
-                                          isFinal: isFinal,
-                                        ),
-                                      );
-                                },
+                                onContextMenu: widget.isPreviewOnly
+                                    ? null
+                                    : (layerId, globalPosition) {
+                                        _openContextMenu(globalPosition);
+                                      },
+                                onSelectLayer: widget.isPreviewOnly
+                                    ? null
+                                    : (layerId, isMulti) {
+                                        _focusNode.requestFocus();
+                                        context.read<EditorBloc>().add(
+                                              SelectLayerEvent(layerId, isMultiSelect: isMulti),
+                                            );
+                                      },
+                                onMoveLayer: widget.isPreviewOnly
+                                    ? null
+                                    : (layerId, details) {
+                                        context.read<EditorBloc>().add(
+                                              MoveLayerDeltaEvent(
+                                                layerId: layerId,
+                                                dx: details.delta.dx / scale,
+                                                dy: details.delta.dy / scale,
+                                                isFinal: false,
+                                              ),
+                                            );
+                                      },
+                                onMoveLayerEnd: widget.isPreviewOnly
+                                    ? null
+                                    : (layerId, details) {
+                                        context.read<EditorBloc>().add(
+                                              MoveLayerDeltaEvent(
+                                                layerId: layerId,
+                                                dx: 0,
+                                                dy: 0,
+                                                isFinal: true,
+                                              ),
+                                            );
+                                      },
+                                onResizeLayer: widget.isPreviewOnly
+                                    ? null
+                                    : (layerId, handle, details) {
+                                        context.read<EditorBloc>().add(
+                                              ResizeLayerHandleEvent(
+                                                layerId: layerId,
+                                                handle: handle,
+                                                dx: details.delta.dx / scale,
+                                                dy: details.delta.dy / scale,
+                                                isFinal: false,
+                                              ),
+                                            );
+                                      },
+                                onResizeLayerEnd: widget.isPreviewOnly
+                                    ? null
+                                    : (layerId, handle, details) {
+                                        context.read<EditorBloc>().add(
+                                              ResizeLayerHandleEvent(
+                                                layerId: layerId,
+                                                handle: handle,
+                                                dx: 0,
+                                                dy: 0,
+                                                isFinal: true,
+                                              ),
+                                            );
+                                      },
+                                onRotateLayer: widget.isPreviewOnly
+                                    ? null
+                                    : (layerId, angle, isFinal) {
+                                        context.read<EditorBloc>().add(
+                                              RotateLayerEvent(
+                                                layerId: layerId,
+                                                angle: angle,
+                                                isFinal: isFinal,
+                                              ),
+                                            );
+                                      },
                               ),
                             ),
                           ),
@@ -478,72 +494,86 @@ class _EditorCanvasState extends State<EditorCanvas> {
                       borderRadius: BorderRadius.circular(16),
                       child: PageRenderer(
                         page: activePage,
-                        selectedLayerIds: state.selectedLayerIds,
-                        activeGuides: state.activeSnapGuides,
-                        activeSpacingMeasurements: state.activeSpacingMeasurements,
+                        selectedLayerIds: widget.isPreviewOnly ? const [] : state.selectedLayerIds,
+                        activeGuides: widget.isPreviewOnly ? const [] : state.activeSnapGuides,
+                        activeSpacingMeasurements: widget.isPreviewOnly ? const [] : state.activeSpacingMeasurements,
                         scale: state.zoom,
                         getComponentDefinition: (id) =>
                             state.getComponentDefinition(id),
-                        onContextMenu: (layerId, globalPosition) {
-                          _openContextMenu(globalPosition);
-                        },
-                        onSelectLayer: (layerId, isMulti) {
-                          _focusNode.requestFocus();
-                          context.read<EditorBloc>().add(
-                                SelectLayerEvent(layerId, isMultiSelect: isMulti),
-                              );
-                        },
-                        onMoveLayer: (layerId, details) {
-                          context.read<EditorBloc>().add(
-                                MoveLayerDeltaEvent(
-                                  layerId: layerId,
-                                  dx: details.delta.dx,
-                                  dy: details.delta.dy,
-                                  isFinal: false,
-                                ),
-                              );
-                        },
-                        onMoveLayerEnd: (layerId, details) {
-                          context.read<EditorBloc>().add(
-                                MoveLayerDeltaEvent(
-                                  layerId: layerId,
-                                  dx: 0,
-                                  dy: 0,
-                                  isFinal: true,
-                                ),
-                              );
-                        },
-                        onResizeLayer: (layerId, handle, details) {
-                          context.read<EditorBloc>().add(
-                                ResizeLayerHandleEvent(
-                                  layerId: layerId,
-                                  handle: handle,
-                                  dx: details.delta.dx,
-                                  dy: details.delta.dy,
-                                  isFinal: false,
-                                ),
-                              );
-                        },
-                        onResizeLayerEnd: (layerId, handle, details) {
-                          context.read<EditorBloc>().add(
-                                ResizeLayerHandleEvent(
-                                  layerId: layerId,
-                                  handle: handle,
-                                  dx: 0,
-                                  dy: 0,
-                                  isFinal: true,
-                                ),
-                              );
-                        },
-                        onRotateLayer: (layerId, angle, isFinal) {
-                          context.read<EditorBloc>().add(
-                                RotateLayerEvent(
-                                  layerId: layerId,
-                                  angle: angle,
-                                  isFinal: isFinal,
-                                ),
-                              );
-                        },
+                        onContextMenu: widget.isPreviewOnly
+                            ? null
+                            : (layerId, globalPosition) {
+                                _openContextMenu(globalPosition);
+                              },
+                        onSelectLayer: widget.isPreviewOnly
+                            ? null
+                            : (layerId, isMulti) {
+                                _focusNode.requestFocus();
+                                context.read<EditorBloc>().add(
+                                      SelectLayerEvent(layerId, isMultiSelect: isMulti),
+                                    );
+                              },
+                        onMoveLayer: widget.isPreviewOnly
+                            ? null
+                            : (layerId, details) {
+                                context.read<EditorBloc>().add(
+                                      MoveLayerDeltaEvent(
+                                        layerId: layerId,
+                                        dx: details.delta.dx,
+                                        dy: details.delta.dy,
+                                        isFinal: false,
+                                      ),
+                                    );
+                              },
+                        onMoveLayerEnd: widget.isPreviewOnly
+                            ? null
+                            : (layerId, details) {
+                                context.read<EditorBloc>().add(
+                                      MoveLayerDeltaEvent(
+                                        layerId: layerId,
+                                        dx: 0,
+                                        dy: 0,
+                                        isFinal: true,
+                                      ),
+                                    );
+                              },
+                        onResizeLayer: widget.isPreviewOnly
+                            ? null
+                            : (layerId, handle, details) {
+                                context.read<EditorBloc>().add(
+                                      ResizeLayerHandleEvent(
+                                        layerId: layerId,
+                                        handle: handle,
+                                        dx: details.delta.dx,
+                                        dy: details.delta.dy,
+                                        isFinal: false,
+                                      ),
+                                    );
+                              },
+                        onResizeLayerEnd: widget.isPreviewOnly
+                            ? null
+                            : (layerId, handle, details) {
+                                context.read<EditorBloc>().add(
+                                      ResizeLayerHandleEvent(
+                                        layerId: layerId,
+                                        handle: handle,
+                                        dx: 0,
+                                        dy: 0,
+                                        isFinal: true,
+                                      ),
+                                    );
+                              },
+                        onRotateLayer: widget.isPreviewOnly
+                            ? null
+                            : (layerId, angle, isFinal) {
+                                context.read<EditorBloc>().add(
+                                      RotateLayerEvent(
+                                        layerId: layerId,
+                                        angle: angle,
+                                        isFinal: isFinal,
+                                      ),
+                                    );
+                              },
                       ),
                     ),
                   ),
