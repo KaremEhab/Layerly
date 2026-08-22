@@ -10,6 +10,7 @@ import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 import 'package:layerly/core/widgets/hex_color_picker_widget.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 
 void showFigmaContextMenu({
   required BuildContext context,
@@ -725,6 +726,14 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                             ),
                           ),
                           const _MenuDivider(),
+                          _MenuItem(
+                            icon: Icons.auto_awesome_rounded,
+                            label: 'Background Studio...',
+                            textColor: const Color(0xFFB692F6),
+                            onTap: () => _closeAnd(() {
+                              showBackgroundPickerSheet(context, widget.state.activePage, bloc: widget.bloc);
+                            }),
+                          ),
                           _MenuItem(
                             icon: Icons.edit_outlined,
                             label: 'Rename page',

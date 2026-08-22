@@ -68,6 +68,7 @@ enum BackgroundType {
   solid,
   gradient,
   image,
+  transparent,
 }
 
 enum StrokePosition {

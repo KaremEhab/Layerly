@@ -54,9 +54,11 @@ class _PageStripState extends State<PageStrip> {
         return Container(
           height: 100,
           color: AppColors.background,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
             scrollDirection: Axis.horizontal,
             itemCount: pages.length + 1,
             separatorBuilder: (context, index) => const SizedBox(width: 10),

@@ -89,6 +89,8 @@ class PageRenderer extends StatelessWidget {
 
   BoxDecoration _buildBackgroundDecoration() {
     switch (page.backgroundType) {
+      case BackgroundType.transparent:
+        return const BoxDecoration(color: Colors.transparent);
       case BackgroundType.solid:
         return BoxDecoration(color: page.backgroundColor);
       case BackgroundType.gradient:

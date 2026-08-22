@@ -23,6 +23,7 @@ import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/figma_context_menu.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
 import 'package:layerly/core/widgets/hex_color_picker_widget.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 
 class PropertiesPanel extends StatelessWidget {
   const PropertiesPanel({super.key});
@@ -44,24 +45,31 @@ class PropertiesPanel extends StatelessWidget {
           // Single object selected -> Contextual Layer Properties
           final layer = selectedLayers.first;
           if (layer is AutoLayoutLayer) {
-            content = _buildAutoLayoutWithChildrenCards(context, state.activePage, layer);
+            content = _buildAutoLayoutWithChildrenCards(
+              context,
+              state.activePage,
+              layer,
+            );
           } else if (layer is TextLayer) {
             content = _buildTextCard(
               context,
               layer,
-              onUpdate: (updated) => context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
+              onUpdate: (updated) =>
+                  context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
             );
           } else if (layer is IconLayer) {
             content = _buildIconCard(
               context,
               layer,
-              onUpdate: (updated) => context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
+              onUpdate: (updated) =>
+                  context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
             );
           } else if (layer is ShapeLayer) {
             content = _buildShapeCard(
               context,
               layer,
-              onUpdate: (updated) => context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
+              onUpdate: (updated) =>
+                  context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
             );
           } else if (layer is ImageLayer) {
             content = _buildImageProperties(context, layer);
@@ -81,8 +89,15 @@ class PropertiesPanel extends StatelessWidget {
             child: content,
           );
         } else {
+          final isMultiCard = selectedLayers.length == 1 &&
+              selectedLayers.first is AutoLayoutLayer &&
+              (selectedLayers.first as AutoLayoutLayer).children.isNotEmpty;
+
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMultiCard ? 0 : 16,
+              vertical: 4,
+            ),
             child: content,
           );
         }
@@ -122,26 +137,39 @@ class PropertiesPanel extends StatelessWidget {
                 ),
               ),
               InkWell(
-                onTap: () => _showColorPicker(
+                onTap: () => showBackgroundPickerSheet(
                   context,
-                  activePage.backgroundColor,
-                  (c) {
-                    context.read<EditorBloc>().add(UpdatePageBackgroundEvent(
-                          type: activePage.backgroundType,
-                          color: c,
-                        ));
-                  },
+                  activePage,
+                  bloc: context.read<EditorBloc>(),
                 ),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   width: 34,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: activePage.backgroundColor,
-                    gradient: activePage.backgroundGradient,
+                    color:
+                        activePage.backgroundType == BackgroundType.transparent
+                        ? Colors.transparent
+                        : activePage.backgroundColor,
+                    gradient:
+                        activePage.backgroundType == BackgroundType.gradient
+                        ? activePage.backgroundGradient
+                        : null,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      width: 1,
+                    ),
                   ),
+                  child: activePage.backgroundType == BackgroundType.transparent
+                      ? const Center(
+                          child: Icon(
+                            Icons.block_rounded,
+                            size: 12,
+                            color: Colors.white70,
+                          ),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(width: 8),
@@ -201,7 +229,11 @@ class PropertiesPanel extends StatelessWidget {
                     children: [
                       const Text(
                         'Guides',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(width: 6),
                       Transform.scale(
@@ -210,7 +242,9 @@ class PropertiesPanel extends StatelessWidget {
                           value: activePage.showGuides,
                           activeColor: AppColors.primary,
                           onChanged: (val) {
-                            context.read<EditorBloc>().add(const ToggleGuidesEvent());
+                            context.read<EditorBloc>().add(
+                              const ToggleGuidesEvent(),
+                            );
                           },
                         ),
                       ),
@@ -225,16 +259,26 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: activePage.horizontalPadding.toInt(),
                   onDecrement: () {
-                    context.read<EditorBloc>().add(UpdatePagePaddingEvent(
-                          horizontal: (activePage.horizontalPadding - 1).clamp(0.0, 10000.0),
-                          vertical: activePage.verticalPadding,
-                        ));
+                    context.read<EditorBloc>().add(
+                      UpdatePagePaddingEvent(
+                        horizontal: (activePage.horizontalPadding - 1).clamp(
+                          0.0,
+                          10000.0,
+                        ),
+                        vertical: activePage.verticalPadding,
+                      ),
+                    );
                   },
                   onIncrement: () {
-                    context.read<EditorBloc>().add(UpdatePagePaddingEvent(
-                          horizontal: (activePage.horizontalPadding + 1).clamp(0.0, 10000.0),
-                          vertical: activePage.verticalPadding,
-                        ));
+                    context.read<EditorBloc>().add(
+                      UpdatePagePaddingEvent(
+                        horizontal: (activePage.horizontalPadding + 1).clamp(
+                          0.0,
+                          10000.0,
+                        ),
+                        vertical: activePage.verticalPadding,
+                      ),
+                    );
                   },
                 ),
               ),
@@ -245,16 +289,26 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: activePage.verticalPadding.toInt(),
                   onDecrement: () {
-                    context.read<EditorBloc>().add(UpdatePagePaddingEvent(
-                          horizontal: activePage.horizontalPadding,
-                          vertical: (activePage.verticalPadding - 1).clamp(0.0, 10000.0),
-                        ));
+                    context.read<EditorBloc>().add(
+                      UpdatePagePaddingEvent(
+                        horizontal: activePage.horizontalPadding,
+                        vertical: (activePage.verticalPadding - 1).clamp(
+                          0.0,
+                          10000.0,
+                        ),
+                      ),
+                    );
                   },
                   onIncrement: () {
-                    context.read<EditorBloc>().add(UpdatePagePaddingEvent(
-                          horizontal: activePage.horizontalPadding,
-                          vertical: (activePage.verticalPadding + 1).clamp(0.0, 10000.0),
-                        ));
+                    context.read<EditorBloc>().add(
+                      UpdatePagePaddingEvent(
+                        horizontal: activePage.horizontalPadding,
+                        vertical: (activePage.verticalPadding + 1).clamp(
+                          0.0,
+                          10000.0,
+                        ),
+                      ),
+                    );
                   },
                 ),
               ),
@@ -266,13 +320,18 @@ class PropertiesPanel extends StatelessWidget {
   }
 
   // 2. Auto Layout with Horizontal Scrolling Cards
-  Widget _buildAutoLayoutWithChildrenCards(BuildContext context, CanvasPage activePage, AutoLayoutLayer layer) {
+  Widget _buildAutoLayoutWithChildrenCards(
+    BuildContext context,
+    CanvasPage activePage,
+    AutoLayoutLayer layer,
+  ) {
     if (layer.children.isEmpty) {
       return _buildAutoLayoutCard(
         context,
         activePage,
         layer,
-        onUpdate: (updated) => context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
+        onUpdate: (updated) =>
+            context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
       );
     }
 
@@ -281,28 +340,35 @@ class PropertiesPanel extends StatelessWidget {
         context,
         activePage,
         layer,
-        onUpdate: (updated) => context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
+        onUpdate: (updated) =>
+            context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
       ),
       for (final child in layer.children)
         _buildChildLayerCard(context, layer, child),
     ];
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = math.max(350.0, screenWidth * 0.8);
+
     return SizedBox(
-      height: 114,
+      height: 108,
       child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: cards.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (ctx, idx) => SizedBox(
-          width: 310,
-          child: cards[idx],
-        ),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (ctx, idx) =>
+            SizedBox(width: cardWidth, child: cards[idx]),
       ),
     );
   }
 
-  Widget _buildChildLayerCard(BuildContext context, AutoLayoutLayer parent, Layer child) {
+  Widget _buildChildLayerCard(
+    BuildContext context,
+    AutoLayoutLayer parent,
+    Layer child,
+  ) {
     if (child is IconLayer) {
       return _buildIconCard(
         context,
@@ -340,11 +406,17 @@ class PropertiesPanel extends StatelessWidget {
     }
   }
 
-  void _updateChildInParent(BuildContext context, AutoLayoutLayer parent, Layer updatedChild) {
-    final updatedChildren = parent.children.map((c) => c.id == updatedChild.id ? updatedChild : c).toList();
+  void _updateChildInParent(
+    BuildContext context,
+    AutoLayoutLayer parent,
+    Layer updatedChild,
+  ) {
+    final updatedChildren = parent.children
+        .map((c) => c.id == updatedChild.id ? updatedChild : c)
+        .toList();
     context.read<EditorBloc>().add(
-          UpdateLayerEvent(parent.copyWith(children: updatedChildren)),
-        );
+      UpdateLayerEvent(parent.copyWith(children: updatedChildren)),
+    );
   }
 
   // 3. Auto Layout Card (Screenshot 3)
@@ -356,8 +428,14 @@ class PropertiesPanel extends StatelessWidget {
   }) {
     final rightMargin = activePage.width - activePage.horizontalPadding;
     final bottomMargin = activePage.height - activePage.verticalPadding;
-    final maxAllowedWidth = (rightMargin - layer.x).clamp(40.0, activePage.width - activePage.horizontalPadding * 2);
-    final maxAllowedHeight = (bottomMargin - layer.y).clamp(40.0, activePage.height - activePage.verticalPadding * 2);
+    final maxAllowedWidth = (rightMargin - layer.x).clamp(
+      40.0,
+      activePage.width - activePage.horizontalPadding * 2,
+    );
+    final maxAllowedHeight = (bottomMargin - layer.y).clamp(
+      40.0,
+      activePage.height - activePage.verticalPadding * 2,
+    );
 
     final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
     double sumChildrenMain = 0;
@@ -375,16 +453,32 @@ class PropertiesPanel extends StatelessWidget {
     final int numGaps = math.max(1, layer.children.length - 1);
 
     final double maxGap = isHorizontal
-        ? ((maxAllowedWidth - layer.paddingHorizontal * 2 - sumChildrenMain) / numGaps).floorToDouble().clamp(0.0, 10000.0)
-        : ((maxAllowedHeight - layer.paddingVertical * 2 - sumChildrenMain) / numGaps).floorToDouble().clamp(0.0, 10000.0);
+        ? ((maxAllowedWidth - layer.paddingHorizontal * 2 - sumChildrenMain) /
+                  numGaps)
+              .floorToDouble()
+              .clamp(0.0, 10000.0)
+        : ((maxAllowedHeight - layer.paddingVertical * 2 - sumChildrenMain) /
+                  numGaps)
+              .floorToDouble()
+              .clamp(0.0, 10000.0);
 
     final double maxPadH = isHorizontal
-        ? ((maxAllowedWidth - sumChildrenMain - numGaps * layer.gap) / 2).floorToDouble().clamp(0.0, 10000.0)
-        : ((maxAllowedWidth - maxChildCross) / 2).floorToDouble().clamp(0.0, 10000.0);
+        ? ((maxAllowedWidth - sumChildrenMain - numGaps * layer.gap) / 2)
+              .floorToDouble()
+              .clamp(0.0, 10000.0)
+        : ((maxAllowedWidth - maxChildCross) / 2).floorToDouble().clamp(
+            0.0,
+            10000.0,
+          );
 
     final double maxPadV = isHorizontal
-        ? ((maxAllowedHeight - maxChildCross) / 2).floorToDouble().clamp(0.0, 10000.0)
-        : ((maxAllowedHeight - sumChildrenMain - numGaps * layer.gap) / 2).floorToDouble().clamp(0.0, 10000.0);
+        ? ((maxAllowedHeight - maxChildCross) / 2).floorToDouble().clamp(
+            0.0,
+            10000.0,
+          )
+        : ((maxAllowedHeight - sumChildrenMain - numGaps * layer.gap) / 2)
+              .floorToDouble()
+              .clamp(0.0, 10000.0);
 
     return Container(
       constraints: const BoxConstraints(minHeight: 104),
@@ -414,14 +508,18 @@ class PropertiesPanel extends StatelessWidget {
               const Spacer(),
               InkWell(
                 onTap: () {
-                  final nextDir = layer.direction == AutoLayoutDirection.horizontal
+                  final nextDir =
+                      layer.direction == AutoLayoutDirection.horizontal
                       ? AutoLayoutDirection.vertical
                       : AutoLayoutDirection.horizontal;
                   onUpdate(layer.copyWith(direction: nextDir));
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSecondary,
                     borderRadius: BorderRadius.circular(12),
@@ -430,11 +528,21 @@ class PropertiesPanel extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        layer.direction == AutoLayoutDirection.horizontal ? 'Horizontal' : 'Vertical',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                        layer.direction == AutoLayoutDirection.horizontal
+                            ? 'Horizontal'
+                            : 'Vertical',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(Icons.sync_rounded, size: 14, color: AppColors.textSecondary),
+                      const Icon(
+                        Icons.sync_rounded,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
                     ],
                   ),
                 ),
@@ -451,7 +559,13 @@ class PropertiesPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: const Padding(
                   padding: EdgeInsets.all(4.0),
-                  child: MoreRingsIcon(color: AppColors.textSecondary, size: 20, ringRadius: 2.3, strokeWidth: 1.5, spacing: 1.0),
+                  child: MoreRingsIcon(
+                    color: AppColors.textSecondary,
+                    size: 20,
+                    ringRadius: 2.3,
+                    strokeWidth: 1.5,
+                    spacing: 1.0,
+                  ),
                 ),
               ),
             ],
@@ -465,24 +579,33 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: _buildStepperPill(
                   value: layer.gap.toInt(),
-                  overrideText: layer.distribution == AutoLayoutDistribution.spaceBetween ? 'Auto' : null,
+                  overrideText:
+                      layer.distribution == AutoLayoutDistribution.spaceBetween
+                      ? 'Auto'
+                      : null,
                   onDecrement: () {
-                    if (layer.distribution == AutoLayoutDistribution.spaceBetween) {
-                      onUpdate(layer.copyWith(
-                        distribution: AutoLayoutDistribution.start,
-                        gap: 12.0,
-                      ));
+                    if (layer.distribution ==
+                        AutoLayoutDistribution.spaceBetween) {
+                      onUpdate(
+                        layer.copyWith(
+                          distribution: AutoLayoutDistribution.start,
+                          gap: 12.0,
+                        ),
+                      );
                     } else {
                       final newGap = (layer.gap - 1).clamp(0.0, maxGap);
                       onUpdate(layer.copyWith(gap: newGap));
                     }
                   },
                   onIncrement: () {
-                    if (layer.distribution == AutoLayoutDistribution.spaceBetween) {
-                      onUpdate(layer.copyWith(
-                        distribution: AutoLayoutDistribution.start,
-                        gap: 16.0,
-                      ));
+                    if (layer.distribution ==
+                        AutoLayoutDistribution.spaceBetween) {
+                      onUpdate(
+                        layer.copyWith(
+                          distribution: AutoLayoutDistribution.start,
+                          gap: 16.0,
+                        ),
+                      );
                     } else {
                       final newGap = (layer.gap + 1).clamp(0.0, maxGap);
                       onUpdate(layer.copyWith(gap: newGap));
@@ -497,11 +620,17 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: layer.paddingHorizontal.toInt(),
                   onDecrement: () {
-                    final newPad = (layer.paddingHorizontal - 1).clamp(0.0, maxPadH);
+                    final newPad = (layer.paddingHorizontal - 1).clamp(
+                      0.0,
+                      maxPadH,
+                    );
                     onUpdate(layer.copyWith(paddingHorizontal: newPad));
                   },
                   onIncrement: () {
-                    final newPad = (layer.paddingHorizontal + 1).clamp(0.0, maxPadH);
+                    final newPad = (layer.paddingHorizontal + 1).clamp(
+                      0.0,
+                      maxPadH,
+                    );
                     onUpdate(layer.copyWith(paddingHorizontal: newPad));
                   },
                 ),
@@ -513,11 +642,17 @@ class PropertiesPanel extends StatelessWidget {
                 child: _buildStepperPill(
                   value: layer.paddingVertical.toInt(),
                   onDecrement: () {
-                    final newPad = (layer.paddingVertical - 1).clamp(0.0, maxPadV);
+                    final newPad = (layer.paddingVertical - 1).clamp(
+                      0.0,
+                      maxPadV,
+                    );
                     onUpdate(layer.copyWith(paddingVertical: newPad));
                   },
                   onIncrement: () {
-                    final newPad = (layer.paddingVertical + 1).clamp(0.0, maxPadV);
+                    final newPad = (layer.paddingVertical + 1).clamp(
+                      0.0,
+                      maxPadV,
+                    );
                     onUpdate(layer.copyWith(paddingVertical: newPad));
                   },
                 ),
@@ -557,25 +692,13 @@ class PropertiesPanel extends StatelessWidget {
                   onTap: () => _showEditTextDialog(context, layer, (newText) {
                     onUpdate(layer.copyWith(content: newText));
                   }),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Text',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        TextSpanParser.stripTags(layer.content),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  child: const Text(
+                    'Text',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -583,20 +706,26 @@ class PropertiesPanel extends StatelessWidget {
                 onUpdate(layer.copyWith(color: c));
               }),
               const SizedBox(width: 6),
-              const MoreRingsIcon(color: AppColors.textMuted, size: 18, ringRadius: 2.1, strokeWidth: 1.4, spacing: 1.0),
+              const MoreRingsIcon(
+                color: AppColors.textMuted,
+                size: 18,
+                ringRadius: 2.1,
+                strokeWidth: 1.4,
+                spacing: 1.0,
+              ),
             ],
           ),
           const SizedBox(height: 10),
 
-          // Row 2: Font Family Dropdown + Font Size Stepper
+          // Row 2: Font Family Dropdown + Font Weight Dropdown + Font Size Stepper
           Row(
             children: [
               // Font Family Dropdown Pill
               Expanded(
-                flex: 3,
+                flex: 4,
                 child: Container(
                   height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSecondary,
                     borderRadius: BorderRadius.circular(19),
@@ -605,12 +734,42 @@ class PropertiesPanel extends StatelessWidget {
                     child: DropdownButton<String>(
                       value: layer.fontFamily,
                       dropdownColor: AppColors.surfaceElevated,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary, size: 18),
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.textSecondary,
+                        size: 16,
+                      ),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      isExpanded: true,
                       items: () {
-                        const defaultFonts = ['Inter', 'Outfit', 'Poppins', 'Roboto', 'Montserrat'];
-                        final allFonts = <String>{...defaultFonts, layer.fontFamily}.toList();
-                        return allFonts.map((f) => DropdownMenuItem(value: f, child: Text(f.toUpperCase()))).toList();
+                        const defaultFonts = [
+                          'Inter',
+                          'Outfit',
+                          'Poppins',
+                          'Roboto',
+                          'Montserrat',
+                          'Lora',
+                          'Playfair',
+                        ];
+                        final allFonts = <String>{
+                          ...defaultFonts,
+                          layer.fontFamily,
+                        }.toList();
+                        return allFonts
+                            .map(
+                              (f) => DropdownMenuItem(
+                                value: f,
+                                child: Text(
+                                  f.toUpperCase(),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList();
                       }(),
                       onChanged: (val) {
                         if (val != null) {
@@ -621,11 +780,78 @@ class PropertiesPanel extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
+
+              // Font Weight Dropdown Pill (Bold, Regular, Medium, SemiBold, etc.)
+              Expanded(
+                flex: 4,
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(19),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<FontWeight>(
+                      value: layer.fontWeight,
+                      dropdownColor: AppColors.surfaceElevated,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.textSecondary,
+                        size: 16,
+                      ),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      isExpanded: true,
+                      items: () {
+                        const weights = [
+                          (FontWeight.w100, 'Thin'),
+                          (FontWeight.w200, 'ExtraLight'),
+                          (FontWeight.w300, 'Light'),
+                          (FontWeight.w400, 'Regular'),
+                          (FontWeight.w500, 'Medium'),
+                          (FontWeight.w600, 'SemiBold'),
+                          (FontWeight.w700, 'Bold'),
+                          (FontWeight.w800, 'ExtraBold'),
+                          (FontWeight.w900, 'Black'),
+                        ];
+                        final allWeights = <FontWeight>{
+                          ...weights.map((e) => e.$1),
+                          layer.fontWeight,
+                        }.toList();
+                        return allWeights.map((w) {
+                          final match = weights.where((e) => e.$1 == w);
+                          final label = match.isNotEmpty
+                              ? match.first.$2
+                              : 'W${w.value}';
+                          return DropdownMenuItem(
+                            value: w,
+                            child: Text(
+                              label,
+                              style: TextStyle(fontWeight: w, fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList();
+                      }(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          onUpdate(layer.copyWith(fontWeight: val));
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
 
               // Font Size Stepper
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: _buildStepperPill(
                   value: layer.fontSize.toInt(),
                   onDecrement: () {
@@ -664,16 +890,34 @@ class PropertiesPanel extends StatelessWidget {
 
     final items = <DropdownMenuItem<IconData>>[];
     for (final entry in presetIcons.entries) {
-      items.add(DropdownMenuItem(
-        value: entry.key,
-        child: Text(entry.value, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-      ));
+      items.add(
+        DropdownMenuItem(
+          value: entry.key,
+          child: Text(
+            entry.value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
     }
     if (!presetIcons.containsKey(layer.icon)) {
-      items.add(DropdownMenuItem(
-        value: layer.icon,
-        child: const Text('Icon', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-      ));
+      items.add(
+        DropdownMenuItem(
+          value: layer.icon,
+          child: const Text(
+            'Icon',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
     }
 
     return Container(
@@ -706,7 +950,13 @@ class PropertiesPanel extends StatelessWidget {
                 onUpdate(layer.copyWith(color: c));
               }),
               const SizedBox(width: 6),
-              const MoreRingsIcon(color: AppColors.textMuted, size: 18, ringRadius: 2.1, strokeWidth: 1.4, spacing: 1.0),
+              const MoreRingsIcon(
+                color: AppColors.textMuted,
+                size: 18,
+                ringRadius: 2.1,
+                strokeWidth: 1.4,
+                spacing: 1.0,
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -725,7 +975,11 @@ class PropertiesPanel extends StatelessWidget {
                     child: DropdownButton<IconData>(
                       value: layer.icon,
                       dropdownColor: AppColors.surfaceElevated,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary, size: 18),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.textSecondary,
+                        size: 18,
+                      ),
                       items: items,
                       onChanged: (val) {
                         if (val != null) {
@@ -783,20 +1037,37 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   layer.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               _buildColorSwatch(context, layer.fill, (c) {
                 onUpdate(layer.copyWith(fill: c));
               }),
               const SizedBox(width: 6),
-              const MoreRingsIcon(color: AppColors.textMuted, size: 18, ringRadius: 2.1, strokeWidth: 1.4, spacing: 1.0),
+              const MoreRingsIcon(
+                color: AppColors.textMuted,
+                size: 18,
+                ringRadius: 2.1,
+                strokeWidth: 1.4,
+                spacing: 1.0,
+              ),
             ],
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              const Text('Radius', style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+              const Text(
+                'Radius',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: _buildStepperPill(
@@ -839,12 +1110,22 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   layer.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const MoreRingsIcon(color: AppColors.textMuted, size: 18, ringRadius: 2.1, strokeWidth: 1.4, spacing: 1.0),
+              const MoreRingsIcon(
+                color: AppColors.textMuted,
+                size: 18,
+                ringRadius: 2.1,
+                strokeWidth: 1.4,
+                spacing: 1.0,
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -861,11 +1142,19 @@ class PropertiesPanel extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.aspect_ratio_rounded, color: AppColors.textSecondary, size: 14),
+                      const Icon(
+                        Icons.aspect_ratio_rounded,
+                        color: AppColors.textSecondary,
+                        size: 14,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '${layer.width.toInt()} × ${layer.height.toInt()} px',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -883,7 +1172,11 @@ class PropertiesPanel extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     layer.fit.name.toUpperCase(),
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -895,7 +1188,10 @@ class PropertiesPanel extends StatelessWidget {
   }
 
   // 8. Device Mockup Properties
-  Widget _buildDeviceMockupProperties(BuildContext context, DeviceMockupLayer layer) {
+  Widget _buildDeviceMockupProperties(
+    BuildContext context,
+    DeviceMockupLayer layer,
+  ) {
     return Container(
       constraints: const BoxConstraints(minHeight: 104),
       decoration: BoxDecoration(
@@ -915,10 +1211,20 @@ class PropertiesPanel extends StatelessWidget {
               const Expanded(
                 child: Text(
                   'Device Mockup',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const MoreRingsIcon(color: AppColors.textMuted, size: 18, ringRadius: 2.1, strokeWidth: 1.4, spacing: 1.0),
+              const MoreRingsIcon(
+                color: AppColors.textMuted,
+                size: 18,
+                ringRadius: 2.1,
+                strokeWidth: 1.4,
+                spacing: 1.0,
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -935,7 +1241,11 @@ class PropertiesPanel extends StatelessWidget {
                   alignment: Alignment.center,
                   child: const Text(
                     'iPhone Frame',
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -951,7 +1261,11 @@ class PropertiesPanel extends StatelessWidget {
                   alignment: Alignment.center,
                   child: const Text(
                     'Portrait',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -963,7 +1277,11 @@ class PropertiesPanel extends StatelessWidget {
   }
 
   // 9. Component Properties
-  Widget _buildComponentProperties(BuildContext context, EditorState state, ComponentInstanceLayer layer) {
+  Widget _buildComponentProperties(
+    BuildContext context,
+    EditorState state,
+    ComponentInstanceLayer layer,
+  ) {
     return Container(
       constraints: const BoxConstraints(minHeight: 104),
       decoration: BoxDecoration(
@@ -983,7 +1301,11 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   layer.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -993,11 +1315,17 @@ class PropertiesPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFA970FF).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFA970FF).withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: const Color(0xFFA970FF).withValues(alpha: 0.4),
+                  ),
                 ),
                 child: const Text(
                   'COMPONENT',
-                  style: TextStyle(color: Color(0xFFA970FF), fontSize: 9, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: Color(0xFFA970FF),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -1008,7 +1336,9 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: InkWell(
                   onTap: () {
-                    context.read<EditorBloc>().add(DetachComponentInstanceEvent(layer.id));
+                    context.read<EditorBloc>().add(
+                      DetachComponentInstanceEvent(layer.id),
+                    );
                   },
                   borderRadius: BorderRadius.circular(19),
                   child: Container(
@@ -1022,11 +1352,19 @@ class PropertiesPanel extends StatelessWidget {
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.link_off_rounded, size: 15, color: AppColors.primary),
+                        Icon(
+                          Icons.link_off_rounded,
+                          size: 15,
+                          color: AppColors.primary,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           'Detach Instance',
-                          style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -1041,7 +1379,11 @@ class PropertiesPanel extends StatelessWidget {
   }
 
   // 10. Multi-Selection Properties
-  Widget _buildMultiSelectProperties(BuildContext context, EditorState state, List<Layer> selected) {
+  Widget _buildMultiSelectProperties(
+    BuildContext context,
+    EditorState state,
+    List<Layer> selected,
+  ) {
     return Container(
       constraints: const BoxConstraints(minHeight: 104),
       decoration: BoxDecoration(
@@ -1057,24 +1399,36 @@ class PropertiesPanel extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${selected.length} selected',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
               const Spacer(),
               InkWell(
                 onTap: () {
-                  context.read<EditorBloc>().add(const DeleteSelectedLayersEvent());
+                  context.read<EditorBloc>().add(
+                    const DeleteSelectedLayersEvent(),
+                  );
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF5C5C).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -1082,9 +1436,20 @@ class PropertiesPanel extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.delete_outline_rounded, size: 14, color: Color(0xFFFF5C5C)),
+                      Icon(
+                        Icons.delete_outline_rounded,
+                        size: 14,
+                        color: Color(0xFFFF5C5C),
+                      ),
                       SizedBox(width: 4),
-                      Text('Delete', style: TextStyle(color: Color(0xFFFF5C5C), fontSize: 11, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Delete',
+                        style: TextStyle(
+                          color: Color(0xFFFF5C5C),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1097,7 +1462,9 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    context.read<EditorBloc>().add(const CreateAutoLayoutFromSelectionEvent());
+                    context.read<EditorBloc>().add(
+                      const CreateAutoLayoutFromSelectionEvent(),
+                    );
                   },
                   icon: const Icon(Icons.link_rounded, size: 16),
                   label: const Text('Create Layout'),
@@ -1138,7 +1505,11 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   layer.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1157,7 +1528,11 @@ class PropertiesPanel extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     'X: ${layer.x.toInt()}  Y: ${layer.y.toInt()}',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -1173,7 +1548,11 @@ class PropertiesPanel extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     'W: ${layer.width.toInt()}  H: ${layer.height.toInt()}',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -1231,14 +1610,22 @@ class PropertiesPanel extends StatelessWidget {
                 onTap: onDecrement,
                 child: const Padding(
                   padding: EdgeInsets.all(4.0),
-                  child: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary, size: 16),
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textSecondary,
+                    size: 16,
+                  ),
                 ),
               ),
               _RepeatableActionButton(
                 onTap: onIncrement,
                 child: const Padding(
                   padding: EdgeInsets.all(4.0),
-                  child: Icon(Icons.keyboard_arrow_up_rounded, color: AppColors.textSecondary, size: 16),
+                  child: Icon(
+                    Icons.keyboard_arrow_up_rounded,
+                    color: AppColors.textSecondary,
+                    size: 16,
+                  ),
                 ),
               ),
             ],
@@ -1248,10 +1635,18 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildColorSwatch(BuildContext context, Color color, ValueChanged<Color> onColorChanged) {
+  Widget _buildColorSwatch(
+    BuildContext context,
+    Color color,
+    ValueChanged<Color> onColorChanged,
+  ) {
     final isTransparent = color == Colors.transparent || color.a == 0;
     return InkWell(
-      onTap: () => _showColorPicker(context, isTransparent ? const Color(0xFF1E1E24) : color, onColorChanged),
+      onTap: () => _showColorPicker(
+        context,
+        isTransparent ? const Color(0xFF1E1E24) : color,
+        onColorChanged,
+      ),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         width: 28,
@@ -1260,7 +1655,9 @@ class PropertiesPanel extends StatelessWidget {
           color: isTransparent ? AppColors.surfaceSecondary : color,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isTransparent ? Colors.white.withValues(alpha: 0.18) : Colors.white.withValues(alpha: 0.25),
+            color: isTransparent
+                ? Colors.white.withValues(alpha: 0.18)
+                : Colors.white.withValues(alpha: 0.25),
             width: 1.2,
           ),
         ),
@@ -1277,8 +1674,14 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  void _showColorPicker(BuildContext context, Color initialColor, ValueChanged<Color> onColorChanged) {
-    Color selected = initialColor == Colors.transparent ? const Color(0xFF6C5CE7) : initialColor;
+  void _showColorPicker(
+    BuildContext context,
+    Color initialColor,
+    ValueChanged<Color> onColorChanged,
+  ) {
+    Color selected = initialColor == Colors.transparent
+        ? const Color(0xFF6C5CE7)
+        : initialColor;
 
     showDialog(
       context: context,
@@ -1288,7 +1691,14 @@ class PropertiesPanel extends StatelessWidget {
         title: Row(
           children: [
             const Expanded(
-              child: Text('Pick Color', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Pick Color',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             InkWell(
               onTap: () {
@@ -1306,9 +1716,20 @@ class PropertiesPanel extends StatelessWidget {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.block_rounded, size: 12, color: AppColors.textSecondary),
+                    Icon(
+                      Icons.block_rounded,
+                      size: 12,
+                      color: AppColors.textSecondary,
+                    ),
                     SizedBox(width: 4),
-                    Text('No Fill', style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
+                    Text(
+                      'No Fill',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1326,7 +1747,10 @@ class PropertiesPanel extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1336,7 +1760,9 @@ class PropertiesPanel extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('Apply'),
           ),
@@ -1350,7 +1776,10 @@ class PropertiesPanel extends StatelessWidget {
     AutoLayoutLayer layer,
     ValueChanged<AutoLayoutLayer> onUpdate,
   ) {
-    final hasStroke = layer.strokeColor != null && layer.strokeColor != Colors.transparent && layer.strokeWidth > 0;
+    final hasStroke =
+        layer.strokeColor != null &&
+        layer.strokeColor != Colors.transparent &&
+        layer.strokeWidth > 0;
     return InkWell(
       onTap: () => _showAutoLayoutSettingsDialog(
         context,
@@ -1365,7 +1794,9 @@ class PropertiesPanel extends StatelessWidget {
           color: AppColors.surfaceSecondary,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: hasStroke ? (layer.strokeColor ?? Colors.white) : Colors.white.withValues(alpha: 0.18),
+            color: hasStroke
+                ? (layer.strokeColor ?? Colors.white)
+                : Colors.white.withValues(alpha: 0.18),
             width: hasStroke ? (layer.strokeWidth.clamp(1.0, 3.0)) : 1.2,
           ),
         ),
@@ -1373,7 +1804,9 @@ class PropertiesPanel extends StatelessWidget {
           child: Icon(
             Icons.tune_rounded,
             size: 14,
-            color: hasStroke ? (layer.strokeColor ?? Colors.white) : Colors.white60,
+            color: hasStroke
+                ? (layer.strokeColor ?? Colors.white)
+                : Colors.white60,
           ),
         ),
       ),
@@ -1386,25 +1819,41 @@ class PropertiesPanel extends StatelessWidget {
     required ValueChanged<AutoLayoutLayer> onUpdate,
   }) {
     Color? selectedBgColor = layer.backgroundColor;
-    bool hasBgFill = layer.backgroundColor != null && layer.backgroundColor != Colors.transparent;
+    bool hasBgFill =
+        layer.backgroundColor != null &&
+        layer.backgroundColor != Colors.transparent;
     double selectedCornerRadius = layer.cornerRadius;
     Color? selectedStrokeColor = layer.strokeColor;
-    double selectedStrokeWidth = layer.strokeWidth > 0 ? layer.strokeWidth : 1.0;
+    double selectedStrokeWidth = layer.strokeWidth > 0
+        ? layer.strokeWidth
+        : 1.0;
     StrokePosition selectedStrokePos = layer.strokePosition;
-    bool hasStroke = layer.strokeColor != null && layer.strokeColor != Colors.transparent && layer.strokeWidth > 0;
+    bool hasStroke =
+        layer.strokeColor != null &&
+        layer.strokeColor != Colors.transparent &&
+        layer.strokeWidth > 0;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
           backgroundColor: AppColors.surfaceElevated,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Row(
             children: [
               Icon(Icons.tune_rounded, size: 18, color: AppColors.primary),
               SizedBox(width: 8),
               Expanded(
-                child: Text('Auto Layout Settings', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Auto Layout Settings',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
@@ -1416,7 +1865,14 @@ class PropertiesPanel extends StatelessWidget {
                 // Background Fill Section
                 Row(
                   children: [
-                    const Text('Background Fill', style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const Text(
+                      'Background Fill',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const Spacer(),
                     InkWell(
                       onTap: () {
@@ -1427,7 +1883,10 @@ class PropertiesPanel extends StatelessWidget {
                       },
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceSecondary,
                           borderRadius: BorderRadius.circular(6),
@@ -1436,9 +1895,20 @@ class PropertiesPanel extends StatelessWidget {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.block_rounded, size: 11, color: AppColors.textSecondary),
+                            Icon(
+                              Icons.block_rounded,
+                              size: 11,
+                              color: AppColors.textSecondary,
+                            ),
                             SizedBox(width: 4),
-                            Text('No Fill', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+                            Text(
+                              'No Fill',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1461,7 +1931,10 @@ class PropertiesPanel extends StatelessWidget {
                 if (hasBgFill && selectedBgColor != null) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceSecondary,
                       borderRadius: BorderRadius.circular(8),
@@ -1482,7 +1955,12 @@ class PropertiesPanel extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           '#${(selectedBgColor!).toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
                         ),
                       ],
                     ),
@@ -1491,7 +1969,14 @@ class PropertiesPanel extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Corner Radius Section
-                const Text('Corner Radius', style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Corner Radius',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -1506,19 +1991,42 @@ class PropertiesPanel extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.remove, size: 14, color: Colors.white70),
+                            icon: const Icon(
+                              Icons.remove,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
                             onPressed: () {
                               setDialogState(() {
-                                selectedCornerRadius = (selectedCornerRadius - 2).clamp(0.0, 100.0);
+                                selectedCornerRadius =
+                                    (selectedCornerRadius - 2).clamp(
+                                      0.0,
+                                      100.0,
+                                    );
                               });
                             },
                           ),
-                          Text('${selectedCornerRadius.toInt()} px', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text(
+                            '${selectedCornerRadius.toInt()} px',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           IconButton(
-                            icon: const Icon(Icons.add, size: 14, color: Colors.white70),
+                            icon: const Icon(
+                              Icons.add,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
                             onPressed: () {
                               setDialogState(() {
-                                selectedCornerRadius = (selectedCornerRadius + 2).clamp(0.0, 100.0);
+                                selectedCornerRadius =
+                                    (selectedCornerRadius + 2).clamp(
+                                      0.0,
+                                      100.0,
+                                    );
                               });
                             },
                           ),
@@ -1535,12 +2043,24 @@ class PropertiesPanel extends StatelessWidget {
                         },
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 7,
+                          ),
                           decoration: BoxDecoration(
-                            color: selectedCornerRadius == r ? AppColors.primary : AppColors.surfaceSecondary,
+                            color: selectedCornerRadius == r
+                                ? AppColors.primary
+                                : AppColors.surfaceSecondary,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text('${r.toInt()}px', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                          child: Text(
+                            '${r.toInt()}px',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -1552,7 +2072,14 @@ class PropertiesPanel extends StatelessWidget {
                 // Stroke Settings Header
                 Row(
                   children: [
-                    const Text('Stroke', style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const Text(
+                      'Stroke',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const Spacer(),
                     InkWell(
                       onTap: () {
@@ -1563,20 +2090,38 @@ class PropertiesPanel extends StatelessWidget {
                       },
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: !hasStroke ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surfaceSecondary,
+                          color: !hasStroke
+                              ? AppColors.primary.withValues(alpha: 0.2)
+                              : AppColors.surfaceSecondary,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: !hasStroke ? AppColors.primary : AppColors.border,
+                            color: !hasStroke
+                                ? AppColors.primary
+                                : AppColors.border,
                           ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.block_rounded, size: 11, color: AppColors.textSecondary),
+                            Icon(
+                              Icons.block_rounded,
+                              size: 11,
+                              color: AppColors.textSecondary,
+                            ),
                             SizedBox(width: 4),
-                            Text('None', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+                            Text(
+                              'None',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1599,21 +2144,38 @@ class PropertiesPanel extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.remove, size: 14, color: Colors.white70),
+                            icon: const Icon(
+                              Icons.remove,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
                             onPressed: () {
                               setDialogState(() {
-                                selectedStrokeWidth = (selectedStrokeWidth - 1).clamp(1.0, 50.0);
+                                selectedStrokeWidth = (selectedStrokeWidth - 1)
+                                    .clamp(1.0, 50.0);
                                 hasStroke = true;
                                 selectedStrokeColor ??= const Color(0xFFFFFFFF);
                               });
                             },
                           ),
-                          Text('${selectedStrokeWidth.toInt()} px', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text(
+                            '${selectedStrokeWidth.toInt()} px',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           IconButton(
-                            icon: const Icon(Icons.add, size: 14, color: Colors.white70),
+                            icon: const Icon(
+                              Icons.add,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
                             onPressed: () {
                               setDialogState(() {
-                                selectedStrokeWidth = (selectedStrokeWidth + 1).clamp(1.0, 50.0);
+                                selectedStrokeWidth = (selectedStrokeWidth + 1)
+                                    .clamp(1.0, 50.0);
                                 hasStroke = true;
                                 selectedStrokeColor ??= const Color(0xFFFFFFFF);
                               });
@@ -1634,12 +2196,24 @@ class PropertiesPanel extends StatelessWidget {
                         },
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 7,
+                          ),
                           decoration: BoxDecoration(
-                            color: selectedStrokeWidth == w && hasStroke ? AppColors.primary : AppColors.surfaceSecondary,
+                            color: selectedStrokeWidth == w && hasStroke
+                                ? AppColors.primary
+                                : AppColors.surfaceSecondary,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text('${w.toInt()}px', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                          child: Text(
+                            '${w.toInt()}px',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -1649,7 +2223,14 @@ class PropertiesPanel extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Stroke Position (Inside / Center / Outside)
-                const Text('Stroke Position', style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Stroke Position',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Container(
                   height: 36,
@@ -1680,9 +2261,12 @@ class PropertiesPanel extends StatelessWidget {
                               ),
                               alignment: Alignment.center,
                               child: Text(
-                                pos.name[0].toUpperCase() + pos.name.substring(1),
+                                pos.name[0].toUpperCase() +
+                                    pos.name.substring(1),
                                 style: TextStyle(
-                                  color: selectedStrokePos == pos && hasStroke ? Colors.white : AppColors.textSecondary,
+                                  color: selectedStrokePos == pos && hasStroke
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -1696,7 +2280,14 @@ class PropertiesPanel extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Stroke Color Picker
-                const Text('Stroke Color', style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Stroke Color',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 ColorPicker(
                   pickerColor: selectedStrokeColor ?? const Color(0xFFFFFFFF),
@@ -1713,7 +2304,10 @@ class PropertiesPanel extends StatelessWidget {
                 if (hasStroke && selectedStrokeColor != null) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceSecondary,
                       borderRadius: BorderRadius.circular(8),
@@ -1734,7 +2328,12 @@ class PropertiesPanel extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           '#${(selectedStrokeColor!).toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
                         ),
                       ],
                     ),
@@ -1746,25 +2345,32 @@ class PropertiesPanel extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textMuted),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
-                onUpdate(layer.copyWith(
-                  backgroundColor: hasBgFill ? selectedBgColor : null,
-                  clearBackgroundColor: !hasBgFill || selectedBgColor == null,
-                  cornerRadius: selectedCornerRadius,
-                  strokeColor: hasStroke ? selectedStrokeColor : null,
-                  clearStrokeColor: !hasStroke || selectedStrokeColor == null,
-                  strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
-                  strokePosition: selectedStrokePos,
-                ));
+                onUpdate(
+                  layer.copyWith(
+                    backgroundColor: hasBgFill ? selectedBgColor : null,
+                    clearBackgroundColor: !hasBgFill || selectedBgColor == null,
+                    cornerRadius: selectedCornerRadius,
+                    strokeColor: hasStroke ? selectedStrokeColor : null,
+                    clearStrokeColor: !hasStroke || selectedStrokeColor == null,
+                    strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
+                    strokePosition: selectedStrokePos,
+                  ),
+                );
                 Navigator.pop(ctx);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('Apply'),
             ),
@@ -1774,7 +2380,11 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  void _showEditTextDialog(BuildContext context, TextLayer layer, ValueChanged<String> onSaved) {
+  void _showEditTextDialog(
+    BuildContext context,
+    TextLayer layer,
+    ValueChanged<String> onSaved,
+  ) {
     final controller = TextEditingController(text: layer.content);
     TextStyle previewStyle;
     try {
@@ -1803,13 +2413,22 @@ class PropertiesPanel extends StatelessWidget {
 
           return AlertDialog(
             backgroundColor: AppColors.surfaceElevated,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: const Row(
               children: [
                 Icon(Icons.title_rounded, size: 18, color: AppColors.primary),
                 SizedBox(width: 8),
                 Expanded(
-                  child: Text('Edit Text & Colors', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Edit Text & Colors',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1819,7 +2438,14 @@ class PropertiesPanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Live Preview Box
-                  const Text('Preview', style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Preview',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Container(
                     width: double.infinity,
@@ -1830,14 +2456,24 @@ class PropertiesPanel extends StatelessWidget {
                       border: Border.all(color: AppColors.border),
                     ),
                     child: Text.rich(
-                      TextSpanParser.parseToTextSpan(controller.text.isEmpty ? ' ' : controller.text, previewStyle),
+                      TextSpanParser.parseToTextSpan(
+                        controller.text.isEmpty ? ' ' : controller.text,
+                        previewStyle,
+                      ),
                       textAlign: layer.textAlign,
                     ),
                   ),
                   const SizedBox(height: 14),
 
                   // Text Input
-                  const Text('Content', style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Content',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   TextField(
                     controller: controller,
@@ -1861,18 +2497,29 @@ class PropertiesPanel extends StatelessWidget {
                   // Character & Selection Color Toolbar
                   const Row(
                     children: [
-                      Icon(Icons.palette_rounded, size: 13, color: AppColors.primary),
+                      Icon(
+                        Icons.palette_rounded,
+                        size: 13,
+                        color: AppColors.primary,
+                      ),
                       SizedBox(width: 5),
                       Text(
                         'Color Selection / Letters',
-                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   const Text(
                     'Select any letters or words above, then tap a color:',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: 8),
 
@@ -1892,14 +2539,26 @@ class PropertiesPanel extends StatelessWidget {
                           child: InkWell(
                             onTap: () {
                               final sel = controller.selection;
-                              if (sel.isValid && !sel.isCollapsed && sel.start >= 0 && sel.end <= controller.text.length) {
-                                final selectedText = controller.text.substring(sel.start, sel.end);
-                                final updated = TextSpanParser.applyColorToSubstring(controller.text, selectedText, color);
+                              if (sel.isValid &&
+                                  !sel.isCollapsed &&
+                                  sel.start >= 0 &&
+                                  sel.end <= controller.text.length) {
+                                final selectedText = controller.text.substring(
+                                  sel.start,
+                                  sel.end,
+                                );
+                                final updated =
+                                    TextSpanParser.applyColorToSubstring(
+                                      controller.text,
+                                      selectedText,
+                                      color,
+                                    );
                                 controller.text = updated;
                               } else {
                                 // Default color picker for whole or word
                                 _showColorPicker(context, color, (newColor) {
-                                  controller.text = '[color:${TextSpanParser.colorToHex(newColor)}]${controller.text}[/color]';
+                                  controller.text =
+                                      '[color:${TextSpanParser.colorToHex(newColor)}]${controller.text}[/color]';
                                   setDialogState(() {});
                                 });
                               }
@@ -1912,7 +2571,10 @@ class PropertiesPanel extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: color,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white24, width: 1.5),
+                                border: Border.all(
+                                  color: Colors.white24,
+                                  width: 1.5,
+                                ),
                               ),
                             ),
                           ),
@@ -1922,12 +2584,26 @@ class PropertiesPanel extends StatelessWidget {
                         onTap: () {
                           final sel = controller.selection;
                           final initialColor = const Color(0xFF6C5CE7);
-                          _showColorPicker(context, initialColor, (customColor) {
-                            if (sel.isValid && !sel.isCollapsed && sel.start >= 0 && sel.end <= controller.text.length) {
-                              final selectedText = controller.text.substring(sel.start, sel.end);
-                              controller.text = TextSpanParser.applyColorToSubstring(controller.text, selectedText, customColor);
+                          _showColorPicker(context, initialColor, (
+                            customColor,
+                          ) {
+                            if (sel.isValid &&
+                                !sel.isCollapsed &&
+                                sel.start >= 0 &&
+                                sel.end <= controller.text.length) {
+                              final selectedText = controller.text.substring(
+                                sel.start,
+                                sel.end,
+                              );
+                              controller.text =
+                                  TextSpanParser.applyColorToSubstring(
+                                    controller.text,
+                                    selectedText,
+                                    customColor,
+                                  );
                             } else {
-                              controller.text = '[color:${TextSpanParser.colorToHex(customColor)}]${controller.text}[/color]';
+                              controller.text =
+                                  '[color:${TextSpanParser.colorToHex(customColor)}]${controller.text}[/color]';
                             }
                             setDialogState(() {});
                           });
@@ -1949,9 +2625,16 @@ class PropertiesPanel extends StatelessWidget {
                               ],
                             ),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white38, width: 1.5),
+                            border: Border.all(
+                              color: Colors.white38,
+                              width: 1.5,
+                            ),
                           ),
-                          child: const Icon(Icons.colorize_rounded, size: 14, color: Colors.white),
+                          child: const Icon(
+                            Icons.colorize_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1959,11 +2642,24 @@ class PropertiesPanel extends StatelessWidget {
                       InkWell(
                         onTap: () {
                           final sel = controller.selection;
-                          if (sel.isValid && !sel.isCollapsed && sel.start >= 0 && sel.end <= controller.text.length) {
-                            final selectedText = controller.text.substring(sel.start, sel.end);
-                            controller.text = TextSpanParser.applyColorToSubstring(controller.text, selectedText, null);
+                          if (sel.isValid &&
+                              !sel.isCollapsed &&
+                              sel.start >= 0 &&
+                              sel.end <= controller.text.length) {
+                            final selectedText = controller.text.substring(
+                              sel.start,
+                              sel.end,
+                            );
+                            controller.text =
+                                TextSpanParser.applyColorToSubstring(
+                                  controller.text,
+                                  selectedText,
+                                  null,
+                                );
                           } else {
-                            controller.text = TextSpanParser.stripTags(controller.text);
+                            controller.text = TextSpanParser.stripTags(
+                              controller.text,
+                            );
                           }
                           setDialogState(() {});
                         },
@@ -1979,9 +2675,19 @@ class PropertiesPanel extends StatelessWidget {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.format_clear_rounded, size: 13, color: AppColors.textSecondary),
+                              Icon(
+                                Icons.format_clear_rounded,
+                                size: 13,
+                                color: AppColors.textSecondary,
+                              ),
                               SizedBox(width: 4),
-                              Text('Clear', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                              Text(
+                                'Clear',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1994,7 +2700,11 @@ class PropertiesPanel extends StatelessWidget {
                   if (words.isNotEmpty) ...[
                     const Text(
                       'Or tap word:',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Wrap(
@@ -2008,11 +2718,12 @@ class PropertiesPanel extends StatelessWidget {
                                 context,
                                 seg.color ?? layer.color,
                                 (newColor) {
-                                  final updated = TextSpanParser.applyColorToWord(
-                                    controller.text,
-                                    seg.text,
-                                    newColor,
-                                  );
+                                  final updated =
+                                      TextSpanParser.applyColorToWord(
+                                        controller.text,
+                                        seg.text,
+                                        newColor,
+                                      );
                                   controller.text = updated;
                                   setDialogState(() {});
                                 },
@@ -2020,12 +2731,17 @@ class PropertiesPanel extends StatelessWidget {
                             },
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.surfaceSecondary,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: seg.color != null ? seg.color!.withValues(alpha: 0.8) : AppColors.border,
+                                  color: seg.color != null
+                                      ? seg.color!.withValues(alpha: 0.8)
+                                      : AppColors.border,
                                   width: seg.color != null ? 1.5 : 1.0,
                                 ),
                               ),
@@ -2046,7 +2762,9 @@ class PropertiesPanel extends StatelessWidget {
                                     style: TextStyle(
                                       color: seg.color ?? Colors.white,
                                       fontSize: 11,
-                                      fontWeight: seg.color != null ? FontWeight.bold : FontWeight.w500,
+                                      fontWeight: seg.color != null
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -2062,7 +2780,10 @@ class PropertiesPanel extends StatelessWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: AppColors.textMuted),
+                ),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -2074,7 +2795,9 @@ class PropertiesPanel extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: const Text('Save'),
               ),
@@ -2090,13 +2813,11 @@ class _RepeatableActionButton extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
 
-  const _RepeatableActionButton({
-    required this.child,
-    required this.onTap,
-  });
+  const _RepeatableActionButton({required this.child, required this.onTap});
 
   @override
-  State<_RepeatableActionButton> createState() => _RepeatableActionButtonState();
+  State<_RepeatableActionButton> createState() =>
+      _RepeatableActionButtonState();
 }
 
 class _RepeatableActionButtonState extends State<_RepeatableActionButton> {

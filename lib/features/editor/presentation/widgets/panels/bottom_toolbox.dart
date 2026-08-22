@@ -14,6 +14,7 @@ import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/layers_panel.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 
 class BottomToolbox extends StatelessWidget {
   const BottomToolbox({super.key});
@@ -743,6 +744,34 @@ class BottomToolbox extends StatelessWidget {
               onChanged: (_) {
                 bloc.add(const ToggleSnapEvent());
                 Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.auto_awesome_rounded,
+                color: Color(0xFFB692F6),
+              ),
+              title: const Text(
+                'Background Studio',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Gradients, solid colors & palettes',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+              ),
+              trailing: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: state.activePage.backgroundColor,
+                  gradient: state.activePage.backgroundGradient,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.white30),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                showBackgroundPickerSheet(context, state.activePage, bloc: bloc);
               },
             ),
           ],
