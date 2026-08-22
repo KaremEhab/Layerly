@@ -17,8 +17,78 @@ import 'package:layerly/features/editor/presentation/widgets/panels/layouts_asse
 import 'package:layerly/features/editor/presentation/widgets/panels/layers_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/image_picker_sheet.dart';
 
-class BottomToolbox extends StatelessWidget {
+class BottomToolbox extends StatefulWidget {
   const BottomToolbox({super.key});
+
+  @override
+  State<BottomToolbox> createState() => _BottomToolboxState();
+}
+
+class _BottomToolboxState extends State<BottomToolbox> {
+  bool _isShapesOpen = false;
+  OverlayEntry? _shapesOverlayEntry;
+
+  void _toggleShapes() {
+    if (_isShapesOpen) {
+      _closeShapes();
+    } else {
+      _openShapes();
+    }
+  }
+
+  void _closeShapes() {
+    if (!_isShapesOpen && _shapesOverlayEntry == null) return;
+    _shapesOverlayEntry?.remove();
+    _shapesOverlayEntry = null;
+    if (mounted) {
+      setState(() {
+        _isShapesOpen = false;
+      });
+    }
+  }
+
+  void _openShapes() {
+    _closeShapes();
+    final overlay = Overlay.of(context);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    _shapesOverlayEntry = OverlayEntry(
+      builder: (ctx) => Stack(
+        children: [
+          // Dismiss on tap outside
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _closeShapes,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          // Floating Shapes Card overlayed right above navbar
+          Positioned(
+            left: 14,
+            right: 14,
+            bottom: 74 + bottomPadding,
+            child: Material(
+              color: Colors.transparent,
+              child: _buildGlassyShapesCard(context),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    overlay.insert(_shapesOverlayEntry!);
+    setState(() {
+      _isShapesOpen = true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _shapesOverlayEntry?.remove();
+    _shapesOverlayEntry = null;
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,12 +136,12 @@ class BottomToolbox extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // 1. Shapes with Dropdown Caret
+                // 1. Shapes Button (Filled icon + colored arrow container when selected)
                 Tooltip(
                   message: 'Shapes',
                   child: InkWell(
-                    onTap: () => _showShapesSheet(context),
-                    borderRadius: BorderRadius.circular(16),
+                    onTap: _toggleShapes,
+                    borderRadius: BorderRadius.circular(14),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
@@ -80,23 +150,41 @@ class BottomToolbox extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Shape: Filled when open, outlined when closed
                           Container(
                             width: 19,
                             height: 19,
                             decoration: BoxDecoration(
+                              color: _isShapesOpen
+                                  ? Colors.white
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(5.0),
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 1.8,
-                              ),
+                              border: _isShapesOpen
+                                  ? null
+                                  : Border.all(color: Colors.white, width: 1.8),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: Colors.white,
-                            size: 14,
-                          ),
+                          const SizedBox(width: 5),
+                          // Arrow: Colored container with up-caret when open, regular icon when closed
+                          if (_isShapesOpen)
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4C3E75),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(
+                                Icons.keyboard_arrow_up_rounded,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                            )
+                          else
+                            const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
                         ],
                       ),
                     ),
@@ -116,7 +204,10 @@ class BottomToolbox extends StatelessWidget {
                     ),
                   ),
                   tooltip: 'Text',
-                  onTap: () => _showTextSheet(context),
+                  onTap: () {
+                    _closeShapes();
+                    _showTextSheet(context);
+                  },
                 ),
 
                 // 3. Images & Gallery
@@ -126,7 +217,10 @@ class BottomToolbox extends StatelessWidget {
                     painter: _PhotoIconPainter(),
                   ),
                   tooltip: 'Images & Gallery',
-                  onTap: () => _showImagesSheet(context),
+                  onTap: () {
+                    _closeShapes();
+                    _showImagesSheet(context);
+                  },
                 ),
 
                 // 4. Layers
@@ -136,7 +230,10 @@ class BottomToolbox extends StatelessWidget {
                     painter: _LayersIconPainter(),
                   ),
                   tooltip: 'Layers',
-                  onTap: () => _showLayersSheet(context),
+                  onTap: () {
+                    _closeShapes();
+                    _showLayersSheet(context);
+                  },
                 ),
 
                 // 5. Components / Elements
@@ -146,7 +243,10 @@ class BottomToolbox extends StatelessWidget {
                     painter: _DiamondGridPainter(),
                   ),
                   tooltip: 'Components',
-                  onTap: () => _showComponentsSheet(context),
+                  onTap: () {
+                    _closeShapes();
+                    _showComponentsSheet(context);
+                  },
                 ),
 
                 // 6. Bento Layouts / Templates
@@ -156,7 +256,10 @@ class BottomToolbox extends StatelessWidget {
                     painter: _BentoLayoutPainter(),
                   ),
                   tooltip: 'Layouts & Assets',
-                  onTap: () => _showAssetsSheet(context),
+                  onTap: () {
+                    _closeShapes();
+                    _showAssetsSheet(context);
+                  },
                 ),
 
                 // Vertical Divider
@@ -174,7 +277,10 @@ class BottomToolbox extends StatelessWidget {
                     color: Colors.white,
                   ),
                   tooltip: 'More options',
-                  onTap: () => _showMoreSheet(context),
+                  onTap: () {
+                    _closeShapes();
+                    _showMoreSheet(context);
+                  },
                 ),
               ],
             ),
@@ -204,311 +310,447 @@ class BottomToolbox extends StatelessWidget {
     );
   }
 
-  void _showShapesSheet(BuildContext context) {
+  Widget _buildGlassyShapesCard(BuildContext context) {
     final bloc = context.read<EditorBloc>();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF161522),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.6),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.65),
+            blurRadius: 40,
+            offset: const Offset(0, 16),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
+          BoxShadow(
+            color: const Color(0xFF9E77F6).withValues(alpha: 0.20),
+            blurRadius: 30,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF2C2448).withValues(alpha: 0.72),
+                  const Color(0xFF181428).withValues(alpha: 0.78),
+                  const Color(0xFF0F0D1A).withValues(alpha: 0.85),
+                ],
+              ),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.22),
+                width: 1.2,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Drag Indicator
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Insert Shape & Frame',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => Navigator.pop(ctx),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF22202E),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // Figma-style shape & frame menu items
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildFigmaMenuItem(
-                    ctx: ctx,
-                    icon: Icons.crop_free_rounded,
-                    title: 'Frame',
-                    subtitle: 'Freeform container for layers',
-                    shortcut: 'F',
-                    onTap: () {
-                      bloc.add(
-                        AddLayerEvent(
-                          AutoLayoutLayer(
-                            id: UuidGenerator.generate(),
-                            name: 'Frame',
-                            direction: AutoLayoutDirection.none,
-                            x: 120,
-                            y: 160,
-                            width: 340,
-                            height: 260,
-                            backgroundColor: const Color(0xFF1E1C2B),
-                            cornerRadius: 16,
-                            strokeColor: const Color(0xFF37334F),
-                            strokeWidth: 1.5,
-                            horizontalSizing: AutoLayoutSizingMode.fixed,
-                            verticalSizing: AutoLayoutSizingMode.fixed,
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF9E77F6), Color(0xFF6C5CE7)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(
+                              0xFF6C5CE7,
+                            ).withValues(alpha: 0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.category_rounded,
+                        color: Colors.white,
+                        size: 17,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Shapes & Containers',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          SizedBox(height: 1),
+                          Text(
+                            'Tap any shape or frame to insert onto canvas',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    InkWell(
+                      onTap: _closeShapes,
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.12),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 10, color: Color(0xFF242135)),
-                  _buildFigmaMenuItem(
-                    ctx: ctx,
-                    icon: Icons.crop_square_rounded,
-                    title: 'Rectangle',
-                    shortcut: 'R',
-                    onTap: () {
-                      bloc.add(
-                        AddLayerEvent(
-                          ShapeLayer(
-                            id: UuidGenerator.generate(),
-                            name: 'Rectangle',
-                            shapeType: ShapeType.rectangle,
-                            x: 180,
-                            y: 200,
-                            width: 240,
-                            height: 150,
-                            fill: const Color(0xFF262438),
-                            cornerRadius: 12,
-                            strokeColor: const Color(0xFF3B3754),
-                            strokeWidth: 1.5,
-                          ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white70,
+                          size: 15,
                         ),
-                      );
-                    },
-                  ),
-                  _buildFigmaMenuItem(
-                    ctx: ctx,
-                    icon: Icons.horizontal_rule_rounded,
-                    title: 'Line',
-                    shortcut: 'L',
-                    onTap: () {
-                      bloc.add(
-                        AddLayerEvent(
-                          ShapeLayer(
-                            id: UuidGenerator.generate(),
-                            name: 'Line',
-                            shapeType: ShapeType.line,
-                            x: 180,
-                            y: 240,
-                            width: 220,
-                            height: 4,
-                            strokeWidth: 3.0,
-                            fill: const Color(0xFF8B5CF6),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Glassy Shapes Grid / List
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildGlassShapeTile(
+                      icon: Icons.crop_free_rounded,
+                      title: 'Frame',
+                      subtitle: 'Auto container',
+                      shortcut: 'F',
+                      accentColor: const Color(0xFF9E77F6),
+                      onTap: () {
+                        bloc.add(
+                          AddLayerEvent(
+                            AutoLayoutLayer(
+                              id: UuidGenerator.generate(),
+                              name: 'Frame',
+                              direction: AutoLayoutDirection.none,
+                              x: 120,
+                              y: 160,
+                              width: 340,
+                              height: 260,
+                              backgroundColor: const Color(0xFF1E1C2B),
+                              cornerRadius: 16,
+                              strokeColor: const Color(0xFF37334F),
+                              strokeWidth: 1.5,
+                              horizontalSizing: AutoLayoutSizingMode.fixed,
+                              verticalSizing: AutoLayoutSizingMode.fixed,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildFigmaMenuItem(
-                    ctx: ctx,
-                    icon: Icons.arrow_outward_rounded,
-                    title: 'Arrow',
-                    shortcut: 'Shift+L',
-                    onTap: () {
-                      bloc.add(
-                        AddLayerEvent(
-                          ShapeLayer(
-                            id: UuidGenerator.generate(),
-                            name: 'Arrow',
-                            shapeType: ShapeType.arrow,
-                            x: 180,
-                            y: 200,
-                            width: 220,
-                            height: 24,
-                            strokeWidth: 3.0,
-                            fill: const Color(0xFF6C5CE7),
+                        );
+                      },
+                    ),
+                    _buildGlassShapeTile(
+                      icon: Icons.crop_square_rounded,
+                      title: 'Rectangle',
+                      subtitle: 'Sharp box',
+                      shortcut: 'R',
+                      accentColor: const Color(0xFF0D99FF),
+                      onTap: () {
+                        bloc.add(
+                          AddLayerEvent(
+                            ShapeLayer(
+                              id: UuidGenerator.generate(),
+                              name: 'Rectangle',
+                              shapeType: ShapeType.rectangle,
+                              x: 180,
+                              y: 200,
+                              width: 240,
+                              height: 150,
+                              fill: const Color(0xFF262438),
+                              cornerRadius: 0,
+                              strokeColor: const Color(0xFF3B3754),
+                              strokeWidth: 1.5,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildFigmaMenuItem(
-                    ctx: ctx,
-                    icon: Icons.circle_outlined,
-                    title: 'Ellipse',
-                    shortcut: 'O',
-                    onTap: () {
-                      bloc.add(
-                        AddLayerEvent(
-                          ShapeLayer(
-                            id: UuidGenerator.generate(),
-                            name: 'Ellipse',
-                            shapeType: ShapeType.circle,
-                            x: 200,
-                            y: 200,
-                            width: 180,
-                            height: 180,
-                            fill: const Color(0xFF6C5CE7),
+                        );
+                      },
+                    ),
+                    _buildGlassShapeTile(
+                      icon: Icons.rectangle_outlined,
+                      title: 'Rounded',
+                      subtitle: 'Pill / card',
+                      shortcut: 'U',
+                      accentColor: const Color(0xFF00F298),
+                      onTap: () {
+                        bloc.add(
+                          AddLayerEvent(
+                            ShapeLayer(
+                              id: UuidGenerator.generate(),
+                              name: 'Rounded Rectangle',
+                              shapeType: ShapeType.roundedRectangle,
+                              x: 180,
+                              y: 200,
+                              width: 240,
+                              height: 150,
+                              fill: const Color(0xFF262438),
+                              cornerRadius: 16,
+                              strokeColor: const Color(0xFF3B3754),
+                              strokeWidth: 1.5,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildFigmaMenuItem(
-                    ctx: ctx,
-                    icon: Icons.change_history_rounded,
-                    title: 'Polygon',
-                    subtitle: 'Triangle',
-                    onTap: () {
-                      bloc.add(
-                        AddLayerEvent(
-                          ShapeLayer(
-                            id: UuidGenerator.generate(),
-                            name: 'Polygon',
-                            shapeType: ShapeType.triangle,
-                            x: 200,
-                            y: 200,
-                            width: 180,
-                            height: 180,
-                            fill: const Color(0xFF8B5CF6),
+                        );
+                      },
+                    ),
+                    _buildGlassShapeTile(
+                      icon: Icons.circle_outlined,
+                      title: 'Ellipse',
+                      subtitle: 'Circle',
+                      shortcut: 'O',
+                      accentColor: const Color(0xFF6C5CE7),
+                      onTap: () {
+                        bloc.add(
+                          AddLayerEvent(
+                            ShapeLayer(
+                              id: UuidGenerator.generate(),
+                              name: 'Ellipse',
+                              shapeType: ShapeType.circle,
+                              x: 200,
+                              y: 200,
+                              width: 180,
+                              height: 180,
+                              fill: const Color(0xFF6C5CE7),
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildFigmaMenuItem(
-                    ctx: ctx,
-                    icon: Icons.star_border_rounded,
-                    title: 'Star',
-                    onTap: () {
-                      bloc.add(
-                        AddLayerEvent(
-                          ShapeLayer(
-                            id: UuidGenerator.generate(),
-                            name: 'Star',
-                            shapeType: ShapeType.star,
-                            x: 200,
-                            y: 200,
-                            width: 180,
-                            height: 180,
-                            fill: const Color(0xFFFFB800),
+                        );
+                      },
+                    ),
+                    _buildGlassShapeTile(
+                      icon: Icons.horizontal_rule_rounded,
+                      title: 'Line',
+                      subtitle: 'Stroke vector',
+                      shortcut: 'L',
+                      accentColor: const Color(0xFF00D2D3),
+                      onTap: () {
+                        bloc.add(
+                          AddLayerEvent(
+                            ShapeLayer(
+                              id: UuidGenerator.generate(),
+                              name: 'Line',
+                              shapeType: ShapeType.line,
+                              x: 180,
+                              y: 240,
+                              width: 220,
+                              height: 4,
+                              strokeWidth: 3.0,
+                              fill: const Color(0xFF8B5CF6),
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
+                        );
+                      },
+                    ),
+                    _buildGlassShapeTile(
+                      icon: Icons.arrow_outward_rounded,
+                      title: 'Arrow',
+                      subtitle: 'Directional',
+                      shortcut: 'Shift+L',
+                      accentColor: const Color(0xFFFF4757),
+                      onTap: () {
+                        bloc.add(
+                          AddLayerEvent(
+                            ShapeLayer(
+                              id: UuidGenerator.generate(),
+                              name: 'Arrow',
+                              shapeType: ShapeType.arrow,
+                              x: 180,
+                              y: 200,
+                              width: 220,
+                              height: 24,
+                              strokeWidth: 3.0,
+                              fill: const Color(0xFFFF4757),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildGlassShapeTile(
+                      icon: Icons.change_history_rounded,
+                      title: 'Polygon',
+                      subtitle: 'Triangle',
+                      shortcut: 'P',
+                      accentColor: const Color(0xFFFFA502),
+                      onTap: () {
+                        bloc.add(
+                          AddLayerEvent(
+                            ShapeLayer(
+                              id: UuidGenerator.generate(),
+                              name: 'Polygon',
+                              shapeType: ShapeType.triangle,
+                              x: 200,
+                              y: 200,
+                              width: 180,
+                              height: 180,
+                              fill: const Color(0xFFFFA502),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildGlassShapeTile(
+                      icon: Icons.star_border_rounded,
+                      title: 'Star',
+                      subtitle: '5-Point badge',
+                      shortcut: 'S',
+                      accentColor: const Color(0xFFFFB800),
+                      onTap: () {
+                        bloc.add(
+                          AddLayerEvent(
+                            ShapeLayer(
+                              id: UuidGenerator.generate(),
+                              name: 'Star',
+                              shapeType: ShapeType.star,
+                              x: 200,
+                              y: 200,
+                              width: 180,
+                              height: 180,
+                              fill: const Color(0xFFFFB800),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildFigmaMenuItem({
-    required BuildContext ctx,
+  Widget _buildGlassShapeTile({
     required IconData icon,
     required String title,
-    String? subtitle,
+    required String subtitle,
     String? shortcut,
+    required Color accentColor,
     required VoidCallback onTap,
   }) {
+    final width = (MediaQuery.of(context).size.width - 68) / 2;
+
     return InkWell(
       onTap: () {
-        Navigator.pop(ctx);
+        _closeShapes();
         onTap();
       },
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: width.clamp(140.0, 220.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF241F38).withValues(alpha: 0.50),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
+            width: 1.0,
+          ),
+        ),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: Colors.white70),
-            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: accentColor.withValues(alpha: 0.4),
+                  width: 1.0,
+                ),
+              ),
+              child: Icon(icon, size: 18, color: accentColor),
+            ),
+            const SizedBox(width: 10),
             Expanded(
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (shortcut != null) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            shortcut,
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 1),
                   Text(
-                    title,
+                    subtitle,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      color: AppColors.textMuted,
+                      fontSize: 10,
                     ),
                   ),
-                  if (subtitle != null) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      '• $subtitle',
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
-            if (shortcut != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF221F33),
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(color: const Color(0xFF332E4A)),
-                ),
-                child: Text(
-                  shortcut,
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -713,71 +955,79 @@ class BottomToolbox extends StatelessWidget {
                   ),
                 ),
               ),
-            SwitchListTile(
-              secondary: const Icon(
-                Icons.grid_on_rounded,
-                color: AppColors.text,
-              ),
-              title: const Text(
-                'Show Grid',
-                style: TextStyle(color: Colors.white, fontSize: 14),
-              ),
-              value: state.showGrid,
-              activeColor: AppColors.primary,
-              onChanged: (_) {
-                bloc.add(const ToggleGridEvent());
-                Navigator.pop(ctx);
-              },
-            ),
-            SwitchListTile(
-              secondary: const Icon(
-                Icons.align_horizontal_left_rounded,
-                color: AppColors.text,
-              ),
-              title: const Text(
-                'Smart Snapping Guides',
-                style: TextStyle(color: Colors.white, fontSize: 14),
-              ),
-              value: state.snapEnabled,
-              activeColor: AppColors.primary,
-              onChanged: (_) {
-                bloc.add(const ToggleSnapEvent());
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.auto_awesome_rounded,
-                color: Color(0xFFB692F6),
-              ),
-              title: const Text(
-                'Background Studio',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              subtitle: const Text(
-                'Gradients, solid colors & palettes',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 11),
-              ),
-              trailing: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: state.activePage.backgroundColor,
-                  gradient: state.activePage.backgroundGradient,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.white30),
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.grid_on_rounded,
+                  color: AppColors.text,
                 ),
+                title: const Text(
+                  'Show Grid',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                value: state.showGrid,
+                activeColor: AppColors.primary,
+                onChanged: (_) {
+                  bloc.add(const ToggleGridEvent());
+                  Navigator.pop(ctx);
+                },
               ),
-              onTap: () {
-                Navigator.pop(ctx);
-                showBackgroundPickerSheet(context, state.activePage, bloc: bloc);
-              },
-            ),
-          ],
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.align_horizontal_left_rounded,
+                  color: AppColors.text,
+                ),
+                title: const Text(
+                  'Smart Snapping Guides',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                value: state.snapEnabled,
+                activeColor: AppColors.primary,
+                onChanged: (_) {
+                  bloc.add(const ToggleSnapEvent());
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Color(0xFFB692F6),
+                ),
+                title: const Text(
+                  'Background Studio',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Gradients, solid colors & palettes',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                ),
+                trailing: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: state.activePage.backgroundColor,
+                    gradient: state.activePage.backgroundGradient,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.white30),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showBackgroundPickerSheet(
+                    context,
+                    state.activePage,
+                    bloc: bloc,
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
 
