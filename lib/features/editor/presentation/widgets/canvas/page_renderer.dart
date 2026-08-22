@@ -49,30 +49,43 @@ class PageRenderer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: page.width,
       height: page.height,
-      decoration: _buildBackgroundDecoration(),
-      clipBehavior: Clip.hardEdge,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Grid Overlay if enabled
-          if (page.showGrid) _buildGridOverlay(),
+          // Page background — clipped to page bounds for visual correctness
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                width: page.width,
+                height: page.height,
+                decoration: _buildBackgroundDecoration(),
+                clipBehavior: Clip.hardEdge,
+                child: Stack(
+                  children: [
+                    if (page.showGrid) _buildGridOverlay(),
+                    if (page.showGuides) _buildGuidesOverlay(),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-          // Page Padding & Guides Overlay
-          if (page.showGuides) _buildGuidesOverlay(),
-
-          // Render all layers in z-index order
+          // Interactive layer tree — NOT clipped so layers outside page bounds
+          // remain fully selectable and draggable
           ...page.layers.map((layer) => _buildLayerItem(layer)),
 
-          // Smart Guides (snapping alignment lines & Figma spacing measurements)
-          SmartGuidesOverlay(
-            guides: activeGuides,
-            measurements: activeSpacingMeasurements,
-            pageWidth: page.width,
-            pageHeight: page.height,
-            scale: scale,
+          // Smart Guides overlay
+          IgnorePointer(
+            child: SmartGuidesOverlay(
+              guides: activeGuides,
+              measurements: activeSpacingMeasurements,
+              pageWidth: page.width,
+              pageHeight: page.height,
+              scale: scale,
+            ),
           ),
         ],
       ),

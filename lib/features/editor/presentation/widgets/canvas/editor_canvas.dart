@@ -294,106 +294,123 @@ class _EditorCanvasState extends State<EditorCanvas> {
                           ),
                         ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          width: fitWidth,
-                          height: fitHeight,
-                          child: FittedBox(
-                            fit: BoxFit.contain,
-                            alignment: Alignment.center,
-                            child: SizedBox(
-                              width: activePage.width,
-                              height: activePage.height,
-                              child: PageRenderer(
-                                page: activePage,
-                                selectedLayerIds: widget.isPreviewOnly ? const [] : state.selectedLayerIds,
-                                activeGuides: widget.isPreviewOnly ? const [] : state.activeSnapGuides,
-                                activeSpacingMeasurements: widget.isPreviewOnly ? const [] : state.activeSpacingMeasurements,
-                                scale: scale,
-                                getComponentDefinition: (id) =>
-                                    state.getComponentDefinition(id),
-                                onContextMenu: widget.isPreviewOnly
-                                    ? null
-                                    : (layerId, globalPosition) {
-                                        _openContextMenu(globalPosition);
-                                      },
-                                onSelectLayer: widget.isPreviewOnly
-                                    ? null
-                                    : (layerId, isMulti) {
-                                        _focusNode.requestFocus();
-                                        context.read<EditorBloc>().add(
-                                              SelectLayerEvent(layerId, isMultiSelect: isMulti),
-                                            );
-                                      },
-                                onMoveLayer: widget.isPreviewOnly
-                                    ? null
-                                    : (layerId, details) {
-                                        context.read<EditorBloc>().add(
-                                              MoveLayerDeltaEvent(
-                                                layerId: layerId,
-                                                dx: details.delta.dx / scale,
-                                                dy: details.delta.dy / scale,
-                                                isFinal: false,
-                                              ),
-                                            );
-                                      },
-                                onMoveLayerEnd: widget.isPreviewOnly
-                                    ? null
-                                    : (layerId, details) {
-                                        context.read<EditorBloc>().add(
-                                              MoveLayerDeltaEvent(
-                                                layerId: layerId,
-                                                dx: 0,
-                                                dy: 0,
-                                                isFinal: true,
-                                              ),
-                                            );
-                                      },
-                                onResizeLayer: widget.isPreviewOnly
-                                    ? null
-                                    : (layerId, handle, details) {
-                                        context.read<EditorBloc>().add(
-                                              ResizeLayerHandleEvent(
-                                                layerId: layerId,
-                                                handle: handle,
-                                                dx: details.delta.dx / scale,
-                                                dy: details.delta.dy / scale,
-                                                isFinal: false,
-                                              ),
-                                            );
-                                      },
-                                onResizeLayerEnd: widget.isPreviewOnly
-                                    ? null
-                                    : (layerId, handle, details) {
-                                        context.read<EditorBloc>().add(
-                                              ResizeLayerHandleEvent(
-                                                layerId: layerId,
-                                                handle: handle,
-                                                dx: 0,
-                                                dy: 0,
-                                                isFinal: true,
-                                              ),
-                                            );
-                                      },
-                                onRotateLayer: widget.isPreviewOnly
-                                    ? null
-                                    : (layerId, angle, isFinal) {
-                                        context.read<EditorBloc>().add(
-                                              RotateLayerEvent(
-                                                layerId: layerId,
-                                                angle: angle,
-                                                isFinal: isFinal,
-                                              ),
-                                            );
-                                      },
-                                hoveredFrameId: widget.isPreviewOnly
-                                    ? null
-                                    : state.hoveredFrameId,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Visual background with rounded corners — clipped for aesthetics only
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  width: fitWidth,
+                                  height: fitHeight,
+                                  color: Colors.transparent,
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                          // Interactive PageRenderer — NOT clipped so layers outside
+                          // the page boundary remain selectable and draggable
+                          SizedBox(
+                            width: fitWidth,
+                            height: fitHeight,
+                            child: FittedBox(
+                              fit: BoxFit.contain,
+                              alignment: Alignment.center,
+                              child: SizedBox(
+                                width: activePage.width,
+                                height: activePage.height,
+                                child: PageRenderer(
+                                  page: activePage,
+                                  selectedLayerIds: widget.isPreviewOnly ? const [] : state.selectedLayerIds,
+                                  activeGuides: widget.isPreviewOnly ? const [] : state.activeSnapGuides,
+                                  activeSpacingMeasurements: widget.isPreviewOnly ? const [] : state.activeSpacingMeasurements,
+                                  scale: scale,
+                                  getComponentDefinition: (id) =>
+                                      state.getComponentDefinition(id),
+                                  onContextMenu: widget.isPreviewOnly
+                                      ? null
+                                      : (layerId, globalPosition) {
+                                          _openContextMenu(globalPosition);
+                                        },
+                                  onSelectLayer: widget.isPreviewOnly
+                                      ? null
+                                      : (layerId, isMulti) {
+                                          _focusNode.requestFocus();
+                                          context.read<EditorBloc>().add(
+                                                SelectLayerEvent(layerId, isMultiSelect: isMulti),
+                                              );
+                                        },
+                                  onMoveLayer: widget.isPreviewOnly
+                                      ? null
+                                      : (layerId, details) {
+                                          context.read<EditorBloc>().add(
+                                                MoveLayerDeltaEvent(
+                                                  layerId: layerId,
+                                                  dx: details.delta.dx / scale,
+                                                  dy: details.delta.dy / scale,
+                                                  isFinal: false,
+                                                ),
+                                              );
+                                        },
+                                  onMoveLayerEnd: widget.isPreviewOnly
+                                      ? null
+                                      : (layerId, details) {
+                                          context.read<EditorBloc>().add(
+                                                MoveLayerDeltaEvent(
+                                                  layerId: layerId,
+                                                  dx: 0,
+                                                  dy: 0,
+                                                  isFinal: true,
+                                                ),
+                                              );
+                                        },
+                                  onResizeLayer: widget.isPreviewOnly
+                                      ? null
+                                      : (layerId, handle, details) {
+                                          context.read<EditorBloc>().add(
+                                                ResizeLayerHandleEvent(
+                                                  layerId: layerId,
+                                                  handle: handle,
+                                                  dx: details.delta.dx / scale,
+                                                  dy: details.delta.dy / scale,
+                                                  isFinal: false,
+                                                ),
+                                              );
+                                        },
+                                  onResizeLayerEnd: widget.isPreviewOnly
+                                      ? null
+                                      : (layerId, handle, details) {
+                                          context.read<EditorBloc>().add(
+                                                ResizeLayerHandleEvent(
+                                                  layerId: layerId,
+                                                  handle: handle,
+                                                  dx: 0,
+                                                  dy: 0,
+                                                  isFinal: true,
+                                                ),
+                                              );
+                                        },
+                                  onRotateLayer: widget.isPreviewOnly
+                                      ? null
+                                      : (layerId, angle, isFinal) {
+                                          context.read<EditorBloc>().add(
+                                                RotateLayerEvent(
+                                                  layerId: layerId,
+                                                  angle: angle,
+                                                  isFinal: isFinal,
+                                                ),
+                                              );
+                                        },
+                                  hoveredFrameId: widget.isPreviewOnly
+                                      ? null
+                                      : state.hoveredFrameId,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

@@ -1113,7 +1113,7 @@ class LayerView extends StatelessWidget {
 
     if (layer.direction == AutoLayoutDirection.none) {
       final isHoveredFrame = hoveredFrameId == layer.id;
-      Widget frameWidget = Container(
+      final frameContent = Container(
         width: size.width,
         height: size.height,
         clipBehavior: Clip.none,
@@ -1204,17 +1204,12 @@ class LayerView extends StatelessWidget {
         ),
       );
 
-      // Snap highlight: animated glowing border when dragged layer hovers over this frame
-      if (isHoveredFrame) {
-        frameWidget = _FrameSnapHighlight(
-          width: size.width,
-          height: size.height,
-          cornerRadius: layer.cornerRadius,
-          child: frameWidget,
-        );
-      }
-
-      return frameWidget;
+      // Always wrap so the highlight can fade in/out without mount/unmount jank
+      return _FrameSnapHighlight(
+        isActive: isHoveredFrame,
+        cornerRadius: layer.cornerRadius,
+        child: frameContent,
+      );
     }
 
     final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
@@ -1818,18 +1813,18 @@ class _ArrowShapePainter extends CustomPainter {
       oldDelegate.strokePosition != strokePosition;
 }
 
-/// An animated pulsing border overlay rendered on a Frame when a dragged layer
-/// is hovering over it. The opacity and border width oscillate to give a clear
-/// "snap here" feel with haptic feedback already triggered in the bloc.
+/// Smooth snap-highlight overlay for freeform Frames.
+///
+/// Always mounted on every freeform frame — [isActive] drives a 200ms
+/// fade-in/out so there is no mount/unmount jank. While active a gentle
+/// 1.8 s sinusoidal pulse breathes the glow in and out.
 class _FrameSnapHighlight extends StatefulWidget {
-  final double width;
-  final double height;
+  final bool isActive;
   final double cornerRadius;
   final Widget child;
 
   const _FrameSnapHighlight({
-    required this.width,
-    required this.height,
+    required this.isActive,
     required this.cornerRadius,
     required this.child,
   });
@@ -1839,62 +1834,102 @@ class _FrameSnapHighlight extends StatefulWidget {
 }
 
 class _FrameSnapHighlightState extends State<_FrameSnapHighlight>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _pulseAnim;
+    with TickerProviderStateMixin {
+  /// Fades the entire overlay in (200 ms) and out (200 ms).
+  late final AnimationController _fadeCtrl;
+  /// Breathes the glow slowly while the overlay is visible.
+  late final AnimationController _pulseCtrl;
+
+  late final Animation<double> _fadeAnim;
+  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..repeat(reverse: true);
-    _pulseAnim = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+      duration: const Duration(milliseconds: 200),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+    _pulseAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOutSine);
+
+    if (widget.isActive) {
+      _fadeCtrl.forward();
+      _pulseCtrl.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_FrameSnapHighlight old) {
+    super.didUpdateWidget(old);
+    if (widget.isActive && !old.isActive) {
+      _fadeCtrl.forward();
+      _pulseCtrl.repeat(reverse: true);
+    } else if (!widget.isActive && old.isActive) {
+      _fadeCtrl.reverse().then((_) {
+        if (mounted) _pulseCtrl.stop();
+      });
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _fadeCtrl.dispose();
+    _pulseCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _pulseAnim,
+      animation: Listenable.merge([_fadeAnim, _pulseAnim]),
       builder: (context, child) {
-        final opacity = 0.55 + 0.45 * _pulseAnim.value; // 0.55 → 1.0
-        final borderWidth = 2.0 + 1.5 * _pulseAnim.value; // 2.0 → 3.5
+        final fade = _fadeAnim.value;           // 0 → 1
+        final pulse = _pulseAnim.value;         // 0 → 1 (breathing)
+
+        if (fade == 0) return child!; // Nothing to paint, skip overlay
+
+        final glowAlpha = fade * (0.25 + 0.20 * pulse);   // gentle breath
+        final borderAlpha = fade * (0.65 + 0.35 * pulse); // crisp ring
+        final blurRadius = 10.0 + 10.0 * pulse;
+        final spreadRadius = 0.0 + 2.0 * pulse;
+        final borderWidth = 1.8 + 0.7 * pulse;
+
         return Stack(
           clipBehavior: Clip.none,
           children: [
             child!,
-            // Outer glow (spread)
+            // Soft glow halo — rendered via boxShadow on a transparent container
             Positioned.fill(
               child: IgnorePointer(
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(widget.cornerRadius + 2),
+                    borderRadius: BorderRadius.circular(widget.cornerRadius + 1),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6C5CE7).withValues(alpha: opacity * 0.45),
-                        blurRadius: 16 * _pulseAnim.value + 8,
-                        spreadRadius: 2 + 3 * _pulseAnim.value,
+                        color: const Color(0xFF7B68EE).withValues(alpha: glowAlpha),
+                        blurRadius: blurRadius,
+                        spreadRadius: spreadRadius,
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-            // Crisp animated border ring
+            // Crisp border ring
             Positioned.fill(
               child: IgnorePointer(
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(widget.cornerRadius),
                     border: Border.all(
-                      color: const Color(0xFF9B59B6).withValues(alpha: opacity),
+                      color: const Color(0xFF9B8FFF).withValues(alpha: borderAlpha),
                       width: borderWidth,
                     ),
                   ),
