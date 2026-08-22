@@ -329,30 +329,35 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  // 2. Auto Layout with Horizontal Scrolling Cards
+  // 2. Auto Layout / Frame with Horizontal Scrolling Cards
   Widget _buildAutoLayoutWithChildrenCards(
     BuildContext context,
     CanvasPage activePage,
     AutoLayoutLayer layer,
   ) {
+    final isFrame = layer.direction == AutoLayoutDirection.none;
+    final primaryCard = isFrame
+        ? _buildFramePropertiesCard(
+            context,
+            activePage,
+            layer,
+            onUpdate: (updated) =>
+                context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
+          )
+        : _buildAutoLayoutCard(
+            context,
+            activePage,
+            layer,
+            onUpdate: (updated) =>
+                context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
+          );
+
     if (layer.children.isEmpty) {
-      return _buildAutoLayoutCard(
-        context,
-        activePage,
-        layer,
-        onUpdate: (updated) =>
-            context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
-      );
+      return primaryCard;
     }
 
     final cards = <Widget>[
-      _buildAutoLayoutCard(
-        context,
-        activePage,
-        layer,
-        onUpdate: (updated) =>
-            context.read<EditorBloc>().add(UpdateLayerEvent(updated)),
-      ),
+      primaryCard,
       for (final child in layer.children)
         _buildChildLayerCard(context, layer, child),
     ];
@@ -426,6 +431,165 @@ class PropertiesPanel extends StatelessWidget {
         .toList();
     context.read<EditorBloc>().add(
       UpdateLayerEvent(parent.copyWith(children: updatedChildren)),
+    );
+  }
+
+  // 2.5 Frame Properties Card (Freeform Frames: Radius, Height & Width)
+  Widget _buildFramePropertiesCard(
+    BuildContext context,
+    CanvasPage activePage,
+    AutoLayoutLayer layer, {
+    required ValueChanged<AutoLayoutLayer> onUpdate,
+  }) {
+    final maxAllowedWidth = (activePage.width - activePage.horizontalPadding * 2)
+        .clamp(40.0, 10000.0);
+    final maxAllowedHeight = (activePage.height - activePage.verticalPadding * 2)
+        .clamp(40.0, 10000.0);
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 104),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Frame Icon + "Frame" + Direction Switcher + More Button
+          Row(
+            children: [
+              _buildTypeIconBox(Icons.crop_free_rounded),
+              const SizedBox(width: 10),
+              const Text(
+                'Frame',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              InkWell(
+                onTap: () {
+                  final nextDir = switch (layer.direction) {
+                    AutoLayoutDirection.none => AutoLayoutDirection.vertical,
+                    AutoLayoutDirection.vertical => AutoLayoutDirection.horizontal,
+                    AutoLayoutDirection.horizontal => AutoLayoutDirection.none,
+                  };
+                  onUpdate(layer.copyWith(direction: nextDir));
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Freeform (Frame)',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(
+                        Icons.sync_rounded,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () {
+                  _showFrameSettingsDialog(
+                    context,
+                    layer: layer,
+                    onUpdate: onUpdate,
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: MoreRingsIcon(
+                    color: AppColors.textSecondary,
+                    size: 20,
+                    ringRadius: 2.3,
+                    strokeWidth: 1.5,
+                    spacing: 1.0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Row 2: 3 Controllers: Radius, Height & Width (as requested)
+          Row(
+            children: [
+              // Controller 1: Radius
+              Expanded(
+                child: _buildStepperPill(
+                  value: layer.cornerRadius.toInt(),
+                  onDecrement: () {
+                    final newRad = (layer.cornerRadius - 1).clamp(0.0, 500.0);
+                    onUpdate(layer.copyWith(cornerRadius: newRad));
+                  },
+                  onIncrement: () {
+                    final newRad = (layer.cornerRadius + 1).clamp(0.0, 500.0);
+                    onUpdate(layer.copyWith(cornerRadius: newRad));
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Controller 2: Height
+              Expanded(
+                child: _buildStepperPill(
+                  value: layer.height.toInt(),
+                  onDecrement: () {
+                    final newH = (layer.height - 10).clamp(20.0, maxAllowedHeight);
+                    onUpdate(layer.copyWith(height: newH));
+                  },
+                  onIncrement: () {
+                    final newH = (layer.height + 10).clamp(20.0, maxAllowedHeight);
+                    onUpdate(layer.copyWith(height: newH));
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Controller 3: Width
+              Expanded(
+                child: _buildStepperPill(
+                  value: layer.width.toInt(),
+                  onDecrement: () {
+                    final newW = (layer.width - 10).clamp(20.0, maxAllowedWidth);
+                    onUpdate(layer.copyWith(width: newW));
+                  },
+                  onIncrement: () {
+                    final newW = (layer.width + 10).clamp(20.0, maxAllowedWidth);
+                    onUpdate(layer.copyWith(width: newW));
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -4448,6 +4612,732 @@ class PropertiesPanel extends StatelessWidget {
               onPressed: () {
                 onUpdate(
                   layer.copyWith(
+                    backgroundColor: hasBgFill ? selectedBgColor : null,
+                    clearBackgroundColor: !hasBgFill || selectedBgColor == null,
+                    cornerRadius: selectedCornerRadius,
+                    strokeColor: hasStroke ? selectedStrokeColor : null,
+                    clearStrokeColor: !hasStroke || selectedStrokeColor == null,
+                    strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
+                    strokePosition: selectedStrokePos,
+                  ),
+                );
+                Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFrameSettingsDialog(
+    BuildContext context, {
+    required AutoLayoutLayer layer,
+    required ValueChanged<AutoLayoutLayer> onUpdate,
+  }) {
+    Color? selectedBgColor = layer.backgroundColor;
+    bool hasBgFill =
+        layer.backgroundColor != null &&
+        layer.backgroundColor != Colors.transparent;
+    double selectedCornerRadius = layer.cornerRadius;
+    double selectedWidth = layer.width;
+    double selectedHeight = layer.height;
+    Color? selectedStrokeColor = layer.strokeColor;
+    double selectedStrokeWidth = layer.strokeWidth > 0
+        ? layer.strokeWidth
+        : 1.0;
+    StrokePosition selectedStrokePos = layer.strokePosition;
+    bool hasStroke =
+        layer.strokeColor != null &&
+        layer.strokeColor != Colors.transparent &&
+        layer.strokeWidth > 0;
+    AutoLayoutDirection selectedDirection = layer.direction;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surfaceElevated,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.crop_free_rounded, size: 18, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Frame Properties',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Layout Mode / Direction Section
+                const Text(
+                  'Layout Mode',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    for (final entry in [
+                      (AutoLayoutDirection.none, 'Freeform', Icons.crop_free_rounded),
+                      (AutoLayoutDirection.vertical, 'Vertical', Icons.table_rows_rounded),
+                      (AutoLayoutDirection.horizontal, 'Horizontal', Icons.view_column_rounded),
+                    ])
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                          child: InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                selectedDirection = entry.$1;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: selectedDirection == entry.$1
+                                    ? AppColors.primary
+                                    : AppColors.surfaceSecondary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    entry.$3,
+                                    size: 16,
+                                    color: selectedDirection == entry.$1
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    entry.$2,
+                                    style: TextStyle(
+                                      color: selectedDirection == entry.$1
+                                          ? Colors.white
+                                          : AppColors.textSecondary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Dimensions (Width & Height)
+                const Text(
+                  'Dimensions (Width × Height)',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    // Width Stepper
+                    Expanded(
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 14, color: Colors.white70),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedWidth = (selectedWidth - 10).clamp(20.0, 5000.0);
+                                });
+                              },
+                            ),
+                            Text(
+                              'W: ${selectedWidth.toInt()}',
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 14, color: Colors.white70),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedWidth = (selectedWidth + 10).clamp(20.0, 5000.0);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Height Stepper
+                    Expanded(
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 14, color: Colors.white70),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedHeight = (selectedHeight - 10).clamp(20.0, 5000.0);
+                                });
+                              },
+                            ),
+                            Text(
+                              'H: ${selectedHeight.toInt()}',
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 14, color: Colors.white70),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedHeight = (selectedHeight + 10).clamp(20.0, 5000.0);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Background Fill Section
+                Row(
+                  children: [
+                    const Text(
+                      'Background Fill',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () {
+                        setDialogState(() {
+                          hasBgFill = false;
+                          selectedBgColor = null;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.block_rounded,
+                              size: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'No Fill',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ColorPicker(
+                  pickerColor: selectedBgColor ?? const Color(0xFF1E1E24),
+                  onColorChanged: (c) {
+                    setDialogState(() {
+                      selectedBgColor = c;
+                      hasBgFill = true;
+                    });
+                  },
+                  showLabel: false,
+                  enableAlpha: false,
+                  pickerAreaHeightPercent: 0.55,
+                ),
+                if (hasBgFill && selectedBgColor != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: selectedBgColor,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '#${(selectedBgColor!).toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+
+                // Corner Radius Section
+                const Text(
+                  'Corner Radius',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.remove,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedCornerRadius =
+                                    (selectedCornerRadius - 2).clamp(
+                                      0.0,
+                                      200.0,
+                                    );
+                              });
+                            },
+                          ),
+                          Text(
+                            '${selectedCornerRadius.toInt()} px',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.add,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedCornerRadius =
+                                    (selectedCornerRadius + 2).clamp(
+                                      0.0,
+                                      200.0,
+                                    );
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    for (final r in [0.0, 8.0, 16.0, 24.0, 32.0]) ...[
+                      InkWell(
+                        onTap: () {
+                          setDialogState(() {
+                            selectedCornerRadius = r;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selectedCornerRadius == r
+                                ? AppColors.primary
+                                : AppColors.surfaceSecondary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${r.toInt()}px',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Stroke Settings Header
+                Row(
+                  children: [
+                    const Text(
+                      'Stroke',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () {
+                        setDialogState(() {
+                          hasStroke = false;
+                          selectedStrokeColor = null;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: !hasStroke
+                              ? AppColors.primary.withValues(alpha: 0.2)
+                              : AppColors.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: !hasStroke
+                                ? AppColors.primary
+                                : AppColors.border,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.block_rounded,
+                              size: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'None',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Stroke Width Stepper
+                Row(
+                  children: [
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.remove,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedStrokeWidth = (selectedStrokeWidth - 1)
+                                    .clamp(1.0, 50.0);
+                                hasStroke = true;
+                                selectedStrokeColor ??= const Color(0xFFFFFFFF);
+                              });
+                            },
+                          ),
+                          Text(
+                            '${selectedStrokeWidth.toInt()} px',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.add,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedStrokeWidth = (selectedStrokeWidth + 1)
+                                    .clamp(1.0, 50.0);
+                                hasStroke = true;
+                                selectedStrokeColor ??= const Color(0xFFFFFFFF);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    for (final w in [1.0, 2.0, 4.0]) ...[
+                      InkWell(
+                        onTap: () {
+                          setDialogState(() {
+                            selectedStrokeWidth = w;
+                            hasStroke = true;
+                            selectedStrokeColor ??= const Color(0xFFFFFFFF);
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selectedStrokeWidth == w && hasStroke
+                                ? AppColors.primary
+                                : AppColors.surfaceSecondary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${w.toInt()}px',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Stroke Position (Inside, Center, Outside)
+                Container(
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      for (final pos in StrokePosition.values)
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                selectedStrokePos = pos;
+                                hasStroke = true;
+                                selectedStrokeColor ??= const Color(0xFFFFFFFF);
+                              });
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: selectedStrokePos == pos && hasStroke
+                                    ? AppColors.primary
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                pos.name[0].toUpperCase() +
+                                    pos.name.substring(1),
+                                style: TextStyle(
+                                  color: selectedStrokePos == pos && hasStroke
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Stroke Color Picker
+                const Text(
+                  'Stroke Color',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ColorPicker(
+                  pickerColor: selectedStrokeColor ?? const Color(0xFFFFFFFF),
+                  onColorChanged: (c) {
+                    setDialogState(() {
+                      selectedStrokeColor = c;
+                      hasStroke = true;
+                    });
+                  },
+                  showLabel: false,
+                  enableAlpha: false,
+                  pickerAreaHeightPercent: 0.55,
+                ),
+                if (hasStroke && selectedStrokeColor != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: selectedStrokeColor,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '#${(selectedStrokeColor!).toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textMuted),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                onUpdate(
+                  layer.copyWith(
+                    direction: selectedDirection,
+                    width: selectedWidth,
+                    height: selectedHeight,
                     backgroundColor: hasBgFill ? selectedBgColor : null,
                     clearBackgroundColor: !hasBgFill || selectedBgColor == null,
                     cornerRadius: selectedCornerRadius,

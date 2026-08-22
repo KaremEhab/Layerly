@@ -974,6 +974,103 @@ void main() {
       expect(cleared.strokeWidth, 0.0);
       expect(cleared.shadows, isNull);
     });
+
+    test('EditorBloc automatically nests dragged layers into Frame when placed over Frame and moves them together with the Frame', () async {
+      final customProject = CanvasProject(
+        id: 'frame-test-project',
+        name: 'Frame Test',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        pages: [
+          CanvasPage(
+            id: 'p1',
+            name: 'Page 1',
+            width: 1000,
+            height: 1000,
+            layers: [
+              AutoLayoutLayer(
+                id: 'my-frame',
+                name: 'Frame',
+                direction: AutoLayoutDirection.none,
+                x: 100,
+                y: 100,
+                width: 400,
+                height: 400,
+                backgroundColor: const Color(0xFF1E1C2B),
+                children: const [],
+              ),
+              ShapeLayer(
+                id: 'my-rect',
+                name: 'Rectangle',
+                shapeType: ShapeType.rectangle,
+                x: 600,
+                y: 600,
+                width: 100,
+                height: 100,
+                fill: const Color(0xFF8B5CF6),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final bloc = EditorBloc(initialProject: customProject);
+      expect(bloc.state.activePage.layers.length, 2);
+
+      // 1. Drag rectangle from (600, 600) to (200, 200) inside the frame
+      bloc.add(const MoveLayerDeltaEvent(
+        layerId: 'my-rect',
+        dx: -400,
+        dy: -400,
+        isFinal: true,
+      ));
+      await Future.delayed(Duration.zero);
+
+      // Top-level canvas now has 1 layer (my-frame), and my-rect is now a child inside my-frame!
+      expect(bloc.state.activePage.layers.length, 1);
+      final frame = bloc.state.activePage.layers.first as AutoLayoutLayer;
+      expect(frame.id, 'my-frame');
+      expect(frame.children.length, 1);
+      expect(frame.children.first.id, 'my-rect');
+
+      // Local coordinates inside the frame: (200 - 100, 200 - 100) = (100, 100)
+      expect(frame.children.first.x, 100.0);
+      expect(frame.children.first.y, 100.0);
+
+      // 2. Move the frame by (50, 50)
+      bloc.add(const MoveLayerDeltaEvent(
+        layerId: 'my-frame',
+        dx: 50,
+        dy: 50,
+        isFinal: true,
+      ));
+      await Future.delayed(Duration.zero);
+
+      final movedFrame = bloc.state.activePage.layers.first as AutoLayoutLayer;
+      expect(movedFrame.x, 150.0);
+      expect(movedFrame.y, 150.0);
+      // The child stays with the frame at local (100, 100), effectively moving with it to canvas (250, 250)
+      expect(movedFrame.children.first.id, 'my-rect');
+      expect(movedFrame.children.first.x, 100.0);
+      expect(movedFrame.children.first.y, 100.0);
+
+      // 3. Drag the child out of the frame back to the root canvas
+      bloc.add(const MoveLayerDeltaEvent(
+        layerId: 'my-rect',
+        dx: 600,
+        dy: 600,
+        isFinal: true,
+      ));
+      await Future.delayed(Duration.zero);
+
+      // Top level should now have 2 layers again (frame and rect)
+      expect(bloc.state.activePage.layers.length, 2);
+      final finalFrame = bloc.state.activePage.layers.firstWhere((l) => l.id == 'my-frame') as AutoLayoutLayer;
+      final finalRect = bloc.state.activePage.layers.firstWhere((l) => l.id == 'my-rect');
+      expect(finalFrame.children.isEmpty, isTrue);
+      expect(finalRect.x, 850.0);
+      expect(finalRect.y, 850.0);
+    });
   });
 }
 

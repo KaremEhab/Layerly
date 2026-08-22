@@ -33,6 +33,8 @@ class LayerView extends StatelessWidget {
   final Function(String layerId, ResizeHandle handle, DragEndDetails details)?
   onResizeLayerEnd;
   final Function(String layerId, double angle, bool isFinal)? onRotateLayer;
+  final Function(String layerId, DragUpdateDetails details)? onMoveLayer;
+  final Function(String layerId, DragEndDetails details)? onMoveLayerEnd;
 
   const LayerView({
     super.key,
@@ -44,6 +46,8 @@ class LayerView extends StatelessWidget {
     this.onResizeLayer,
     this.onResizeLayerEnd,
     this.onRotateLayer,
+    this.onMoveLayer,
+    this.onMoveLayerEnd,
   });
 
   @override
@@ -1139,6 +1143,8 @@ class LayerView extends StatelessWidget {
                   onResizeLayer: onResizeLayer,
                   onResizeLayerEnd: onResizeLayerEnd,
                   onRotateLayer: onRotateLayer,
+                  onMoveLayer: onMoveLayer,
+                  onMoveLayerEnd: onMoveLayerEnd,
                 );
 
                 if (isChildSelected) {
@@ -1173,6 +1179,15 @@ class LayerView extends StatelessWidget {
                     onTap: () {
                       onSelectLayer?.call(child.id, false);
                     },
+                    onPanStart: onMoveLayer != null
+                        ? (_) => onSelectLayer?.call(child.id, false)
+                        : null,
+                    onPanUpdate: onMoveLayer != null
+                        ? (details) => onMoveLayer?.call(child.id, details)
+                        : null,
+                    onPanEnd: onMoveLayerEnd != null
+                        ? (details) => onMoveLayerEnd?.call(child.id, details)
+                        : null,
                     child: childView,
                   ),
                 );
@@ -1291,6 +1306,8 @@ class LayerView extends StatelessWidget {
                     onResizeLayer: onResizeLayer,
                     onResizeLayerEnd: onResizeLayerEnd,
                     onRotateLayer: onRotateLayer,
+                    onMoveLayer: onMoveLayer,
+                    onMoveLayerEnd: onMoveLayerEnd,
                   );
 
                   if (isChildSelected) {

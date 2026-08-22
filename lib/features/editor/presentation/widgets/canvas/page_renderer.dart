@@ -144,6 +144,8 @@ class PageRenderer extends StatelessWidget {
       onResizeLayer: onResizeLayer,
       onResizeLayerEnd: onResizeLayerEnd,
       onRotateLayer: onRotateLayer,
+      onMoveLayer: onMoveLayer,
+      onMoveLayerEnd: onMoveLayerEnd,
     );
 
     // If selected and editable, attach TransformBox

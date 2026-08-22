@@ -175,43 +175,8 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
   }
 
   void _onMoveLayerDelta(MoveLayerDeltaEvent event, Emitter<EditorState> emit) {
-    if (event.isFinal && (event.layerId.isEmpty || (event.dx == 0 && event.dy == 0))) {
-      emit(state.copyWith(
-        activeSnapGuides: [],
-        activeSpacingMeasurements: [],
-        isInteracting: false,
-        undoStack: _pushHistory(state.project, state.undoStack),
-        redoStack: [],
-      ));
-      return;
-    }
-
-    final activePage = state.activePage;
-    final layerIndex = activePage.layers.indexWhere((l) => l.id == event.layerId);
-    if (layerIndex == -1) {
-      final treeLayer = state.findLayerById(event.layerId);
-      if (treeLayer != null && !treeLayer.locked) {
-        final updatedLayer = treeLayer.copyWithTransform(
-          x: treeLayer.x + event.dx,
-          y: treeLayer.y + event.dy,
-        );
-        final updatedLayers = _updateLayerInTree(activePage.layers, updatedLayer);
-        final updatedPage = activePage.copyWith(layers: updatedLayers);
-        final updatedPages = List<CanvasPage>.from(state.project.pages);
-        updatedPages[state.project.activePageIndex] = updatedPage;
-        final updatedProject = state.project.copyWith(pages: updatedPages);
-
-        emit(state.copyWith(
-          project: updatedProject,
-          activeSnapGuides: [],
-          activeSpacingMeasurements: [],
-          isInteracting: !event.isFinal,
-          undoStack: event.isFinal
-              ? _pushHistory(state.project, state.undoStack)
-              : state.undoStack,
-          redoStack: event.isFinal ? [] : state.redoStack,
-        ));
-      } else if (event.isFinal) {
+    if (event.layerId.isEmpty) {
+      if (event.isFinal) {
         emit(state.copyWith(
           activeSnapGuides: [],
           activeSpacingMeasurements: [],
@@ -221,55 +186,146 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       return;
     }
 
-    final layer = activePage.layers[layerIndex];
-    if (layer.locked) return;
+    final activePage = state.activePage;
+    final layerIndex = activePage.layers.indexWhere((l) => l.id == event.layerId);
+    List<Layer> updatedLayers = List<Layer>.from(activePage.layers);
+    SnapResult? snapResult;
 
-    final double rawTargetX = layer.x + event.dx;
-    final double rawTargetY = layer.y + event.dy;
+    if (layerIndex == -1) {
+      // Layer is nested inside an AutoLayout or Frame
+      final treeLayer = _findLayerInList(activePage.layers, event.layerId);
+      if (treeLayer != null && !treeLayer.locked) {
+        if (event.dx != 0 || event.dy != 0) {
+          final updatedLayer = treeLayer.copyWithTransform(
+            x: treeLayer.x + event.dx,
+            y: treeLayer.y + event.dy,
+          );
+          updatedLayers = _updateLayerInTree(activePage.layers, updatedLayer);
+        }
+      }
+    } else {
+      // Top-level canvas layer
+      final layer = activePage.layers[layerIndex];
+      if (!layer.locked && (event.dx != 0 || event.dy != 0)) {
+        final double rawTargetX = layer.x + event.dx;
+        final double rawTargetY = layer.y + event.dy;
 
-    // Apply smart snapping
-    final snap = SnappingService.calculateSnap(
-      targetX: rawTargetX,
-      targetY: rawTargetY,
-      targetWidth: layer.width,
-      targetHeight: layer.height,
-      page: activePage,
-      excludeLayerIds: [layer.id],
-      snapEnabled: state.snapEnabled,
-    );
+        // Apply smart snapping
+        snapResult = SnappingService.calculateSnap(
+          targetX: rawTargetX,
+          targetY: rawTargetY,
+          targetWidth: layer.width,
+          targetHeight: layer.height,
+          page: activePage,
+          excludeLayerIds: [layer.id],
+          snapEnabled: state.snapEnabled,
+        );
 
-    // Clamp layer within page margins so items strictly follow padding limits
-    final double minX = activePage.horizontalPadding;
-    final double maxX = (activePage.width - activePage.horizontalPadding - layer.width).clamp(minX, activePage.width);
-    final double minY = activePage.verticalPadding;
-    final double maxY = (activePage.height - activePage.verticalPadding - layer.height).clamp(minY, activePage.height);
+        // Clamp layer within page margins
+        final double minX = activePage.horizontalPadding;
+        final double maxX = (activePage.width - activePage.horizontalPadding - layer.width).clamp(minX, activePage.width);
+        final double minY = activePage.verticalPadding;
+        final double maxY = (activePage.height - activePage.verticalPadding - layer.height).clamp(minY, activePage.height);
 
-    final double clampedX = snap.snappedX.clamp(minX, maxX);
-    final double clampedY = snap.snappedY.clamp(minY, maxY);
+        final double clampedX = snapResult.snappedX.clamp(minX, maxX);
+        final double clampedY = snapResult.snappedY.clamp(minY, maxY);
 
-    final updatedLayer = layer.copyWithTransform(
-      x: clampedX,
-      y: clampedY,
-    );
+        final updatedLayer = layer.copyWithTransform(
+          x: clampedX,
+          y: clampedY,
+        );
 
-    final updatedLayers = List<Layer>.from(activePage.layers);
-    updatedLayers[layerIndex] = updatedLayer;
+        updatedLayers[layerIndex] = updatedLayer;
+      }
+    }
+
+    // When the user drops the layer (isFinal == true), handle automatic Frame parenting
+    if (event.isFinal) {
+      final movedLayerId = event.layerId;
+      var currentLayers = List<Layer>.from(updatedLayers);
+      final layerItem = _findLayerInList(currentLayers, movedLayerId);
+
+      if (layerItem != null) {
+        final absPos = _getAbsoluteLayerPosition(currentLayers, movedLayerId);
+        final layerCenter = Offset(
+          absPos.dx + layerItem.width / 2,
+          absPos.dy + layerItem.height / 2,
+        );
+
+        final targetFrame = _findTargetFrameForPoint(
+          currentLayers,
+          layerCenter,
+          movedLayerId,
+          Offset.zero,
+          draggedLayer: layerItem,
+        );
+
+        final currentParent = _findParentOfLayer(currentLayers, movedLayerId);
+
+        if (targetFrame != null && targetFrame.id != currentParent?.id) {
+          // Reparent layer into the target Frame container
+          final extraction = _extractLayerFromTree(currentLayers, movedLayerId);
+          if (extraction.layer != null) {
+            currentLayers = extraction.updatedLayers;
+            final targetFrameAbsPos = _getAbsoluteLayerPosition(currentLayers, targetFrame.id);
+            final localX = absPos.dx - targetFrameAbsPos.dx;
+            final localY = absPos.dy - targetFrameAbsPos.dy;
+            final reparented = extraction.layer!.copyWithTransform(x: localX, y: localY);
+            currentLayers = _insertLayerIntoParentTree(
+              currentLayers,
+              targetFrame.id,
+              reparented,
+              targetFrame.children.length,
+            );
+          }
+        } else if (targetFrame == null && currentParent != null) {
+          final parentAbsPos = _getAbsoluteLayerPosition(currentLayers, currentParent.id);
+          final parentRect = Rect.fromLTWH(
+            parentAbsPos.dx,
+            parentAbsPos.dy,
+            currentParent.width,
+            currentParent.height,
+          );
+          if (!parentRect.contains(layerCenter)) {
+            // Dragged out of parent frame onto root canvas
+            final extraction = _extractLayerFromTree(currentLayers, movedLayerId);
+            if (extraction.layer != null) {
+              currentLayers = extraction.updatedLayers;
+              final reparented = extraction.layer!.copyWithTransform(x: absPos.dx, y: absPos.dy);
+              currentLayers.add(reparented);
+            }
+          }
+        }
+      }
+
+      final finalPage = activePage.copyWith(layers: currentLayers);
+      final finalPages = List<CanvasPage>.from(state.project.pages);
+      finalPages[state.project.activePageIndex] = finalPage;
+      final finalProject = state.project.copyWith(pages: finalPages);
+
+      emit(state.copyWith(
+        project: finalProject,
+        activeSnapGuides: [],
+        activeSpacingMeasurements: [],
+        isInteracting: false,
+        undoStack: _pushHistory(state.project, state.undoStack),
+        redoStack: [],
+      ));
+      return;
+    }
 
     final updatedPage = activePage.copyWith(layers: updatedLayers);
     final updatedPages = List<CanvasPage>.from(state.project.pages);
     updatedPages[state.project.activePageIndex] = updatedPage;
-
     final updatedProject = state.project.copyWith(pages: updatedPages);
 
     emit(state.copyWith(
       project: updatedProject,
-      activeSnapGuides: event.isFinal ? [] : snap.activeGuides,
-      activeSpacingMeasurements: event.isFinal ? [] : snap.spacingMeasurements,
-      isInteracting: !event.isFinal,
-      undoStack: event.isFinal
-          ? _pushHistory(state.project, state.undoStack)
-          : state.undoStack,
-      redoStack: event.isFinal ? [] : state.redoStack,
+      activeSnapGuides: snapResult?.activeGuides ?? [],
+      activeSpacingMeasurements: snapResult?.spacingMeasurements ?? [],
+      isInteracting: true,
+      undoStack: state.undoStack,
+      redoStack: state.redoStack,
     ));
   }
 
@@ -1352,6 +1408,83 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     }).toList();
   }
 
+  Offset _getAbsoluteLayerPosition(List<Layer> rootLayers, String layerId) {
+    Offset? traverse(List<Layer> layers, Offset parentOffset) {
+      for (final l in layers) {
+        final currentPos = Offset(parentOffset.dx + l.x, parentOffset.dy + l.y);
+        if (l.id == layerId) {
+          return currentPos;
+        }
+        if (l is AutoLayoutLayer) {
+          final found = traverse(l.children, currentPos);
+          if (found != null) return found;
+        }
+      }
+      return null;
+    }
+
+    return traverse(rootLayers, Offset.zero) ?? Offset.zero;
+  }
+
+  AutoLayoutLayer? _findParentOfLayer(List<Layer> layers, String layerId) {
+    for (final l in layers) {
+      if (l is AutoLayoutLayer) {
+        if (l.children.any((c) => c.id == layerId)) {
+          return l;
+        }
+        final nested = _findParentOfLayer(l.children, layerId);
+        if (nested != null) return nested;
+      }
+    }
+    return null;
+  }
+
+  AutoLayoutLayer? _findTargetFrameForPoint(
+    List<Layer> layers,
+    Offset point,
+    String excludeLayerId,
+    Offset parentOffset, {
+    Layer? draggedLayer,
+  }) {
+    AutoLayoutLayer? target;
+
+    for (final l in layers) {
+      if (l is AutoLayoutLayer) {
+        if (l.id == excludeLayerId) continue;
+        if (draggedLayer is AutoLayoutLayer && _isLayerDescendant(draggedLayer, l.id)) {
+          continue;
+        }
+
+        final framePos = Offset(parentOffset.dx + l.x, parentOffset.dy + l.y);
+        final frameRect = Rect.fromLTWH(framePos.dx, framePos.dy, l.width, l.height);
+
+        if (frameRect.contains(point)) {
+          final deeper = _findTargetFrameForPoint(
+            l.children,
+            point,
+            excludeLayerId,
+            framePos,
+            draggedLayer: draggedLayer,
+          );
+          target = deeper ?? l;
+        }
+      }
+    }
+
+    return target;
+  }
+
+  static Layer? _findLayerInList(List<Layer> list, String id) {
+    for (final l in list) {
+      if (l.id == id) return l;
+      if (l is AutoLayoutLayer) {
+        final nested = _findLayerInList(l.children, id);
+        if (nested != null) return nested;
+      }
+    }
+    return null;
+  }
+
   static AutoLayoutLayer _recalculateAutoLayoutDimensions(
     AutoLayoutLayer container, {
     double? parentAvailableWidth,
@@ -1360,6 +1493,9 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     double pageHorizontalPadding = 16.0,
     double pageVerticalPadding = 16.0,
   }) {
+    if (container.direction == AutoLayoutDirection.none) {
+      return container;
+    }
     final isHorizontal = container.direction == AutoLayoutDirection.horizontal;
     double totalMainAxis = 0;
     double maxCrossAxis = 0;
