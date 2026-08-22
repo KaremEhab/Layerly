@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
-import 'package:layerly/core/utils/uuid_generator.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/image_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
-import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
@@ -89,22 +87,27 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
 
         final filteredLayers = _filterLayers(layers);
 
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.78,
-          decoration: const BoxDecoration(
-            color: Color(0xFF131219),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(color: Color(0xFF2A2838), width: 1.5),
-              left: BorderSide(color: Color(0xFF2A2838), width: 1.0),
-              right: BorderSide(color: Color(0xFF2A2838), width: 1.0),
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+            height: MediaQuery.of(context).size.height * 0.78,
+            decoration: BoxDecoration(
+              color: const Color(0xFF131219),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  blurRadius: 32,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Drag Handle & Header
-              _buildHeader(context, state, layers),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Drag Handle & Header
+                _buildHeader(context, state, layers),
 
               // 2. Search & Quick Filters
               _buildSearchBar(),
@@ -162,10 +165,11 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
               ),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildHeader(BuildContext context, EditorState state, List<Layer> layers) {
     final allExpanded = _expandedLayerIds.isNotEmpty;

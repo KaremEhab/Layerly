@@ -539,12 +539,22 @@ class LayerlyAppBar extends StatelessWidget {
   void _showExportDialog(BuildContext context, EditorState state) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => SafeArea(
-        child: Padding(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1B1927),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.55),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -237,21 +237,26 @@ class _VectorNodeEditorModalState extends State<_VectorNodeEditorModal> {
         ? curElem.points[_selectedPointIndex!]
         : null;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.90,
-      decoration: const BoxDecoration(
-        color: Color(0xFF111018),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(
-          top: BorderSide(color: Color(0xFF2A2838), width: 1.5),
-          left: BorderSide(color: Color(0xFF2A2838), width: 1.0),
-          right: BorderSide(color: Color(0xFF2A2838), width: 1.0),
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+        height: MediaQuery.of(context).size.height * 0.90,
+        decoration: BoxDecoration(
+          color: const Color(0xFF111018),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.55),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
+            ),
+          ],
         ),
-      ),
-      child: Column(
-        children: [
-          // 1. Figma Vector Header
-          _buildHeader(context),
+        child: Column(
+          children: [
+            // 1. Figma Vector Header
+            _buildHeader(context),
 
           // 2. Sub-Layers / Elements Chip Bar
           _buildSubLayersBar(),
@@ -353,8 +358,9 @@ class _VectorNodeEditorModalState extends State<_VectorNodeEditorModal> {
           _buildNodeToolbar(curElem, activePt),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader(BuildContext context) {
     return Padding(

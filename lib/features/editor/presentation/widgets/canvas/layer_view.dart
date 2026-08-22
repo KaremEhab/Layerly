@@ -272,13 +272,13 @@ class LayerView extends StatelessWidget {
       width: layer.width,
       height: layer.height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(layer.borderRadius),
+        borderRadius: layer.borderRadius > 0 ? BorderRadius.circular(layer.borderRadius) : null,
         border: layer.borderColor != null && layer.borderWidth > 0
             ? Border.all(color: layer.borderColor!, width: layer.borderWidth)
             : null,
         boxShadow: layer.shadows,
       ),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: layer.borderRadius > 0 ? Clip.antiAlias : Clip.none,
       child: imageContent,
     );
   }

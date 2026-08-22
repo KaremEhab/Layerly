@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,7 +8,6 @@ import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
-import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -560,33 +558,6 @@ final List<TypographyPreset> kTypographyPresets = [
   ),
 ];
 
-final List<IconData> kVectorIcons = [
-  Icons.auto_awesome_rounded,
-  Icons.bolt_rounded,
-  Icons.check_circle_rounded,
-  Icons.favorite_rounded,
-  Icons.star_rounded,
-  Icons.speed_rounded,
-  Icons.verified_rounded,
-  Icons.touch_app_rounded,
-  Icons.all_inclusive_rounded,
-  Icons.diamond_rounded,
-  Icons.layers_rounded,
-  Icons.widgets_rounded,
-  Icons.arrow_forward_rounded,
-  Icons.arrow_back_rounded,
-  Icons.north_east_rounded,
-  Icons.aspect_ratio_rounded,
-  Icons.phone_iphone_rounded,
-  Icons.laptop_chromebook_rounded,
-  Icons.cloud_done_rounded,
-  Icons.palette_rounded,
-  Icons.tune_rounded,
-  Icons.search_rounded,
-  Icons.share_rounded,
-  Icons.download_rounded,
-];
-
 // -------------------------------------------------------------
 // MODAL IMPLEMENTATION
 // -------------------------------------------------------------
@@ -624,25 +595,30 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
     return BlocBuilder<EditorBloc, EditorState>(
       bloc: widget.bloc,
       builder: (context, state) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.80,
-          decoration: const BoxDecoration(
-            color: Color(0xFF131219),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(color: Color(0xFF2A273C), width: 1.5),
-              left: BorderSide(color: Color(0xFF2A273C), width: 1.0),
-              right: BorderSide(color: Color(0xFF2A273C), width: 1.0),
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+            height: MediaQuery.of(context).size.height * 0.80,
+            decoration: BoxDecoration(
+              color: const Color(0xFF131219),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: const Color(0xFF2A273C), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  blurRadius: 32,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Drag Handle & Header
-              _buildHeader(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Drag Handle & Header
+                _buildHeader(context),
 
-              // 2. Live Search Bar
-              _buildSearchBar(),
+                // 2. Live Search Bar
+                _buildSearchBar(),
 
               // 3. Navigation Tabs
               _buildTabs(),
@@ -665,10 +641,11 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
               ),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
@@ -717,7 +694,7 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Layouts & Asset Hub',
                       style: TextStyle(
                         color: Colors.white,
@@ -726,9 +703,9 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
                         letterSpacing: -0.2,
                       ),
                     ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Bento grids, device mockups, tokens & vector assets',
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Bento grids, device mockups, color palettes & typography',
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 12,
@@ -779,7 +756,7 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
                 controller: _searchController,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: const InputDecoration(
-                  hintText: 'Search layouts, mockups, typography & assets...',
+                  hintText: 'Search layouts, mockups, palettes & typography...',
                   hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
                   border: InputBorder.none,
                   isDense: true,
@@ -1094,16 +1071,6 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
         ),
         const SizedBox(height: 8),
         ...kTypographyPresets.map((t) => _buildTypographyCard(context, state, t)),
-
-        const SizedBox(height: 16),
-
-        // 3. Vector Icons
-        const Text(
-          '✨ Vector Icon Pack (Tap to insert)',
-          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        _buildVectorIconsGrid(context, state),
       ],
     );
   }
@@ -1215,51 +1182,7 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
     );
   }
 
-  Widget _buildVectorIconsGrid(BuildContext context, EditorState state) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1B1927),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF2C283F)),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: kVectorIcons.map((ic) {
-          return InkWell(
-            onTap: () {
-              Navigator.pop(context);
-              final activePage = state.activePage;
-              final iconLayer = IconLayer(
-                id: UuidGenerator.generate(),
-                name: 'Vector Icon',
-                icon: ic,
-                color: Colors.white,
-                x: ((activePage.width - 48) / 2).clamp(0.0, activePage.width - 48),
-                y: ((activePage.height - 48) / 2).clamp(0.0, activePage.height - 48),
-                width: 48,
-                height: 48,
-              );
-              widget.bloc.add(AddLayerEvent(iconLayer));
-              _showSuccessToast(context, '✨ Inserted Icon');
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFF242233),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: Icon(ic, color: Colors.white70, size: 20),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
+
 
   Widget _buildEmptyState(String title, String subtitle) {
     return Center(

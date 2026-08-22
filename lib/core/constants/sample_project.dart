@@ -6,6 +6,7 @@ import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
+import 'package:layerly/features/editor/domain/entities/image_layer.dart';
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
@@ -32,16 +33,18 @@ class SampleProject {
       alignment: AutoLayoutAlignment.center,
       distribution: AutoLayoutDistribution.start,
       children: [
-        // Icon (Logo)
-        IconLayer(
+        // Logo (SVG)
+        ImageLayer(
           id: UuidGenerator.generate(),
           name: 'Brand Logo',
           x: 0,
           y: 0,
-          width: 36,
-          height: 36,
-          icon: Icons.all_inclusive_rounded,
-          color: Colors.white,
+          width: 34,
+          height: 42,
+          assetPath: 'assets/images/Kareem-Ehab-Logo.svg',
+          tintColor: Colors.white,
+          fit: BoxFit.contain,
+          borderRadius: 0,
         ),
 
         // Vertical layout with 2 things: Text (Kareem Ehab) + Text (kareem.designs_)

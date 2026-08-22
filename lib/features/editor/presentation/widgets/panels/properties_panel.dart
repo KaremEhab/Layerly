@@ -900,20 +900,25 @@ class PropertiesPanel extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.76,
-            decoration: const BoxDecoration(
-              color: Color(0xFF14131A),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border(
-                top: BorderSide(color: Color(0xFF2A2838), width: 1.5),
-                left: BorderSide(color: Color(0xFF2A2838), width: 1.0),
-                right: BorderSide(color: Color(0xFF2A2838), width: 1.0),
+          return SafeArea(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+              height: MediaQuery.of(context).size.height * 0.76,
+              decoration: BoxDecoration(
+                color: const Color(0xFF14131A),
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    blurRadius: 32,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // 1. Drag handle & Header
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
@@ -1296,11 +1301,12 @@ class PropertiesPanel extends StatelessWidget {
                 ),
               ],
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 
   Widget _buildSheetMicroButton({required IconData icon, required VoidCallback onTap}) {
     return InkWell(

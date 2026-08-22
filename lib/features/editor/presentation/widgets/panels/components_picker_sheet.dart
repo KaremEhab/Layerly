@@ -7,6 +7,7 @@ import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
+import 'package:layerly/features/editor/domain/entities/image_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
@@ -79,11 +80,13 @@ final List<PresetComponentItem> kPresetComponents = [
         strokeColor: const Color(0xFF8B5CF6).withValues(alpha: 0.4),
         strokeWidth: 1.0,
         children: [
-          IconLayer(
+          ImageLayer(
             id: UuidGenerator.generate(),
-            name: 'Infinity Icon',
-            icon: Icons.all_inclusive_rounded,
-            color: Colors.white,
+            name: 'Brand Logo',
+            assetPath: 'assets/images/Kareem-Ehab-Logo.svg',
+            tintColor: Colors.white,
+            fit: BoxFit.contain,
+            borderRadius: 0,
             x: 0,
             y: 0,
             width: 20,
@@ -424,22 +427,27 @@ class _ComponentsPickerModalState extends State<_ComponentsPickerModal>
         final projectComponents = state.project.components;
         final selectedLayers = state.selectedLayers;
 
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.78,
-          decoration: const BoxDecoration(
-            color: Color(0xFF14131A),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(color: Color(0xFF2A2838), width: 1.5),
-              left: BorderSide(color: Color(0xFF2A2838), width: 1.0),
-              right: BorderSide(color: Color(0xFF2A2838), width: 1.0),
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+            height: MediaQuery.of(context).size.height * 0.78,
+            decoration: BoxDecoration(
+              color: const Color(0xFF14131A),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  blurRadius: 32,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Drag Handle & Header
-              _buildHeader(context, selectedLayers),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Drag Handle & Header
+                _buildHeader(context, selectedLayers),
 
               // 2. Search Box
               _buildSearchBar(),
@@ -475,10 +483,11 @@ class _ComponentsPickerModalState extends State<_ComponentsPickerModal>
               ),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildHeader(BuildContext context, List<Layer> selectedLayers) {
     return Padding(

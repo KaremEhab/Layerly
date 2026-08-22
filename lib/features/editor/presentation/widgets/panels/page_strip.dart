@@ -186,12 +186,22 @@ class _PageStripState extends State<PageStrip> {
     final bloc = context.read<EditorBloc>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => SafeArea(
-        child: Padding(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1B1927),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.55),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -400,20 +410,31 @@ class _PageStripState extends State<PageStrip> {
     final bloc = context.read<EditorBloc>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Text(
-                'Slide options ($slideName)',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1B1927),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.55),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
               ),
-            ),
+            ],
+          ),
+          child: Wrap(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Text(
+                  'Slide options ($slideName)',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
             ListTile(
               leading: const Icon(Icons.copy_rounded, color: Colors.white, size: 18),
               title: const Text('Duplicate slide', style: TextStyle(color: Colors.white, fontSize: 13)),
@@ -431,7 +452,8 @@ class _PageStripState extends State<PageStrip> {
                   bloc.add(DeletePageEvent(pageIndex));
                 },
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
