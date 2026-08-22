@@ -702,7 +702,7 @@ class PropertiesPanel extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: InkWell(
-                  onTap: () => _showEditTextDialog(context, layer, (newText) {
+                  onTap: () => _showEditTextBottomSheet(context, layer, (newText) {
                     onUpdate(layer.copyWith(content: newText));
                   }),
                   child: const Text(
@@ -1026,22 +1026,58 @@ class PropertiesPanel extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: const Color(0xFF2E2B40)),
                         ),
-                        child: Text.rich(
-                          TextSpanParser.parseToTextSpan(
+                        child: () {
+                          final baseStyle = TextStyle(
+                            fontFamily: currentLayer.fontFamily,
+                            fontSize: currentLayer.fontSize.clamp(12.0, 32.0),
+                            fontWeight: currentLayer.fontWeight,
+                            fontStyle: currentLayer.fontStyle,
+                            letterSpacing: currentLayer.letterSpacing,
+                            height: currentLayer.lineHeight,
+                            color: currentLayer.color,
+                            decoration: currentLayer.decoration,
+                            shadows: currentLayer.shadows,
+                          );
+                          final span = TextSpanParser.parseToTextSpan(
                             currentLayer.content.isEmpty ? 'Typography Preview' : currentLayer.content,
-                            TextStyle(
-                              fontFamily: currentLayer.fontFamily,
-                              fontSize: currentLayer.fontSize.clamp(12.0, 32.0),
-                              fontWeight: currentLayer.fontWeight,
-                              fontStyle: currentLayer.fontStyle,
-                              letterSpacing: currentLayer.letterSpacing,
-                              height: currentLayer.lineHeight,
-                              color: currentLayer.color,
-                              decoration: currentLayer.decoration,
-                            ),
-                          ),
-                          textAlign: currentLayer.textAlign,
-                        ),
+                            baseStyle,
+                          );
+                          Widget previewWidget = Text.rich(
+                            span,
+                            textAlign: currentLayer.textAlign,
+                          );
+                          if (currentLayer.strokeColor != null &&
+                              currentLayer.strokeColor != Colors.transparent &&
+                              currentLayer.strokeWidth > 0) {
+                            final strokeStyle = baseStyle.copyWith(
+                              color: null,
+                              foreground: Paint()
+                                ..style = PaintingStyle.stroke
+                                ..strokeWidth = currentLayer.strokeWidth * 2
+                                ..strokeCap = StrokeCap.round
+                                ..strokeJoin = StrokeJoin.round
+                                ..color = currentLayer.strokeColor!,
+                            );
+                            previewWidget = Stack(
+                              alignment: currentLayer.textAlign == TextAlign.center
+                                  ? Alignment.center
+                                  : (currentLayer.textAlign == TextAlign.right || currentLayer.textAlign == TextAlign.end
+                                      ? Alignment.centerRight
+                                      : Alignment.centerLeft),
+                              children: [
+                                Text.rich(
+                                  TextSpanParser.parseToTextSpan(
+                                    currentLayer.content.isEmpty ? 'Typography Preview' : currentLayer.content,
+                                    strokeStyle,
+                                  ),
+                                  textAlign: currentLayer.textAlign,
+                                ),
+                                previewWidget,
+                              ],
+                            );
+                          }
+                          return previewWidget;
+                        }(),
                       ),
                       const SizedBox(height: 20),
 
@@ -1303,6 +1339,367 @@ class PropertiesPanel extends StatelessWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 20),
+
+                      // F. Text Stroke (Outline)
+                      () {
+                        final hasStroke = currentLayer.strokeColor != null &&
+                            currentLayer.strokeColor != Colors.transparent &&
+                            currentLayer.strokeWidth > 0;
+                        final activeStrokeColor = currentLayer.strokeColor ?? const Color(0xFF6C5CE7);
+                        final activeStrokeWidth = currentLayer.strokeWidth > 0 ? currentLayer.strokeWidth : 1.5;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.border_color_rounded, color: Color(0xFFA78BFA), size: 16),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Text Stroke (Outline)',
+                                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                Switch(
+                                  value: hasStroke,
+                                  activeColor: const Color(0xFF6C5CE7),
+                                  onChanged: (val) {
+                                    if (val) {
+                                      currentLayer = currentLayer.copyWith(
+                                        strokeColor: activeStrokeColor,
+                                        strokeWidth: activeStrokeWidth,
+                                      );
+                                    } else {
+                                      currentLayer = currentLayer.copyWith(
+                                        clearStrokeColor: true,
+                                        strokeWidth: 0.0,
+                                      );
+                                    }
+                                    onUpdate(currentLayer);
+                                    setModalState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                            if (hasStroke) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  // Color swatch
+                                  InkWell(
+                                    onTap: () {
+                                      _showColorPicker(context, activeStrokeColor, (c) {
+                                        currentLayer = currentLayer.copyWith(strokeColor: c);
+                                        onUpdate(currentLayer);
+                                        setModalState(() {});
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF221F32),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFF383350)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              color: activeStrokeColor,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: Colors.white30),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            TextSpanParser.colorToHex(activeStrokeColor),
+                                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        _buildSheetMicroButton(
+                                          icon: Icons.remove,
+                                          onTap: () {
+                                            final w = (currentLayer.strokeWidth - 0.5).clamp(0.5, 10.0);
+                                            currentLayer = currentLayer.copyWith(strokeWidth: double.parse(w.toStringAsFixed(1)));
+                                            onUpdate(currentLayer);
+                                            setModalState(() {});
+                                          },
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          width: 60,
+                                          padding: const EdgeInsets.symmetric(vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF221F32),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: const Color(0xFF383350)),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            '${currentLayer.strokeWidth.toStringAsFixed(1)} px',
+                                            style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _buildSheetMicroButton(
+                                          icon: Icons.add,
+                                          onTap: () {
+                                            final w = (currentLayer.strokeWidth + 0.5).clamp(0.5, 10.0);
+                                            currentLayer = currentLayer.copyWith(strokeWidth: double.parse(w.toStringAsFixed(1)));
+                                            onUpdate(currentLayer);
+                                            setModalState(() {});
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Slider(
+                                value: currentLayer.strokeWidth.clamp(0.5, 10.0),
+                                min: 0.5,
+                                max: 10.0,
+                                divisions: 19,
+                                activeColor: const Color(0xFF6C5CE7),
+                                inactiveColor: const Color(0xFF262338),
+                                onChanged: (val) {
+                                  currentLayer = currentLayer.copyWith(strokeWidth: double.parse(val.toStringAsFixed(1)));
+                                  onUpdate(currentLayer);
+                                  setModalState(() {});
+                                },
+                              ),
+                            ],
+                          ],
+                        );
+                      }(),
+                      const SizedBox(height: 20),
+
+                      // G. Text Shadow (Drop Shadow)
+                      () {
+                        final hasShadow = currentLayer.shadows != null && currentLayer.shadows!.isNotEmpty;
+                        final currentShadow = hasShadow
+                            ? currentLayer.shadows!.first
+                            : const Shadow(color: Colors.black54, offset: Offset(2, 2), blurRadius: 4);
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.wb_sunny_rounded, color: Color(0xFFA78BFA), size: 16),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Text Shadow (Drop Shadow)',
+                                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                Switch(
+                                  value: hasShadow,
+                                  activeColor: const Color(0xFF6C5CE7),
+                                  onChanged: (val) {
+                                    if (val) {
+                                      currentLayer = currentLayer.copyWith(
+                                        shadows: [currentShadow],
+                                      );
+                                    } else {
+                                      currentLayer = currentLayer.copyWith(
+                                        clearShadows: true,
+                                      );
+                                    }
+                                    onUpdate(currentLayer);
+                                    setModalState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                            if (hasShadow) ...[
+                              const SizedBox(height: 8),
+                              // Shadow Color Row
+                              Row(
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      _showColorPicker(context, currentShadow.color, (c) {
+                                        currentLayer = currentLayer.copyWith(
+                                          shadows: [
+                                            Shadow(
+                                              color: c,
+                                              offset: currentShadow.offset,
+                                              blurRadius: currentShadow.blurRadius,
+                                            ),
+                                          ],
+                                        );
+                                        onUpdate(currentLayer);
+                                        setModalState(() {});
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF221F32),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFF383350)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              color: currentShadow.color,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: Colors.white30),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            TextSpanParser.colorToHex(currentShadow.color),
+                                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Blur: ${currentShadow.blurRadius.toStringAsFixed(1)}px | Offset: (${currentShadow.offset.dx.toInt()}, ${currentShadow.offset.dy.toInt()})',
+                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              // Blur Slider
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Blur Radius', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                  Text('${currentShadow.blurRadius.toStringAsFixed(1)} px', style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 12, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              Slider(
+                                value: currentShadow.blurRadius.clamp(0.0, 30.0),
+                                min: 0.0,
+                                max: 30.0,
+                                divisions: 30,
+                                activeColor: const Color(0xFF6C5CE7),
+                                inactiveColor: const Color(0xFF262338),
+                                onChanged: (val) {
+                                  currentLayer = currentLayer.copyWith(
+                                    shadows: [
+                                      Shadow(
+                                        color: currentShadow.color,
+                                        offset: currentShadow.offset,
+                                        blurRadius: val,
+                                      ),
+                                    ],
+                                  );
+                                  onUpdate(currentLayer);
+                                  setModalState(() {});
+                                },
+                              ),
+                              // Offset X & Y Sliders
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text('Offset X', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                            Text('${currentShadow.offset.dx.toInt()} px', style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 11, fontWeight: FontWeight.bold)),
+                                          ],
+                                        ),
+                                        Slider(
+                                          value: currentShadow.offset.dx.clamp(-20.0, 20.0),
+                                          min: -20.0,
+                                          max: 20.0,
+                                          divisions: 40,
+                                          activeColor: const Color(0xFF6C5CE7),
+                                          inactiveColor: const Color(0xFF262338),
+                                          onChanged: (val) {
+                                            currentLayer = currentLayer.copyWith(
+                                              shadows: [
+                                                Shadow(
+                                                  color: currentShadow.color,
+                                                  offset: Offset(val, currentShadow.offset.dy),
+                                                  blurRadius: currentShadow.blurRadius,
+                                                ),
+                                              ],
+                                            );
+                                            onUpdate(currentLayer);
+                                            setModalState(() {});
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text('Offset Y', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                            Text('${currentShadow.offset.dy.toInt()} px', style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 11, fontWeight: FontWeight.bold)),
+                                          ],
+                                        ),
+                                        Slider(
+                                          value: currentShadow.offset.dy.clamp(-20.0, 20.0),
+                                          min: -20.0,
+                                          max: 20.0,
+                                          divisions: 40,
+                                          activeColor: const Color(0xFF6C5CE7),
+                                          inactiveColor: const Color(0xFF262338),
+                                          onChanged: (val) {
+                                            currentLayer = currentLayer.copyWith(
+                                              shadows: [
+                                                Shadow(
+                                                  color: currentShadow.color,
+                                                  offset: Offset(currentShadow.offset.dx, val),
+                                                  blurRadius: currentShadow.blurRadius,
+                                                ),
+                                              ],
+                                            );
+                                            onUpdate(currentLayer);
+                                            setModalState(() {});
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        );
+                      }(),
                     ],
                   ),
                 ),
@@ -4077,428 +4474,523 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  void _showEditTextDialog(
+  void _showEditTextBottomSheet(
     BuildContext context,
     TextLayer layer,
     ValueChanged<String> onSaved,
   ) {
-    final controller = TextEditingController(text: layer.content);
-    TextStyle previewStyle;
+    final controller = RichColorTextEditingController(taggedText: layer.content);
+    Color activeColor = controller.ranges.isNotEmpty
+        ? controller.ranges.first.color
+        : layer.color;
+    controller.activeColor = activeColor;
+
+    TextStyle editorBaseStyle;
     try {
-      previewStyle = GoogleFonts.getFont(
+      editorBaseStyle = GoogleFonts.getFont(
         layer.fontFamily,
         color: layer.color,
-        fontSize: 18,
+        fontSize: layer.fontSize.clamp(14.0, 26.0),
         fontWeight: layer.fontWeight,
         fontStyle: layer.fontStyle,
+        letterSpacing: layer.letterSpacing,
+        height: layer.lineHeight,
       );
     } catch (_) {
-      previewStyle = TextStyle(
+      editorBaseStyle = TextStyle(
         fontFamily: layer.fontFamily,
         color: layer.color,
-        fontSize: 18,
+        fontSize: layer.fontSize.clamp(14.0, 26.0),
         fontWeight: layer.fontWeight,
         fontStyle: layer.fontStyle,
+        letterSpacing: layer.letterSpacing,
+        height: layer.lineHeight,
       );
     }
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) {
-          final words = TextSpanParser.extractWordSegments(controller.text);
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final words = TextSpanParser.extractCleanWordSegments(
+            controller.text,
+            controller.ranges,
+          );
 
-          return AlertDialog(
-            backgroundColor: AppColors.surfaceElevated,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.title_rounded, size: 18, color: AppColors.primary),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Edit Text & Colors',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+          // Update active color based on cursor position
+          if (controller.selection.isValid && controller.selection.isCollapsed) {
+            final cursorColor = controller.getColorAtCursor(controller.selection.baseOffset);
+            if (cursorColor != null && cursorColor != activeColor) {
+              activeColor = cursorColor;
+              controller.activeColor = activeColor;
+            }
+          }
+
+          return SafeArea(
+            child: Container(
+              margin: EdgeInsets.only(
+                left: 14,
+                right: 14,
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 16,
+              ),
+              height: MediaQuery.of(context).size.height * 0.78,
+              decoration: BoxDecoration(
+                color: const Color(0xFF14131A),
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    blurRadius: 32,
+                    offset: const Offset(0, 12),
                   ),
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
+                ],
+              ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Live Preview Box
-                  const Text(
-                    'Preview',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF141419),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Text.rich(
-                      TextSpanParser.parseToTextSpan(
-                        controller.text.isEmpty ? ' ' : controller.text,
-                        previewStyle,
-                      ),
-                      textAlign: layer.textAlign,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Text Input
-                  const Text(
-                    'Content',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    maxLines: 3,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    onChanged: (_) => setDialogState(() {}),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: AppColors.surfaceSecondary,
-                      hintText: 'Enter text...',
-                      hintStyle: const TextStyle(color: AppColors.textMuted),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Character & Selection Color Toolbar
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.palette_rounded,
-                        size: 13,
-                        color: AppColors.primary,
-                      ),
-                      SizedBox(width: 5),
-                      Text(
-                        'Color Selection / Letters',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Select any letters or words above, then tap a color:',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Quick Color Palette for Selection
-                  Row(
-                    children: [
-                      for (final color in const [
-                        Color(0xFF6C5CE7), // Purple
-                        Color(0xFF0D99FF), // Blue
-                        Color(0xFFFFA502), // Amber
-                        Color(0xFF2ED573), // Green
-                        Color(0xFFFF4757), // Red
-                        Color(0xFFFFFFFF), // White
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: InkWell(
-                            onTap: () {
-                              final sel = controller.selection;
-                              if (sel.isValid &&
-                                  !sel.isCollapsed &&
-                                  sel.start >= 0 &&
-                                  sel.end <= controller.text.length) {
-                                final selectedText = controller.text.substring(
-                                  sel.start,
-                                  sel.end,
-                                );
-                                final updated =
-                                    TextSpanParser.applyColorToSubstring(
-                                      controller.text,
-                                      selectedText,
-                                      color,
-                                    );
-                                controller.text = updated;
-                              } else {
-                                // Default color picker for whole or word
-                                _showColorPicker(context, color, (newColor) {
-                                  controller.text =
-                                      '[color:${TextSpanParser.colorToHex(newColor)}]${controller.text}[/color]';
-                                  setDialogState(() {});
-                                });
-                              }
-                              setDialogState(() {});
-                            },
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white24,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      // Custom Color Picker Button
-                      InkWell(
-                        onTap: () {
-                          final sel = controller.selection;
-                          final initialColor = const Color(0xFF6C5CE7);
-                          _showColorPicker(context, initialColor, (
-                            customColor,
-                          ) {
-                            if (sel.isValid &&
-                                !sel.isCollapsed &&
-                                sel.start >= 0 &&
-                                sel.end <= controller.text.length) {
-                              final selectedText = controller.text.substring(
-                                sel.start,
-                                sel.end,
-                              );
-                              controller.text =
-                                  TextSpanParser.applyColorToSubstring(
-                                    controller.text,
-                                    selectedText,
-                                    customColor,
-                                  );
-                            } else {
-                              controller.text =
-                                  '[color:${TextSpanParser.colorToHex(customColor)}]${controller.text}[/color]';
-                            }
-                            setDialogState(() {});
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            gradient: const SweepGradient(
-                              colors: [
-                                Colors.red,
-                                Colors.amber,
-                                Colors.green,
-                                Colors.cyan,
-                                Colors.blue,
-                                Colors.purple,
-                                Colors.red,
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white38,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.colorize_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Reset / Clear formatting for selection
-                      InkWell(
-                        onTap: () {
-                          final sel = controller.selection;
-                          if (sel.isValid &&
-                              !sel.isCollapsed &&
-                              sel.start >= 0 &&
-                              sel.end <= controller.text.length) {
-                            final selectedText = controller.text.substring(
-                              sel.start,
-                              sel.end,
-                            );
-                            controller.text =
-                                TextSpanParser.applyColorToSubstring(
-                                  controller.text,
-                                  selectedText,
-                                  null,
-                                );
-                          } else {
-                            controller.text = TextSpanParser.stripTags(
-                              controller.text,
-                            );
-                          }
-                          setDialogState(() {});
-                        },
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          height: 28,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceSecondary,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.format_clear_rounded,
-                                size: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Clear',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Word Quick Chips
-                  if (words.isNotEmpty) ...[
-                    const Text(
-                      'Or tap word:',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
+                  // 1. Drag handle & Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
+                    child: Column(
                       children: [
-                        for (final seg in words)
-                          InkWell(
-                            onTap: () {
-                              _showColorPicker(
-                                context,
-                                seg.color ?? layer.color,
-                                (newColor) {
-                                  final updated =
-                                      TextSpanParser.applyColorToWord(
-                                        controller.text,
-                                        seg.text,
-                                        newColor,
-                                      );
-                                  controller.text = updated;
-                                  setDialogState(() {});
-                                },
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(7),
                               decoration: BoxDecoration(
-                                color: AppColors.surfaceSecondary,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: seg.color != null
-                                      ? seg.color!.withValues(alpha: 0.8)
-                                      : AppColors.border,
-                                  width: seg.color != null ? 1.5 : 1.0,
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF9E77F6), Color(0xFF6C5CE7)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                              child: const Icon(
+                                Icons.title_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: BoxDecoration(
-                                      color: seg.color ?? layer.color,
-                                      shape: BoxShape.circle,
+                                  Text(
+                                    'Edit Text & Multi-Colors',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.2,
                                     ),
                                   ),
-                                  const SizedBox(width: 5),
+                                  SizedBox(height: 2),
                                   Text(
-                                    seg.text,
+                                    'Type & format directly with live inline styling',
                                     style: TextStyle(
-                                      color: seg.color ?? Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: seg.color != null
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
+                                      color: AppColors.textMuted,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
+                            InkWell(
+                              onTap: () => Navigator.pop(modalCtx),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF22202C),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white10),
+                                ),
+                                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
+                  ),
+
+                  const Divider(color: Color(0xFF242232), height: 1),
+
+                  // 2. Scrollable Content Area
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        // A. Live WYSIWYG Editable Text Area
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.edit_note_rounded, size: 15, color: Color(0xFFA78BFA)),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Editable Content (Direct Preview)',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 9,
+                                  height: 9,
+                                  decoration: BoxDecoration(
+                                    color: activeColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: activeColor.withValues(alpha: 0.6),
+                                        blurRadius: 6,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Typing style',
+                                  style: TextStyle(
+                                    color: activeColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        Container(
+                          width: double.infinity,
+                          constraints: const BoxConstraints(minHeight: 120),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1B1927),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF2E2B40), width: 1.2),
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: TextField(
+                            controller: controller,
+                            autofocus: true,
+                            maxLines: null,
+                            textAlign: layer.textAlign,
+                            style: editorBaseStyle,
+                            cursorColor: activeColor,
+                            onChanged: (_) {
+                              setModalState(() {});
+                            },
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              border: InputBorder.none,
+                              hintText: 'Enter text here...',
+                              hintStyle: TextStyle(color: AppColors.textMuted),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // B. Premium Color Palette Bar
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.palette_rounded, size: 15, color: Color(0xFFA78BFA)),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Color Palette',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1B2E),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFF383350)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: activeColor,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: activeColor.withValues(alpha: 0.6),
+                                          blurRadius: 6,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    TextSpanParser.colorToHex(activeColor),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Select text in editor above to apply color, or pick a color to type with it:',
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Enhanced Swatches Row
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            for (final color in const [
+                              Color(0xFFFFFFFF), // White
+                              Color(0xFF6C5CE7), // Electric Purple
+                              Color(0xFF8B5CF6), // Deep Violet
+                              Color(0xFF0D99FF), // Vivid Blue
+                              Color(0xFF00F298), // Neon Mint
+                              Color(0xFFFFA502), // Golden Amber
+                              Color(0xFFFF4757), // Coral Flame
+                              Color(0xFFFF007F), // Hot Magenta
+                            ])
+                              InkWell(
+                                onTap: () {
+                                  activeColor = color;
+                                  controller.activeColor = color;
+                                  if (controller.selection.isValid && !controller.selection.isCollapsed) {
+                                    controller.applyColorToSelection(color);
+                                  }
+                                  setModalState(() {});
+                                },
+                                borderRadius: BorderRadius.circular(18),
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: activeColor == color ? Colors.white : Colors.white24,
+                                      width: activeColor == color ? 2.8 : 1.2,
+                                    ),
+                                    boxShadow: [
+                                      if (activeColor == color)
+                                        BoxShadow(
+                                          color: color.withValues(alpha: 0.65),
+                                          blurRadius: 12,
+                                          spreadRadius: 1,
+                                        )
+                                      else
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.3),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                    ],
+                                  ),
+                                  child: activeColor == color
+                                      ? Center(
+                                          child: Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            // Custom Color Picker Button
+                            InkWell(
+                              onTap: () {
+                                _showColorPicker(context, activeColor, (customColor) {
+                                  activeColor = customColor;
+                                  controller.activeColor = customColor;
+                                  if (controller.selection.isValid && !controller.selection.isCollapsed) {
+                                    controller.applyColorToSelection(customColor);
+                                  }
+                                  setModalState(() {});
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(18),
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  gradient: const SweepGradient(
+                                    colors: [
+                                      Colors.red,
+                                      Colors.amber,
+                                      Colors.green,
+                                      Colors.cyan,
+                                      Colors.blue,
+                                      Colors.purple,
+                                      Colors.red,
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white38, width: 1.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.4),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.colorize_rounded, size: 16, color: Colors.white),
+                              ),
+                            ),
+                            // Clear formatting pill
+                            InkWell(
+                              onTap: () {
+                                activeColor = layer.color;
+                                controller.activeColor = layer.color;
+                                if (controller.selection.isValid && !controller.selection.isCollapsed) {
+                                  controller.applyColorToSelection(null);
+                                } else {
+                                  controller.ranges.clear();
+                                  controller.notifyListeners();
+                                }
+                                setModalState(() {});
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                height: 36,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF221F32),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFF383350)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.format_clear_rounded, size: 14, color: AppColors.textSecondary),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      'Reset',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 3. Footer Action Bar
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF14131A),
+                      border: Border(top: BorderSide(color: Color(0xFF242232))),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(modalCtx),
+                          child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                        ),
+                        const SizedBox(width: 12),
+                        InkWell(
+                          onTap: () {
+                            if (controller.text.isNotEmpty) {
+                              onSaved(controller.toTaggedString());
+                            }
+                            Navigator.pop(modalCtx);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF9E77F6), Color(0xFF6C5CE7)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF6C5CE7).withValues(alpha: 0.4),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Text(
+                              'Save Changes',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: AppColors.textMuted),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (controller.text.isNotEmpty) {
-                    onSaved(controller.text);
-                  }
-                  Navigator.pop(ctx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('Save'),
-              ),
-            ],
           );
         },
       ),

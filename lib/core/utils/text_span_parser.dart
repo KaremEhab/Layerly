@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class StyledWordSegment {
@@ -217,35 +218,345 @@ class TextSpanParser {
     return content.replaceFirst(word, '[color:$hex]$word[/color]');
   }
 
-  /// Applies a color to any arbitrary selected characters or text range
-  static String applyColorToSubstring(String content, String selectedText, Color? color) {
-    if (selectedText.isEmpty) return content;
+  /// Parses tagged string (e.g. "[color:#6C5CE7]Uber's Eats[/color]") into clean text and ranges
+  static (String, List<ColoredRange>) parseTaggedTextToClean(String content) {
+    if (content.isEmpty) return ('', <ColoredRange>[]);
 
-    final hex = color != null && color != Colors.transparent ? colorToHex(color) : null;
+    final matches = _tagRegex.allMatches(content).toList();
+    if (matches.isEmpty) {
+      return (content, <ColoredRange>[]);
+    }
 
-    if (hex == null) {
-      final pattern = RegExp(
-        r'\[color:(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)\](' +
-            RegExp.escape(selectedText) +
-            r')\[/color\]',
-        caseSensitive: false,
-      );
-      if (pattern.hasMatch(content)) {
-        return content.replaceAllMapped(pattern, (m) => m.group(2)!);
+    final cleanBuffer = StringBuffer();
+    final ranges = <ColoredRange>[];
+    int lastIndex = 0;
+
+    for (final match in matches) {
+      if (match.start > lastIndex) {
+        cleanBuffer.write(content.substring(lastIndex, match.start));
       }
-      return content;
+
+      final colorStr = match.group(2) ?? match.group(4) ?? '';
+      final innerText = match.group(3) ?? match.group(5) ?? '';
+      final parsedColor = parseColor(colorStr);
+
+      final start = cleanBuffer.length;
+      cleanBuffer.write(innerText);
+      final end = cleanBuffer.length;
+
+      if (parsedColor != null && end > start) {
+        ranges.add(ColoredRange(start: start, end: end, color: parsedColor));
+      }
+
+      lastIndex = match.end;
     }
 
-    final tagPattern = RegExp(
-      r'\[color:(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)\](' +
-          RegExp.escape(selectedText) +
-          r')\[/color\]',
-      caseSensitive: false,
-    );
-    if (tagPattern.hasMatch(content)) {
-      return content.replaceAllMapped(tagPattern, (m) => '[color:$hex]${m.group(2)}[/color]');
+    if (lastIndex < content.length) {
+      cleanBuffer.write(content.substring(lastIndex));
     }
 
-    return content.replaceFirst(selectedText, '[color:$hex]$selectedText[/color]');
+    return (cleanBuffer.toString(), ranges);
+  }
+
+  /// Extracts individual words along with their assigned color styling from clean text and ranges
+  static List<StyledWordSegment> extractCleanWordSegments(String cleanText, List<ColoredRange> ranges) {
+    final segments = <StyledWordSegment>[];
+    final regex = RegExp(r'\S+');
+    for (final match in regex.allMatches(cleanText)) {
+      final word = match.group(0)!;
+      final start = match.start;
+      final end = match.end;
+
+      Color? wordColor;
+      for (final r in ranges) {
+        if (r.start <= start && r.end >= end) {
+          wordColor = r.color;
+          break;
+        } else if (r.start < end && r.end > start) {
+          wordColor = r.color;
+          break;
+        }
+      }
+
+      segments.add(StyledWordSegment(
+        text: word,
+        color: wordColor,
+        rawStartIndex: start,
+        rawEndIndex: end,
+      ));
+    }
+    return segments;
+  }
+}
+
+class ColoredRange {
+  int start;
+  int end;
+  Color color;
+
+  ColoredRange({required this.start, required this.end, required this.color});
+
+  ColoredRange copy() => ColoredRange(start: start, end: end, color: color);
+
+  @override
+  String toString() => 'ColoredRange($start..$end, color: $color)';
+}
+
+/// WYSIWYG rich text editing controller that renders colored text spans inline
+/// and allows continuous typing in the active or adjacent text color.
+class RichColorTextEditingController extends TextEditingController {
+  List<ColoredRange> ranges = [];
+  Color? activeColor;
+
+  RichColorTextEditingController({String? taggedText, this.activeColor}) {
+    if (taggedText != null && taggedText.isNotEmpty) {
+      final parsed = TextSpanParser.parseTaggedTextToClean(taggedText);
+      text = parsed.$1;
+      ranges = parsed.$2;
+    }
+  }
+
+  void setFromTaggedText(String taggedText) {
+    final parsed = TextSpanParser.parseTaggedTextToClean(taggedText);
+    text = parsed.$1;
+    ranges = parsed.$2;
+    notifyListeners();
+  }
+
+  String toTaggedString() {
+    if (ranges.isEmpty) return text;
+    final buffer = StringBuffer();
+    int currentPos = 0;
+    final sorted = List<ColoredRange>.from(ranges)
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    for (final r in sorted) {
+      final start = r.start.clamp(0, text.length);
+      final end = r.end.clamp(start, text.length);
+      if (start > currentPos) {
+        buffer.write(text.substring(currentPos, start));
+      }
+      if (end > start) {
+        final hex = TextSpanParser.colorToHex(r.color);
+        buffer.write('[color:$hex]${text.substring(start, end)}[/color]');
+      }
+      currentPos = end;
+    }
+    if (currentPos < text.length) {
+      buffer.write(text.substring(currentPos));
+    }
+    return buffer.toString();
+  }
+
+  @override
+  set value(TextEditingValue newValue) {
+    final oldText = text;
+    final newText = newValue.text;
+
+    if (oldText != newText) {
+      _adjustRangesOnTextChange(oldText, newText, newValue.selection);
+    }
+
+    super.value = newValue;
+  }
+
+  void _adjustRangesOnTextChange(String oldText, String newText, TextSelection newSelection) {
+    final diff = newText.length - oldText.length;
+
+    // Find prefix matching length
+    int prefixLen = 0;
+    while (prefixLen < oldText.length &&
+        prefixLen < newText.length &&
+        oldText[prefixLen] == newText[prefixLen]) {
+      prefixLen++;
+    }
+
+    // Find suffix matching length
+    int suffixLen = 0;
+    while (suffixLen < (oldText.length - prefixLen) &&
+        suffixLen < (newText.length - prefixLen) &&
+        oldText[oldText.length - 1 - suffixLen] == newText[newText.length - 1 - suffixLen]) {
+      suffixLen++;
+    }
+
+    final oldChangeStart = prefixLen;
+    final oldChangeEnd = oldText.length - suffixLen;
+    final insertedLen = newText.length - prefixLen - suffixLen;
+
+    final updatedRanges = <ColoredRange>[];
+
+    for (final r in ranges) {
+      // 1. Span is strictly before edit point
+      if (r.end < oldChangeStart) {
+        updatedRanges.add(r);
+      }
+      // 2. Span is strictly after edit point
+      else if (r.start >= oldChangeEnd) {
+        updatedRanges.add(ColoredRange(
+          start: r.start + diff,
+          end: r.end + diff,
+          color: r.color,
+        ));
+      }
+      // 3. User is typing at the boundary or inside this span
+      else {
+        // If typing directly at the end or inside the span
+        if (oldChangeStart > r.start && oldChangeStart <= r.end && oldChangeStart == oldChangeEnd) {
+          // Insertion inside or at right edge of span -> Expand span with typed text!
+          updatedRanges.add(ColoredRange(
+            start: r.start,
+            end: r.end + insertedLen,
+            color: r.color,
+          ));
+        } else if (oldChangeStart == r.start && oldChangeStart == oldChangeEnd) {
+          // Insertion at left edge: if active color matches, expand; else shift
+          if (activeColor != null && activeColor == r.color) {
+            updatedRanges.add(ColoredRange(
+              start: r.start,
+              end: r.end + insertedLen,
+              color: r.color,
+            ));
+          } else {
+            updatedRanges.add(ColoredRange(
+              start: r.start + insertedLen,
+              end: r.end + insertedLen,
+              color: r.color,
+            ));
+          }
+        } else {
+          // Overwrite or deletion overlapping this span
+          final newStart = r.start < oldChangeStart ? r.start : oldChangeStart + insertedLen;
+          final newEnd = r.end > oldChangeEnd ? r.end + diff : oldChangeStart;
+          if (newEnd > newStart) {
+            updatedRanges.add(ColoredRange(
+              start: newStart,
+              end: newEnd,
+              color: r.color,
+            ));
+          }
+        }
+      }
+    }
+
+    // Clamp and clean
+    ranges = updatedRanges.where((r) => r.start < r.end && r.start >= 0 && r.end <= newText.length).toList();
+    _normalizeRanges();
+  }
+
+  void _normalizeRanges() {
+    if (ranges.isEmpty) return;
+    ranges.sort((a, b) => a.start.compareTo(b.start));
+    final merged = <ColoredRange>[];
+    for (final r in ranges) {
+      if (merged.isEmpty) {
+        merged.add(r);
+      } else {
+        final last = merged.last;
+        if (last.end >= r.start && last.color == r.color) {
+          if (r.end > last.end) {
+            last.end = r.end;
+          }
+        } else if (last.end < r.start) {
+          merged.add(r);
+        } else {
+          last.end = r.start;
+          merged.add(r);
+        }
+      }
+    }
+    ranges = merged.where((r) => r.start < r.end).toList();
+  }
+
+  void applyColorToSelection(Color? color) {
+    if (!selection.isValid || selection.isCollapsed) return;
+    final start = selection.start < selection.end ? selection.start : selection.end;
+    final end = selection.start > selection.end ? selection.start : selection.end;
+    applyColorToRange(start, end, color);
+  }
+
+  void applyColorToRange(int start, int end, Color? color) {
+    if (start >= end || start < 0 || end > text.length) return;
+
+    final updated = <ColoredRange>[];
+    for (final r in ranges) {
+      if (r.end <= start || r.start >= end) {
+        updated.add(r);
+      } else {
+        if (r.start < start) {
+          updated.add(ColoredRange(start: r.start, end: start, color: r.color));
+        }
+        if (r.end > end) {
+          updated.add(ColoredRange(start: end, end: r.end, color: r.color));
+        }
+      }
+    }
+
+    if (color != null && color != Colors.transparent) {
+      updated.add(ColoredRange(start: start, end: end, color: color));
+    }
+
+    ranges = updated;
+    _normalizeRanges();
+    notifyListeners();
+  }
+
+  void applyColorToWord(String word, Color? color) {
+    final idx = text.indexOf(word);
+    if (idx != -1) {
+      applyColorToRange(idx, idx + word.length, color);
+    }
+  }
+
+  Color? getColorAtCursor(int cursor) {
+    for (final r in ranges) {
+      if (cursor >= r.start && cursor <= r.end) {
+        return r.color;
+      }
+    }
+    return null;
+  }
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final baseStyle = style ?? const TextStyle(color: Colors.white, fontSize: 14);
+    if (ranges.isEmpty) {
+      return TextSpan(text: text, style: baseStyle);
+    }
+
+    final spans = <InlineSpan>[];
+    int currentPos = 0;
+    final sorted = List<ColoredRange>.from(ranges)
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    for (final r in sorted) {
+      final start = r.start.clamp(0, text.length);
+      final end = r.end.clamp(start, text.length);
+      if (start > currentPos) {
+        spans.add(TextSpan(
+          text: text.substring(currentPos, start),
+          style: baseStyle,
+        ));
+      }
+      if (end > start) {
+        spans.add(TextSpan(
+          text: text.substring(start, end),
+          style: baseStyle.copyWith(color: r.color),
+        ));
+      }
+      currentPos = end;
+    }
+
+    if (currentPos < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(currentPos),
+        style: baseStyle,
+      ));
+    }
+
+    return TextSpan(children: spans, style: baseStyle);
   }
 }

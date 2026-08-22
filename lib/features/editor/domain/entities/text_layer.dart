@@ -14,6 +14,8 @@ class TextLayer extends Layer {
   final TextAlign textAlign;
   final TextDecoration? decoration;
   final List<Shadow>? shadows;
+  final Color? strokeColor;
+  final double strokeWidth;
   final Color? backgroundColor;
   final double backgroundRadius;
   final EdgeInsets padding;
@@ -42,6 +44,8 @@ class TextLayer extends Layer {
     this.textAlign = TextAlign.left,
     this.decoration,
     this.shadows,
+    this.strokeColor,
+    this.strokeWidth = 0.0,
     this.backgroundColor,
     this.backgroundRadius = 6.0,
     this.padding = EdgeInsets.zero,
@@ -98,7 +102,12 @@ class TextLayer extends Layer {
     TextAlign? textAlign,
     TextDecoration? decoration,
     List<Shadow>? shadows,
+    bool clearShadows = false,
+    Color? strokeColor,
+    bool clearStrokeColor = false,
+    double? strokeWidth,
     Color? backgroundColor,
+    bool clearBackgroundColor = false,
     double? backgroundRadius,
     EdgeInsets? padding,
     Gradient? textGradient,
@@ -125,8 +134,10 @@ class TextLayer extends Layer {
       lineHeight: lineHeight ?? this.lineHeight,
       textAlign: textAlign ?? this.textAlign,
       decoration: decoration ?? this.decoration,
-      shadows: shadows ?? this.shadows,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
+      shadows: clearShadows ? null : (shadows ?? this.shadows),
+      strokeColor: clearStrokeColor ? null : (strokeColor ?? this.strokeColor),
+      strokeWidth: strokeWidth ?? this.strokeWidth,
+      backgroundColor: clearBackgroundColor ? null : (backgroundColor ?? this.backgroundColor),
       backgroundRadius: backgroundRadius ?? this.backgroundRadius,
       padding: padding ?? this.padding,
       textGradient: textGradient ?? this.textGradient,
@@ -147,6 +158,8 @@ class TextLayer extends Layer {
         textAlign,
         decoration,
         shadows,
+        strokeColor,
+        strokeWidth,
         backgroundColor,
         backgroundRadius,
         padding,

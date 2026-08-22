@@ -903,5 +903,78 @@ void main() {
       expect(layer.showGlare, isTrue);
       expect(layer.showDynamicIsland, isTrue);
     });
+
+    test('RichColorTextEditingController parses clean text and preserves/expands colored typing', () {
+      const raw = "I redesigned\n[color:#6C5CE7]Uber's Eats[/color]\nscreen.";
+      final controller = RichColorTextEditingController(taggedText: raw);
+
+      // Clean text without hex tags
+      expect(controller.text, "I redesigned\nUber's Eats\nscreen.");
+      expect(controller.ranges.length, 1);
+      expect(controller.ranges.first.start, 13);
+      expect(controller.ranges.first.end, 24);
+      expect(controller.ranges.first.color, const Color(0xFF6C5CE7));
+
+      // Type text at the end of the colored span ("Uber's Eats Plus")
+      controller.value = const TextEditingValue(
+        text: "I redesigned\nUber's Eats Plus\nscreen.",
+        selection: TextSelection.collapsed(offset: 29),
+      );
+
+      // The typed text expands the purple colored span!
+      expect(controller.ranges.first.start, 13);
+      expect(controller.ranges.first.end, 29); // 24 + 5 chars (" Plus")
+      expect(controller.toTaggedString(), "I redesigned\n[color:#6C5CE7]Uber's Eats Plus[/color]\nscreen.");
+
+      // Word segments extraction
+      final segments = TextSpanParser.extractCleanWordSegments(controller.text, controller.ranges);
+      expect(segments.any((s) => s.text == 'redesigned' && s.color == null), isTrue);
+      expect(segments.any((s) => s.text == "Uber's" && s.color == const Color(0xFF6C5CE7)), isTrue);
+      expect(segments.any((s) => s.text == "Plus" && s.color == const Color(0xFF6C5CE7)), isTrue);
+
+      // Apply color to another word
+      controller.applyColorToWord('redesigned', const Color(0xFF0D99FF));
+      expect(controller.toTaggedString().contains('[color:#0D99FF]redesigned[/color]'), isTrue);
+    });
+
+    test('TextLayer supports text stroke outline and text shadows', () {
+      final textLayer = TextLayer(
+        id: 't-styled',
+        name: 'Heading with Stroke & Shadow',
+        content: 'Epic Design',
+        x: 40,
+        y: 40,
+        width: 200,
+        height: 50,
+        fontSize: 32,
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 2.5,
+        shadows: const [
+          Shadow(
+            color: Color(0x80000000),
+            offset: Offset(4, 4),
+            blurRadius: 8,
+          ),
+        ],
+      );
+
+      expect(textLayer.strokeColor, const Color(0xFF000000));
+      expect(textLayer.strokeWidth, 2.5);
+      expect(textLayer.shadows, isNotNull);
+      expect(textLayer.shadows!.first.blurRadius, 8.0);
+      expect(textLayer.shadows!.first.offset, const Offset(4, 4));
+
+      final cleared = textLayer.copyWith(
+        clearStrokeColor: true,
+        strokeWidth: 0.0,
+        clearShadows: true,
+      );
+
+      expect(cleared.strokeColor, isNull);
+      expect(cleared.strokeWidth, 0.0);
+      expect(cleared.shadows, isNull);
+    });
   });
 }
+
+

@@ -113,6 +113,41 @@ class LayerView extends StatelessWidget {
       overflow: TextOverflow.visible,
     );
 
+    final hasStroke = layer.strokeColor != null &&
+        layer.strokeColor != Colors.transparent &&
+        layer.strokeWidth > 0;
+
+    if (hasStroke) {
+      final strokeStyle = style.copyWith(
+        color: null,
+        foreground: Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = layer.strokeWidth * 2
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = layer.strokeColor!,
+      );
+      final strokeSpan = TextSpanParser.parseToTextSpan(
+        layer.content,
+        strokeStyle,
+      );
+
+      final strokeWidget = Text.rich(
+        strokeSpan,
+        textAlign: layer.textAlign,
+        softWrap: false,
+        overflow: TextOverflow.visible,
+      );
+
+      textWidget = Stack(
+        alignment: _getAlignmentFromTextAlign(layer.textAlign),
+        children: [
+          strokeWidget,
+          textWidget,
+        ],
+      );
+    }
+
     if (layer.textGradient != null) {
       textWidget = ShaderMask(
         shaderCallback: (bounds) => layer.textGradient!.createShader(bounds),
