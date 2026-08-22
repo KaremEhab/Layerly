@@ -11,6 +11,12 @@ class DeviceMockupLayer extends Layer {
   final bool showShadow;
   final bool showHeader;
   final String? title;
+  final BoxFit imageFit;
+  final double imageOffsetX;
+  final double imageOffsetY;
+  final double imageScale;
+  final bool showGlare;
+  final bool showDynamicIsland;
 
   const DeviceMockupLayer({
     required super.id,
@@ -24,14 +30,20 @@ class DeviceMockupLayer extends Layer {
     super.zIndex = 0,
     super.visible = true,
     super.locked = false,
-    this.device = MockupDevice.iphone,
+    this.device = MockupDevice.iphone17ProMax,
     this.screenImagePath,
-    this.frameColor = const Color(0xFF1E2028),
-    this.screenBackgroundColor = const Color(0xFFF6F7FB),
-    this.cornerRadius = 38.0,
+    this.frameColor = const Color(0xFF050507),
+    this.screenBackgroundColor = const Color(0xFFF5F5F7),
+    this.cornerRadius = 52.0,
     this.showShadow = true,
     this.showHeader = true,
     this.title,
+    this.imageFit = BoxFit.cover,
+    this.imageOffsetX = 0.0,
+    this.imageOffsetY = 0.0,
+    this.imageScale = 1.0,
+    this.showGlare = true,
+    this.showDynamicIsland = true,
   }) : super(type: LayerType.deviceMockup);
 
   @override
@@ -81,6 +93,12 @@ class DeviceMockupLayer extends Layer {
     bool? showShadow,
     bool? showHeader,
     String? title,
+    BoxFit? imageFit,
+    double? imageOffsetX,
+    double? imageOffsetY,
+    double? imageScale,
+    bool? showGlare,
+    bool? showDynamicIsland,
   }) {
     return DeviceMockupLayer(
       id: id ?? this.id,
@@ -102,6 +120,12 @@ class DeviceMockupLayer extends Layer {
       showShadow: showShadow ?? this.showShadow,
       showHeader: showHeader ?? this.showHeader,
       title: title ?? this.title,
+      imageFit: imageFit ?? this.imageFit,
+      imageOffsetX: imageOffsetX ?? this.imageOffsetX,
+      imageOffsetY: imageOffsetY ?? this.imageOffsetY,
+      imageScale: imageScale ?? this.imageScale,
+      showGlare: showGlare ?? this.showGlare,
+      showDynamicIsland: showDynamicIsland ?? this.showDynamicIsland,
     );
   }
 
@@ -116,5 +140,11 @@ class DeviceMockupLayer extends Layer {
         showShadow,
         showHeader,
         title,
+        imageFit,
+        imageOffsetX,
+        imageOffsetY,
+        imageScale,
+        showGlare,
+        showDynamicIsland,
       ];
 }

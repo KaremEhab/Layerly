@@ -48,9 +48,13 @@ enum ShapeType {
 }
 
 enum MockupDevice {
+  iphone17ProMax,
+  iphone17Pro,
   iphone,
   android,
   macbook,
+  ipadPro,
+  appleWatch,
   browser,
 }
 

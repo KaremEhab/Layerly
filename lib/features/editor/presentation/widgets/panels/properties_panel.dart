@@ -20,6 +20,8 @@ import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/vector_layer.dart';
+import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:layerly/features/editor/presentation/widgets/canvas/vector_node_editor.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
@@ -1024,17 +1026,19 @@ class PropertiesPanel extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: const Color(0xFF2E2B40)),
                         ),
-                        child: Text(
-                          currentLayer.content.isEmpty ? 'Typography Preview' : currentLayer.content,
-                          style: TextStyle(
-                            fontFamily: currentLayer.fontFamily,
-                            fontSize: currentLayer.fontSize.clamp(12.0, 32.0),
-                            fontWeight: currentLayer.fontWeight,
-                            fontStyle: currentLayer.fontStyle,
-                            letterSpacing: currentLayer.letterSpacing,
-                            height: currentLayer.lineHeight,
-                            color: currentLayer.color,
-                            decoration: currentLayer.decoration,
+                        child: Text.rich(
+                          TextSpanParser.parseToTextSpan(
+                            currentLayer.content.isEmpty ? 'Typography Preview' : currentLayer.content,
+                            TextStyle(
+                              fontFamily: currentLayer.fontFamily,
+                              fontSize: currentLayer.fontSize.clamp(12.0, 32.0),
+                              fontWeight: currentLayer.fontWeight,
+                              fontStyle: currentLayer.fontStyle,
+                              letterSpacing: currentLayer.letterSpacing,
+                              height: currentLayer.lineHeight,
+                              color: currentLayer.color,
+                              decoration: currentLayer.decoration,
+                            ),
                           ),
                           textAlign: currentLayer.textAlign,
                         ),
@@ -2515,8 +2519,10 @@ class PropertiesPanel extends StatelessWidget {
     BuildContext context,
     DeviceMockupLayer layer,
   ) {
+    final bloc = context.read<EditorBloc>();
+    final currentDef = MockupDefinition.fromDevice(layer.device);
+
     return Container(
-      constraints: const BoxConstraints(minHeight: 104),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -2527,22 +2533,41 @@ class PropertiesPanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: Device Icon, Name, and Quick Upload
           Row(
             children: [
               _buildTypeIconBox(Icons.phone_iphone_rounded),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  layer.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      layer.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      currentDef.name,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               InkWell(
-                onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
+                onTap: () async {
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
+                  if (picked != null) {
+                    bloc.add(UpdateLayerEvent(layer.copyWith(screenImagePath: picked.path)));
+                  }
+                },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -2554,10 +2579,10 @@ class PropertiesPanel extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.phone_iphone_rounded, size: 12, color: Color(0xFF74B9FF)),
+                      Icon(Icons.photo_library_outlined, size: 12, color: Color(0xFF74B9FF)),
                       SizedBox(width: 4),
                       Text(
-                        'Upload Screen',
+                        'Gallery',
                         style: TextStyle(color: Color(0xFF74B9FF), fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -2566,31 +2591,312 @@ class PropertiesPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+
+          // Device Selector Dropdown
           Row(
             children: [
+              const SizedBox(
+                width: 65,
+                child: Text(
+                  'Device',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<MockupDevice>(
+                      value: layer.device,
+                      dropdownColor: const Color(0xFF1E2028),
+                      isExpanded: true,
+                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 18),
+                      items: const [
+                        DropdownMenuItem(
+                          value: MockupDevice.iphone17ProMax,
+                          child: Text('iPhone 17 Pro Max', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: MockupDevice.iphone17Pro,
+                          child: Text('iPhone 17 Pro', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: MockupDevice.iphone,
+                          child: Text('iPhone 16 Pro', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: MockupDevice.android,
+                          child: Text('Android Phone', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: MockupDevice.macbook,
+                          child: Text('MacBook Pro 16"', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: MockupDevice.ipadPro,
+                          child: Text('iPad Pro 13"', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: MockupDevice.appleWatch,
+                          child: Text('Apple Watch Ultra', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: MockupDevice.browser,
+                          child: Text('Desktop Browser', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                      ],
+                      onChanged: (MockupDevice? newDevice) {
+                        if (newDevice != null) {
+                          final newDef = MockupDefinition.fromDevice(newDevice);
+                          final newHeight = layer.width / newDef.physicalAspectRatio;
+                          bloc.add(
+                            UpdateLayerEvent(
+                              layer.copyWith(
+                                device: newDevice,
+                                height: newHeight,
+                                cornerRadius: newDef.cornerRadius,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Artwork Image Management Row
+          Row(
+            children: [
+              const SizedBox(
+                width: 65,
+                child: Text(
+                  'Artwork',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ),
               Expanded(
                 child: InkWell(
-                  onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
-                  borderRadius: BorderRadius.circular(19),
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
+                    if (picked != null) {
+                      bloc.add(UpdateLayerEvent(layer.copyWith(screenImagePath: picked.path)));
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    height: 38,
+                    height: 34,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceSecondary,
-                      borderRadius: BorderRadius.circular(19),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.add_a_photo_rounded, color: Color(0xFFA78BFA), size: 14),
+                        const Icon(Icons.add_photo_alternate_outlined, color: Color(0xFFA78BFA), size: 14),
                         const SizedBox(width: 6),
                         Text(
-                          layer.screenImagePath != null ? 'Change Screen' : 'Set Mockup Screen',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
+                          layer.screenImagePath != null ? 'Replace image' : 'Pick image',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (layer.screenImagePath != null) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () {
+                    bloc.add(UpdateLayerEvent(layer.copyWith(screenImagePath: null)));
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF5C67).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.delete_outline, color: Color(0xFFFF5C67), size: 16),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Image Fit Row: Cover, Contain, Fill
+          Row(
+            children: [
+              const SizedBox(
+                width: 65,
+                child: Text(
+                  'Fit',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildFitOption(
+                          label: 'Cover',
+                          isSelected: layer.imageFit == BoxFit.cover,
+                          onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(imageFit: BoxFit.cover))),
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildFitOption(
+                          label: 'Contain',
+                          isSelected: layer.imageFit == BoxFit.contain,
+                          onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(imageFit: BoxFit.contain))),
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildFitOption(
+                          label: 'Fill',
+                          isSelected: layer.imageFit == BoxFit.fill,
+                          onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(imageFit: BoxFit.fill))),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Scale Slider Row
+          Row(
+            children: [
+              const SizedBox(
+                width: 65,
+                child: Text(
+                  'Scale',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 3,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                    activeTrackColor: const Color(0xFF9B6CFF),
+                    inactiveTrackColor: Colors.white12,
+                    thumbColor: Colors.white,
+                  ),
+                  child: Slider(
+                    value: layer.imageScale.clamp(0.5, 2.5),
+                    min: 0.5,
+                    max: 2.5,
+                    onChanged: (v) {
+                      bloc.add(UpdateLayerEvent(layer.copyWith(imageScale: (v * 100).round() / 100)));
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                child: Text(
+                  '${(layer.imageScale * 100).toInt()}%',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // Toggles: Dynamic Island & Glass Glare
+          Row(
+            children: [
+              if (currentDef.hasDynamicIsland) ...[
+                Expanded(
+                  child: InkWell(
+                    onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(showDynamicIsland: !layer.showDynamicIsland))),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: layer.showDynamicIsland ? const Color(0xFF9B6CFF).withValues(alpha: 0.18) : AppColors.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: layer.showDynamicIsland ? const Color(0xFF9B6CFF).withValues(alpha: 0.4) : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.panorama_fish_eye_rounded,
+                            size: 13,
+                            color: layer.showDynamicIsland ? const Color(0xFFB388FF) : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Island',
+                            style: TextStyle(
+                              color: layer.showDynamicIsland ? Colors.white : AppColors.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: InkWell(
+                  onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(showGlare: !layer.showGlare))),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: layer.showGlare ? const Color(0xFF9B6CFF).withValues(alpha: 0.18) : AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: layer.showGlare ? const Color(0xFF9B6CFF).withValues(alpha: 0.4) : Colors.transparent,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 13,
+                          color: layer.showGlare ? const Color(0xFFB388FF) : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Glare',
+                          style: TextStyle(
+                            color: layer.showGlare ? Colors.white : AppColors.textSecondary,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -2601,20 +2907,36 @@ class PropertiesPanel extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    layer.device == MockupDevice.macbook ? 'MacBook Pro' : 'iPhone 15 Pro',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                child: InkWell(
+                  onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(showShadow: !layer.showShadow))),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: layer.showShadow ? const Color(0xFF9B6CFF).withValues(alpha: 0.18) : AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: layer.showShadow ? const Color(0xFF9B6CFF).withValues(alpha: 0.4) : Colors.transparent,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.wb_shade_rounded,
+                          size: 13,
+                          color: layer.showShadow ? const Color(0xFFB388FF) : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Shadow',
+                          style: TextStyle(
+                            color: layer.showShadow ? Colors.white : AppColors.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -2622,6 +2944,31 @@ class PropertiesPanel extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFitOption({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF9B6CFF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
       ),
     );
   }

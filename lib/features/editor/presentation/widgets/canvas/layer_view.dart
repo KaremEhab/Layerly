@@ -14,6 +14,7 @@ import 'package:layerly/features/editor/domain/entities/component_instance_layer
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/vector_layer.dart';
+import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/transform_box.dart';
 
@@ -377,74 +378,146 @@ class LayerView extends StatelessWidget {
   }
 
   Widget _buildDeviceMockupLayer(DeviceMockupLayer layer) {
+    final def = MockupDefinition.fromDevice(layer.device);
+    final cornerRadius = layer.cornerRadius;
+    final bezelWidth = def.bezelWidth;
+
     return Container(
       width: layer.width,
       height: layer.height,
       decoration: BoxDecoration(
         color: layer.frameColor,
-        borderRadius: BorderRadius.circular(layer.cornerRadius),
+        borderRadius: BorderRadius.circular(cornerRadius),
+        border: Border.all(
+          color: const Color(0xFF303039),
+          width: 2.0,
+        ),
         boxShadow: layer.showShadow
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  blurRadius: 40,
-                  spreadRadius: 8,
-                  offset: const Offset(0, 20),
+                  color: Colors.black.withValues(alpha: 0.55),
+                  blurRadius: 36,
+                  spreadRadius: 4,
+                  offset: const Offset(0, 18),
                 ),
               ]
             : null,
       ),
-      padding: const EdgeInsets.all(8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: layer.screenBackgroundColor,
-          borderRadius: BorderRadius.circular(layer.cornerRadius - 6),
-        ),
-        clipBehavior: Clip.antiAlias,
+      padding: EdgeInsets.all(bezelWidth),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(math.max(4.0, cornerRadius - bezelWidth)),
         child: Stack(
+          fit: StackFit.expand,
           children: [
-            // Inner Screen Content (or Simulated Uber/App UI)
-            if (layer.screenImagePath != null)
-              Builder(
-                builder: (ctx) {
-                  final file = File(layer.screenImagePath!);
-                  if (file.existsSync()) {
-                    if (layer.screenImagePath!.toLowerCase().endsWith('.svg')) {
-                      return SvgPicture.file(
-                        file,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      );
-                    } else {
-                      return Image.file(
-                        file,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        errorBuilder: (ctx, err, stack) =>
-                            _buildSimulatedAppScreen(),
-                      );
-                    }
-                  }
-                  return _buildSimulatedAppScreen();
-                },
-              )
-            else
-              _buildSimulatedAppScreen(),
+            // Screen Background & Artwork
+            Container(
+              color: layer.screenBackgroundColor,
+              child: layer.screenImagePath != null
+                  ? Builder(
+                      builder: (ctx) {
+                        final file = File(layer.screenImagePath!);
+                        if (file.existsSync()) {
+                          Widget imgWidget;
+                          if (layer.screenImagePath!.toLowerCase().endsWith('.svg')) {
+                            imgWidget = SvgPicture.file(
+                              file,
+                              fit: layer.imageFit,
+                              width: double.infinity,
+                              height: double.infinity,
+                            );
+                          } else {
+                            imgWidget = Image.file(
+                              file,
+                              fit: layer.imageFit,
+                              width: double.infinity,
+                              height: double.infinity,
+                              filterQuality: FilterQuality.high,
+                              errorBuilder: (ctx, err, stack) =>
+                                  _buildSimulatedAppScreen(),
+                            );
+                          }
 
-            // Top Camera / Speaker Notch
-            if (layer.showHeader)
-              Align(
-                alignment: Alignment.topCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                          return Transform.translate(
+                            offset: Offset(layer.imageOffsetX, layer.imageOffsetY),
+                            child: Transform.scale(
+                              scale: layer.imageScale,
+                              child: imgWidget,
+                            ),
+                          );
+                        }
+                        return _buildSimulatedAppScreen();
+                      },
+                    )
+                  : _buildSimulatedAppScreen(),
+            ),
+
+            // Dynamic Island / Camera Pill
+            if (def.hasDynamicIsland && layer.showDynamicIsland && layer.showHeader)
+              Positioned(
+                top: def.dynamicIslandTop,
+                left: 0,
+                right: 0,
+                child: Center(
                   child: Container(
-                    width: 70,
-                    height: 18,
+                    width: def.dynamicIslandWidth * (layer.width / 340).clamp(0.6, 1.2),
+                    height: def.dynamicIslandHeight * (layer.width / 340).clamp(0.6, 1.2),
                     decoration: BoxDecoration(
                       color: Colors.black,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(def.dynamicIslandHeight / 2),
+                      border: Border.all(color: Colors.white12, width: 0.5),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black45,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF0F1426),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // Notch for Laptop/Older device
+            if (def.hasNotch && layer.showHeader)
+              Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  width: 90,
+                  height: 16,
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
+                  ),
+                ),
+              ),
+
+            // Screen Glass Glare Reflection
+            if (layer.showGlare)
+              IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.04),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.03),
+                      ],
                     ),
                   ),
                 ),

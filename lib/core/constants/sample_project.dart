@@ -294,16 +294,16 @@ class SampleProject {
           ],
         ),
 
-        // Phone Mockup (on the right)
+        // Phone Mockup (on the right - iPhone 17 Pro Max default)
         DeviceMockupLayer(
           id: UuidGenerator.generate(),
-          name: 'Uber Eats Mockup',
+          name: 'iPhone 17 Pro Max',
           x: 520,
           y: 70,
-          width: 480,
-          height: 940,
-          cornerRadius: 48,
-          device: MockupDevice.iphone,
+          width: 440,
+          height: 440 * (163.4 / 78.0),
+          cornerRadius: 52,
+          device: MockupDevice.iphone17ProMax,
         ),
 
         // Profile Footer (Nested Auto Layout Hierarchy)

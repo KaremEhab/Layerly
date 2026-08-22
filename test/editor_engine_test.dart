@@ -11,6 +11,8 @@ import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
+import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
+import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
 import 'package:layerly/features/editor/domain/services/snapping_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -857,6 +859,49 @@ void main() {
       expect(scaledArrow.width, 400.0); // 200 * 2.0
       expect(scaledArrow.height, 200.0); // Height remains unchanged
       expect(scaledArrow.strokeWidth, 6.0); // Stroke width remains unchanged
+    });
+
+    test('DeviceMockupLayer and MockupDefinition accurately model iPhone 17 Pro Max physical and display ratios', () async {
+      const def = MockupDefinition.iphone17ProMax;
+      expect(def.physicalWidthMm, 78.0);
+      expect(def.physicalHeightMm, 163.4);
+      expect(def.screenWidthPx, 1320.0);
+      expect(def.screenHeightPx, 2868.0);
+      expect(def.hasDynamicIsland, isTrue);
+
+      // Physical ratio ~ 0.47735
+      expect((def.physicalAspectRatio - (78.0 / 163.4)).abs() < 0.0001, isTrue);
+      // Screen ratio ~ 0.46025
+      expect((def.screenAspectRatio - (1320.0 / 2868.0)).abs() < 0.0001, isTrue);
+
+      final bloc = EditorBloc(initialProject: project);
+      const mockup = DeviceMockupLayer(
+        id: 'mockup-1',
+        name: 'iPhone 17 Pro Max Mockup',
+        device: MockupDevice.iphone17ProMax,
+        x: 100,
+        y: 100,
+        width: 340,
+        height: 340 * (163.4 / 78.0),
+        imageFit: BoxFit.contain,
+        imageScale: 1.25,
+        imageOffsetX: 10,
+        imageOffsetY: -5,
+        showGlare: true,
+        showDynamicIsland: true,
+      );
+
+      bloc.add(const AddLayerEvent(mockup));
+      await Future.delayed(Duration.zero);
+
+      final layer = bloc.state.activePageLayers.whereType<DeviceMockupLayer>().firstWhere((l) => l.id == 'mockup-1');
+      expect(layer.device, MockupDevice.iphone17ProMax);
+      expect(layer.imageFit, BoxFit.contain);
+      expect(layer.imageScale, 1.25);
+      expect(layer.imageOffsetX, 10.0);
+      expect(layer.imageOffsetY, -5.0);
+      expect(layer.showGlare, isTrue);
+      expect(layer.showDynamicIsland, isTrue);
     });
   });
 }

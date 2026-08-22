@@ -6,6 +6,7 @@ import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
+import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
@@ -339,20 +340,23 @@ class _LeftToolRailState extends State<LeftToolRail> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildActionCard(
-          title: 'iPhone Device Mockup',
-          subtitle: 'Interactive UI screen container',
+          title: 'iPhone 17 Pro Max Mockup',
+          subtitle: 'Interactive real-proportion device container (78×163.4mm)',
           onTap: () {
             final id = UuidGenerator.generate();
+            const def = MockupDefinition.iphone17ProMax;
+            const w = 400.0;
+            final h = w / def.physicalAspectRatio;
             context.read<EditorBloc>().add(AddLayerEvent(
                   DeviceMockupLayer(
                     id: id,
-                    name: 'Mobile Mockup',
+                    name: 'iPhone 17 Pro Max',
                     x: 540,
                     y: 70,
-                    width: 460,
-                    height: 880,
-                    device: MockupDevice.iphone,
-                    cornerRadius: 44,
+                    width: w,
+                    height: h,
+                    device: MockupDevice.iphone17ProMax,
+                    cornerRadius: def.cornerRadius,
                   ),
                 ));
           },

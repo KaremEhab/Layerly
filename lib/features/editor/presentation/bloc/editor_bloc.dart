@@ -1617,8 +1617,8 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     final paddingH = (textLayer.padding?.horizontal ?? 0.0);
     final paddingV = (textLayer.padding?.vertical ?? 0.0);
 
-    // Intrinsic width and height with ample metric buffer so font rasterization never clips
-    final measuredWidth = (textPainter.width * 1.06 + paddingH + 8.0).ceilToDouble().clamp(1.0, 5000.0);
+    // Precise intrinsic width and height without artificial bloating
+    final measuredWidth = (textPainter.width + paddingH + 2.0).ceilToDouble().clamp(1.0, 5000.0);
     final measuredHeight = (textPainter.height + paddingV).ceilToDouble().clamp(1.0, 5000.0);
 
     return textLayer.copyWith(
