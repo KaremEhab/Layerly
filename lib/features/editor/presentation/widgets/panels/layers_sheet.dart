@@ -106,76 +106,82 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Drag Handle & Header
-                _buildHeader(context, state, layers),
+                // 1. Sleek Header
+                _buildHeader(context, state, layers, isMultiActive, selectedCount),
 
-              // 2. Search & Quick Filters
-              _buildSearchBar(),
-              _buildFilterChips(),
+                // 2. Streamlined Search & Filter Bar
+                _buildSearchBar(),
 
-              // 3. Multi-Select & Batch Actions Bar
-              _buildBatchActionsBar(context, state, isMultiActive, selectedCount),
+                // 3. Multi-Select Batch Actions Bar (shown when active)
+                if (isMultiActive)
+                  _buildBatchActionsBar(context, state, selectedCount),
 
-              const Divider(height: 1, color: Color(0xFF242232)),
+                const Divider(height: 1, color: Color(0xFF242232)),
 
-              // 4. Layers Tree View
-              Expanded(
-                child: filteredLayers.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: filteredLayers.length + 1,
-                        itemBuilder: (ctx, index) {
-                          if (index == filteredLayers.length) {
-                            return _buildDropSlot(
-                              context,
-                              targetParentId: null,
-                              targetIndex: filteredLayers.length,
-                            );
-                          }
-
-                          final layer = filteredLayers[index];
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildDropSlot(
+                // 4. Layers Tree View
+                Expanded(
+                  child: filteredLayers.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: filteredLayers.length + 1,
+                          itemBuilder: (ctx, index) {
+                            if (index == filteredLayers.length) {
+                              return _buildDropSlot(
                                 context,
                                 targetParentId: null,
-                                targetIndex: index,
-                              ),
-                              if (layer is AutoLayoutLayer && layer.children.isNotEmpty)
-                                _buildAutoLayoutTreeNode(
-                                  context,
-                                  state,
-                                  layer,
-                                  isMultiMode: isMultiActive,
-                                )
-                              else
-                                _buildStandardLayerTile(
-                                  context,
-                                  state,
-                                  layer,
-                                  isMultiMode: isMultiActive,
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
+                                targetIndex: filteredLayers.length,
+                              );
+                            }
 
-  Widget _buildHeader(BuildContext context, EditorState state, List<Layer> layers) {
+                            final layer = filteredLayers[index];
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildDropSlot(
+                                  context,
+                                  targetParentId: null,
+                                  targetIndex: index,
+                                ),
+                                if (layer is AutoLayoutLayer)
+                                  _buildAutoLayoutTreeNode(
+                                    context,
+                                    state,
+                                    layer,
+                                    isMultiMode: isMultiActive,
+                                  )
+                                else
+                                  _buildStandardLayerTile(
+                                    context,
+                                    state,
+                                    layer,
+                                    isMultiMode: isMultiActive,
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    EditorState state,
+    List<Layer> layers,
+    bool isMultiActive,
+    int selectedCount,
+  ) {
     final allExpanded = _expandedLayerIds.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 16, 6),
+      padding: const EdgeInsets.fromLTRB(18, 12, 16, 6),
       child: Column(
         children: [
           // Drag handle
@@ -192,68 +198,75 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6C5CE7), Color(0xFF8B5CF6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.layers_rounded,
+              const Text(
+                'Layers',
+                style: TextStyle(
                   color: Colors.white,
-                  size: 18,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text(
-                          'Layer Hierarchy',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF262338),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.white12),
-                          ),
-                          child: Text(
-                            '${layers.length} Layers',
-                            style: const TextStyle(color: Color(0xFFA78BFA), fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Page: ${state.activePage.name} • Drag to reorder & group',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-                    ),
-                  ],
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF221F32),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF322E48)),
+                ),
+                child: Text(
+                  '${layers.length}',
+                  style: const TextStyle(
+                    color: Color(0xFFA78BFA),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+
+              const Spacer(),
+
+              // Multi-Select toggle button
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _isMultiSelectMode = !_isMultiSelectMode;
+                  });
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isMultiActive ? const Color(0xFF6C5CE7) : const Color(0xFF1E1C2B),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isMultiActive ? const Color(0xFFA78BFA) : const Color(0xFF2E2C40),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isMultiActive ? Icons.check_circle_rounded : Icons.checklist_rounded,
+                        size: 14,
+                        color: isMultiActive ? Colors.white : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        isMultiActive && selectedCount > 0 ? '$selectedCount Selected' : 'Select',
+                        style: TextStyle(
+                          color: isMultiActive ? Colors.white : AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 6),
 
               // Expand / Collapse all
               IconButton(
@@ -263,6 +276,8 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
                   size: 20,
                 ),
                 tooltip: allExpanded ? 'Collapse All' : 'Expand All',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 onPressed: () {
                   if (allExpanded) {
                     _collapseAll();
@@ -271,6 +286,8 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
                   }
                 },
               ),
+
+              const SizedBox(width: 4),
 
               // Close
               InkWell(
@@ -295,87 +312,136 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Container(
-        height: 38,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1D1B28),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _searchQuery.isNotEmpty ? const Color(0xFF8B5CF6) : const Color(0xFF2B283D),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 17),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: const InputDecoration(
-                  hintText: 'Filter layer names...',
-                  hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-              ),
-            ),
-            if (_searchQuery.isNotEmpty)
-              InkWell(
-                onTap: () {
-                  _searchController.clear();
-                  setState(() => _searchQuery = '');
-                },
-                child: const Icon(Icons.clear_rounded, color: Colors.white70, size: 15),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    final filters = ['All', 'Auto Layouts', 'Text', 'Icons', 'Shapes', 'Locked / Hidden'];
-
-    return SizedBox(
-      height: 34,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
-        itemBuilder: (ctx, idx) {
-          final f = filters[idx];
-          final isSelected = _selectedFilter == f;
-          return InkWell(
-            onTap: () => setState(() => _selectedFilter = f),
-            borderRadius: BorderRadius.circular(10),
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+      child: Row(
+        children: [
+          // Search Box
+          Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              height: 36,
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF6C5CE7) : const Color(0xFF1C1A27),
+                color: const Color(0xFF1B1927),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isSelected ? const Color(0xFFA29BFE) : const Color(0xFF2C283F),
+                  color: _searchQuery.isNotEmpty ? const Color(0xFF6C5CE7) : const Color(0xFF28253A),
                 ),
               ),
-              alignment: Alignment.center,
-              child: Text(
-                f,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textMuted,
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                ),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: const InputDecoration(
+                        hintText: 'Filter by name...',
+                        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                    ),
+                  ),
+                  if (_searchQuery.isNotEmpty)
+                    InkWell(
+                      onTap: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                      child: const Icon(Icons.clear_rounded, color: Colors.white70, size: 15),
+                    ),
+                ],
               ),
             ),
-          );
-        },
+          ),
+
+          const SizedBox(width: 8),
+
+          // Quick Filter Dropdown Button
+          PopupMenuButton<String>(
+            initialValue: _selectedFilter,
+            onSelected: (val) => setState(() => _selectedFilter = val),
+            color: const Color(0xFF1E1C2B),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFF2E2C40)),
+            ),
+            itemBuilder: (ctx) => [
+              'All',
+              'Auto Layouts',
+              'Text',
+              'Icons',
+              'Shapes',
+              'Locked / Hidden',
+            ].map((f) {
+              final isSelected = _selectedFilter == f;
+              return PopupMenuItem<String>(
+                value: f,
+                height: 36,
+                child: Row(
+                  children: [
+                    if (isSelected)
+                      const Icon(Icons.check_rounded, size: 14, color: Color(0xFFA78BFA))
+                    else
+                      const SizedBox(width: 14),
+                    const SizedBox(width: 8),
+                    Text(
+                      f,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            child: Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: _selectedFilter != 'All'
+                    ? const Color(0xFF6C5CE7).withValues(alpha: 0.2)
+                    : const Color(0xFF1B1927),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _selectedFilter != 'All'
+                      ? const Color(0xFF6C5CE7)
+                      : const Color(0xFF28253A),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.filter_list_rounded,
+                    size: 15,
+                    color: _selectedFilter != 'All' ? const Color(0xFFA78BFA) : AppColors.textMuted,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    _selectedFilter == 'All' ? 'Filter' : _selectedFilter,
+                    style: TextStyle(
+                      color: _selectedFilter != 'All' ? const Color(0xFFA78BFA) : AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Icon(
+                    Icons.arrow_drop_down_rounded,
+                    size: 16,
+                    color: _selectedFilter != 'All' ? const Color(0xFFA78BFA) : AppColors.textMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -383,86 +449,81 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
   Widget _buildBatchActionsBar(
     BuildContext context,
     EditorState state,
-    bool isMultiActive,
     int selectedCount,
   ) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+    final allPageLayerIds = state.activePageLayers.map((l) => l.id).toList();
+    final allSelected = selectedCount > 0 && selectedCount == allPageLayerIds.length;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1828),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2E2A42)),
+      ),
       child: Row(
         children: [
-          // Multi-Select Toggle Pill
+          // Select All / Deselect All
           InkWell(
             onTap: () {
-              setState(() {
-                _isMultiSelectMode = !_isMultiSelectMode;
-              });
+              if (allSelected) {
+                context.read<EditorBloc>().add(const ClearSelectionEvent());
+              } else {
+                context.read<EditorBloc>().add(SelectMultipleLayersEvent(allPageLayerIds));
+              }
             },
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: isMultiActive ? const Color(0xFF6C5CE7).withValues(alpha: 0.25) : const Color(0xFF1E1C2B),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isMultiActive ? const Color(0xFF8B5CF6) : const Color(0xFF2C283F),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isMultiActive ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                    size: 14,
-                    color: isMultiActive ? const Color(0xFFA78BFA) : AppColors.textMuted,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isMultiActive ? 'Multi-Select ($selectedCount)' : 'Select Multiple',
-                    style: TextStyle(
-                      color: isMultiActive ? Colors.white : AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+            borderRadius: BorderRadius.circular(6),
+            child: Text(
+              allSelected ? 'Deselect All' : 'Select All (${allPageLayerIds.length})',
+              style: const TextStyle(
+                color: Color(0xFFA78BFA),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
 
           const Spacer(),
 
-          // Batch Group into Auto Layout
+          // Group into Auto Layout button
           if (selectedCount > 1) ...[
             ElevatedButton.icon(
               onPressed: () {
                 context.read<EditorBloc>().add(const CreateAutoLayoutFromSelectionEvent());
               },
               icon: const Icon(Icons.link_rounded, size: 14),
-              label: const Text('Group Layout'),
+              label: const Text('Group Auto Layout'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6C5CE7),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
           ],
 
-          // Batch Delete
+          // Batch Delete button
           if (selectedCount > 0)
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: Colors.white60, size: 18),
-              tooltip: 'Delete Selected',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              onPressed: () {
+            InkWell(
+              onTap: () {
                 context.read<EditorBloc>().add(const DeleteSelectedLayersEvent());
               },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF4757).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFF4757).withValues(alpha: 0.3)),
+                ),
+                child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF6B81), size: 16),
+              ),
             ),
         ],
       ),
