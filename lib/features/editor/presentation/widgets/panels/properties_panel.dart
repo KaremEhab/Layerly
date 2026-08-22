@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/constants/responsive_breakpoints.dart';
 import 'package:layerly/core/utils/text_span_parser.dart';
+import 'package:layerly/core/utils/uuid_generator.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
@@ -18,6 +19,9 @@ import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
+import 'package:layerly/features/editor/domain/entities/vector_layer.dart';
+import 'package:layerly/core/utils/svg_vector_parser.dart';
+import 'package:layerly/features/editor/presentation/widgets/canvas/vector_node_editor.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
@@ -75,6 +79,8 @@ class PropertiesPanel extends StatelessWidget {
             );
           } else if (layer is ImageLayer) {
             content = _buildImageProperties(context, layer);
+          } else if (layer is VectorLayer) {
+            content = _buildVectorProperties(context, layer);
           } else if (layer is DeviceMockupLayer) {
             content = _buildDeviceMockupProperties(context, layer);
           } else if (layer is ComponentInstanceLayer) {
@@ -1704,6 +1710,59 @@ class PropertiesPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
+          if (isSvg) ...[
+            // Figma Vector Node Conversion Action
+            InkWell(
+              onTap: () {
+                final vectorLayer = SvgVectorParser.convertImageLayerToVector(layer);
+                final bloc = context.read<EditorBloc>();
+                bloc.add(const DeleteSelectedLayersEvent());
+                bloc.add(AddLayerEvent(vectorLayer));
+                bloc.add(SelectLayerEvent(vectorLayer.id));
+                showVectorNodeEditorSheet(
+                  context,
+                  vectorLayer,
+                  onUpdate: (u) => bloc.add(UpdateLayerEvent(u)),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF6C5CE7), Color(0xFF0984E3)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.polyline_rounded, size: 14, color: Colors.white),
+                    SizedBox(width: 6),
+                    Text(
+                      '❖ Edit as Figma Vectors (Nodes & Paths)',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           Row(
             children: [
               Expanded(
@@ -1755,6 +1814,217 @@ class PropertiesPanel extends StatelessWidget {
                       color: AppColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 8. Vector Layer Properties & Multi-Sublayer Studio
+  Widget _buildVectorProperties(
+    BuildContext context,
+    VectorLayer layer,
+  ) {
+    // Unique colors across all sub-elements
+    final colors = <Color>{};
+    for (final elem in layer.elements) {
+      if (elem.fill != null) colors.add(elem.fill!);
+      if (elem.strokeColor != null) colors.add(elem.strokeColor!);
+    }
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 104),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            children: [
+              _buildTypeIconBox(Icons.polyline_rounded),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      layer.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${layer.elements.length} Sub-Layers • Vector Graphic',
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+              InkWell(
+                onTap: () => showVectorNodeEditorSheet(
+                  context,
+                  layer,
+                  onUpdate: (u) => context.read<EditorBloc>().add(UpdateLayerEvent(u)),
+                ),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6C5CE7), Color(0xFFA29BFE)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_road_rounded, size: 13, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text(
+                        'Edit Nodes',
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Palette preview of all sub-layer colors
+          if (colors.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('Vector Palette: ', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: colors.map((c) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: c,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white30, width: 1),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 10),
+
+          // Action Buttons: Unpack Sub-Layers into Canvas Layers
+          Row(
+            children: [
+              if (layer.elements.length > 1) ...[
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      final bloc = context.read<EditorBloc>();
+                      // Remove composite layer
+                      bloc.add(const DeleteSelectedLayersEvent());
+                      // Add each sub-layer as an independent layer on canvas
+                      final newIds = <String>[];
+                      for (int i = 0; i < layer.elements.length; i++) {
+                        final elem = layer.elements[i];
+                        final subLayer = VectorLayer(
+                          id: 'subvec-${UuidGenerator.generate().substring(0, 8)}',
+                          name: '${layer.name} / ${elem.name}',
+                          x: layer.x,
+                          y: layer.y,
+                          width: layer.width,
+                          height: layer.height,
+                          elements: [elem],
+                        );
+                        newIds.add(subLayer.id);
+                        bloc.add(AddLayerEvent(subLayer));
+                      }
+                      if (newIds.isNotEmpty) {
+                        bloc.add(SelectMultipleLayersEvent(newIds));
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Unpacked ${layer.elements.length} vector sub-layers into independent canvas layers!'),
+                          backgroundColor: const Color(0xFF6C5CE7),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(19),
+                    child: Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00CEC9).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(19),
+                        border: Border.all(color: const Color(0xFF00CEC9).withValues(alpha: 0.4)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.layers_outlined, color: Color(0xFF00CEC9), size: 14),
+                          SizedBox(width: 6),
+                          Text(
+                            'Unpack to Layers',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: InkWell(
+                  onTap: () => showVectorNodeEditorSheet(
+                    context,
+                    layer,
+                    onUpdate: (u) => context.read<EditorBloc>().add(UpdateLayerEvent(u)),
+                  ),
+                  borderRadius: BorderRadius.circular(19),
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(19),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${layer.width.toInt()} × ${layer.height.toInt()} px',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),

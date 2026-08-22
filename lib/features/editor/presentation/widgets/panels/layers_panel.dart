@@ -1040,6 +1040,8 @@ class _LayersPanelState extends State<LayersPanel> {
         return Icons.widgets_rounded;
       case LayerType.autoLayout:
         return Icons.link_rounded;
+      case LayerType.vector:
+        return Icons.polyline_rounded;
     }
   }
 }

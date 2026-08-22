@@ -7,6 +7,7 @@ enum LayerType {
   group,
   componentInstance,
   autoLayout,
+  vector,
 }
 
 enum AutoLayoutDirection {

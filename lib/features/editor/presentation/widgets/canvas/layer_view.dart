@@ -13,6 +13,7 @@ import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
+import 'package:layerly/features/editor/domain/entities/vector_layer.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/transform_box.dart';
 
@@ -59,6 +60,8 @@ class LayerView extends StatelessWidget {
       content = _buildComponentInstanceLayer(layer as ComponentInstanceLayer);
     } else if (layer is AutoLayoutLayer) {
       content = _buildAutoLayoutLayer(layer as AutoLayoutLayer);
+    } else if (layer is VectorLayer) {
+      content = _buildVectorLayer(layer as VectorLayer);
     } else {
       content = const SizedBox.shrink();
     }
@@ -393,6 +396,16 @@ class LayerView extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildVectorLayer(VectorLayer layer) {
+    return SizedBox(
+      width: layer.width,
+      height: layer.height,
+      child: CustomPaint(
+        painter: _VectorCanvasPainter(layer: layer),
       ),
     );
   }
@@ -1073,4 +1086,78 @@ class _MockTabItem extends StatelessWidget {
   }
 }
 
+class _VectorCanvasPainter extends CustomPainter {
+  final VectorLayer layer;
 
+  const _VectorCanvasPainter({required this.layer});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (layer.elements.isEmpty) return;
+
+    for (final elem in layer.elements) {
+      if (!elem.visible || elem.points.isEmpty) continue;
+
+      final path = Path();
+      final points = elem.points;
+
+      final startX = points.first.x * size.width;
+      final startY = points.first.y * size.height;
+      path.moveTo(startX, startY);
+
+      for (int i = 1; i < points.length; i++) {
+        final p = points[i];
+        final prev = points[i - 1];
+
+        final px = p.x * size.width;
+        final py = p.y * size.height;
+
+        if (p.isSmooth && (p.handleInX != null || prev.handleOutX != null)) {
+          final cp1x = (prev.handleOutX != null) ? prev.handleOutX! * size.width : prev.x * size.width;
+          final cp1y = (prev.handleOutY != null) ? prev.handleOutY! * size.height : prev.y * size.height;
+          final cp2x = (p.handleInX != null) ? p.handleInX! * size.width : px;
+          final cp2y = (p.handleInY != null) ? p.handleInY! * size.height : py;
+          path.cubicTo(cp1x, cp1y, cp2x, cp2y, px, py);
+        } else {
+          path.lineTo(px, py);
+        }
+      }
+
+      if (elem.isClosed) {
+        final last = points.last;
+        final first = points.first;
+        if (first.isSmooth && (first.handleInX != null || last.handleOutX != null)) {
+          final cp1x = (last.handleOutX != null) ? last.handleOutX! * size.width : last.x * size.width;
+          final cp1y = (last.handleOutY != null) ? last.handleOutY! * size.height : last.y * size.height;
+          final cp2x = (first.handleInX != null) ? first.handleInX! * size.width : startX;
+          final cp2y = (first.handleInY != null) ? first.handleInY! * size.height : startY;
+          path.cubicTo(cp1x, cp1y, cp2x, cp2y, startX, startY);
+        } else {
+          path.close();
+        }
+      }
+
+      // Fill
+      if (elem.fill != null) {
+        final fillPaint = Paint()
+          ..color = elem.fill!.withValues(alpha: elem.opacity.clamp(0.0, 1.0))
+          ..style = PaintingStyle.fill;
+        canvas.drawPath(path, fillPaint);
+      }
+
+      // Stroke
+      if (elem.strokeColor != null && elem.strokeWidth > 0) {
+        final strokePaint = Paint()
+          ..color = elem.strokeColor!.withValues(alpha: elem.opacity.clamp(0.0, 1.0))
+          ..strokeWidth = elem.strokeWidth
+          ..strokeCap = elem.strokeCap
+          ..strokeJoin = elem.strokeJoin
+          ..style = PaintingStyle.stroke;
+        canvas.drawPath(path, strokePaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _VectorCanvasPainter oldDelegate) => true;
+}
