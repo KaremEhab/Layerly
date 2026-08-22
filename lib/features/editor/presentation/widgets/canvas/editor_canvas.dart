@@ -387,6 +387,9 @@ class _EditorCanvasState extends State<EditorCanvas> {
                                               ),
                                             );
                                       },
+                                hoveredFrameId: widget.isPreviewOnly
+                                    ? null
+                                    : state.hoveredFrameId,
                               ),
                             ),
                           ),

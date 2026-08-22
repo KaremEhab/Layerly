@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:layerly/core/utils/text_span_parser.dart';
@@ -310,8 +311,33 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
         isInteracting: false,
         undoStack: _pushHistory(state.project, state.undoStack),
         redoStack: [],
+        clearHoveredFrame: true,
       ));
       return;
+    }
+
+    // During drag: compute which frame (if any) the dragged layer is hovering over
+    String? newHoveredFrameId;
+    final dragging = _findLayerInList(updatedLayers, event.layerId);
+    if (dragging != null) {
+      final absPos = _getAbsoluteLayerPosition(updatedLayers, event.layerId);
+      final layerCenter = Offset(
+        absPos.dx + dragging.width / 2,
+        absPos.dy + dragging.height / 2,
+      );
+      final hoveredFrame = _findTargetFrameForPoint(
+        updatedLayers,
+        layerCenter,
+        event.layerId,
+        Offset.zero,
+        draggedLayer: dragging,
+      );
+      newHoveredFrameId = hoveredFrame?.id;
+    }
+
+    // Emit haptic feedback when transitioning in/out of a frame
+    if (newHoveredFrameId != state.hoveredFrameId) {
+      HapticFeedback.selectionClick();
     }
 
     final updatedPage = activePage.copyWith(layers: updatedLayers);
@@ -326,6 +352,8 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       isInteracting: true,
       undoStack: state.undoStack,
       redoStack: state.redoStack,
+      hoveredFrameId: newHoveredFrameId,
+      clearHoveredFrame: newHoveredFrameId == null,
     ));
   }
 

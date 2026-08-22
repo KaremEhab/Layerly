@@ -35,6 +35,10 @@ class LayerView extends StatelessWidget {
   final Function(String layerId, double angle, bool isFinal)? onRotateLayer;
   final Function(String layerId, DragUpdateDetails details)? onMoveLayer;
   final Function(String layerId, DragEndDetails details)? onMoveLayerEnd;
+  /// If this layer (or a nested frame) matches this ID, it renders a
+  /// snap-highlight glow border to signal the user their dragged layer
+  /// will be parented into it on drop.
+  final String? hoveredFrameId;
 
   const LayerView({
     super.key,
@@ -48,6 +52,7 @@ class LayerView extends StatelessWidget {
     this.onRotateLayer,
     this.onMoveLayer,
     this.onMoveLayerEnd,
+    this.hoveredFrameId,
   });
 
   @override
@@ -1107,7 +1112,8 @@ class LayerView extends StatelessWidget {
     final size = measureAutoLayoutSize(layer);
 
     if (layer.direction == AutoLayoutDirection.none) {
-      return Container(
+      final isHoveredFrame = hoveredFrameId == layer.id;
+      Widget frameWidget = Container(
         width: size.width,
         height: size.height,
         clipBehavior: Clip.none,
@@ -1145,6 +1151,7 @@ class LayerView extends StatelessWidget {
                   onRotateLayer: onRotateLayer,
                   onMoveLayer: onMoveLayer,
                   onMoveLayerEnd: onMoveLayerEnd,
+                  hoveredFrameId: hoveredFrameId,
                 );
 
                 if (isChildSelected) {
@@ -1196,6 +1203,18 @@ class LayerView extends StatelessWidget {
           ],
         ),
       );
+
+      // Snap highlight: animated glowing border when dragged layer hovers over this frame
+      if (isHoveredFrame) {
+        frameWidget = _FrameSnapHighlight(
+          width: size.width,
+          height: size.height,
+          cornerRadius: layer.cornerRadius,
+          child: frameWidget,
+        );
+      }
+
+      return frameWidget;
     }
 
     final isHorizontal = layer.direction == AutoLayoutDirection.horizontal;
@@ -1797,4 +1816,95 @@ class _ArrowShapePainter extends CustomPainter {
       oldDelegate.startHead != startHead ||
       oldDelegate.endHead != endHead ||
       oldDelegate.strokePosition != strokePosition;
+}
+
+/// An animated pulsing border overlay rendered on a Frame when a dragged layer
+/// is hovering over it. The opacity and border width oscillate to give a clear
+/// "snap here" feel with haptic feedback already triggered in the bloc.
+class _FrameSnapHighlight extends StatefulWidget {
+  final double width;
+  final double height;
+  final double cornerRadius;
+  final Widget child;
+
+  const _FrameSnapHighlight({
+    required this.width,
+    required this.height,
+    required this.cornerRadius,
+    required this.child,
+  });
+
+  @override
+  State<_FrameSnapHighlight> createState() => _FrameSnapHighlightState();
+}
+
+class _FrameSnapHighlightState extends State<_FrameSnapHighlight>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+    _pulseAnim = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseAnim,
+      builder: (context, child) {
+        final opacity = 0.55 + 0.45 * _pulseAnim.value; // 0.55 → 1.0
+        final borderWidth = 2.0 + 1.5 * _pulseAnim.value; // 2.0 → 3.5
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            child!,
+            // Outer glow (spread)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(widget.cornerRadius + 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6C5CE7).withValues(alpha: opacity * 0.45),
+                        blurRadius: 16 * _pulseAnim.value + 8,
+                        spreadRadius: 2 + 3 * _pulseAnim.value,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Crisp animated border ring
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(widget.cornerRadius),
+                    border: Border.all(
+                      color: const Color(0xFF9B59B6).withValues(alpha: opacity),
+                      width: borderWidth,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      child: widget.child,
+    );
+  }
 }

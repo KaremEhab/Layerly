@@ -21,6 +21,9 @@ class EditorState extends Equatable {
   final List<SnapGuideLine> activeSnapGuides;
   final List<SpacingMeasurement> activeSpacingMeasurements;
   final bool isInteracting;
+  /// The id of a Frame (freeform AutoLayoutLayer) that the currently dragged
+  /// layer is hovering over. Used to render a "snap" highlight border.
+  final String? hoveredFrameId;
 
   const EditorState({
     required this.project,
@@ -36,6 +39,7 @@ class EditorState extends Equatable {
     this.activeSnapGuides = const [],
     this.activeSpacingMeasurements = const [],
     this.isInteracting = false,
+    this.hoveredFrameId,
   });
 
   CanvasPage get activePage => project.activePage;
@@ -98,6 +102,8 @@ class EditorState extends Equatable {
     List<SnapGuideLine>? activeSnapGuides,
     List<SpacingMeasurement>? activeSpacingMeasurements,
     bool? isInteracting,
+    String? hoveredFrameId,
+    bool clearHoveredFrame = false,
   }) {
     return EditorState(
       project: project ?? this.project,
@@ -113,6 +119,7 @@ class EditorState extends Equatable {
       activeSnapGuides: activeSnapGuides ?? this.activeSnapGuides,
       activeSpacingMeasurements: activeSpacingMeasurements ?? this.activeSpacingMeasurements,
       isInteracting: isInteracting ?? this.isInteracting,
+      hoveredFrameId: clearHoveredFrame ? null : (hoveredFrameId ?? this.hoveredFrameId),
     );
   }
 
@@ -131,5 +138,6 @@ class EditorState extends Equatable {
         activeSnapGuides,
         activeSpacingMeasurements,
         isInteracting,
+        hoveredFrameId,
       ];
 }

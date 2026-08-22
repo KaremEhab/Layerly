@@ -25,6 +25,9 @@ class PageRenderer extends StatelessWidget {
   final Function(String layerId, ResizeHandle handle, DragEndDetails details)? onResizeLayerEnd;
   final Function(String layerId, double angle, bool isFinal)? onRotateLayer;
   final Function(String layerId, Offset globalPosition)? onContextMenu;
+  /// If not null, the frame with this ID will render a glowing snap-highlight
+  /// border to indicate the dragged layer will be nested inside it on drop.
+  final String? hoveredFrameId;
 
   const PageRenderer({
     super.key,
@@ -41,6 +44,7 @@ class PageRenderer extends StatelessWidget {
     this.onResizeLayerEnd,
     this.onRotateLayer,
     this.onContextMenu,
+    this.hoveredFrameId,
   });
 
   @override
@@ -146,6 +150,7 @@ class PageRenderer extends StatelessWidget {
       onRotateLayer: onRotateLayer,
       onMoveLayer: onMoveLayer,
       onMoveLayerEnd: onMoveLayerEnd,
+      hoveredFrameId: hoveredFrameId,
     );
 
     // If selected and editable, attach TransformBox
