@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -24,6 +25,7 @@ import 'package:layerly/features/editor/presentation/widgets/canvas/figma_contex
 import 'package:layerly/core/widgets/more_rings_icon.dart';
 import 'package:layerly/core/widgets/hex_color_picker_widget.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/image_picker_sheet.dart';
 
 class PropertiesPanel extends StatelessWidget {
   const PropertiesPanel({super.key});
@@ -1606,8 +1608,14 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  // 7. Image Properties
-  Widget _buildImageProperties(BuildContext context, ImageLayer layer) {
+  // 7. Image Properties & Vector SVG Studio
+  Widget _buildImageProperties(
+    BuildContext context,
+    ImageLayer layer,
+  ) {
+    final isSvg = (layer.svgContent != null && layer.svgContent!.isNotEmpty) ||
+        (layer.imagePath?.toLowerCase().endsWith('.svg') ?? false);
+
     return Container(
       constraints: const BoxConstraints(minHeight: 104),
       decoration: BoxDecoration(
@@ -1622,7 +1630,7 @@ class PropertiesPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              _buildTypeIconBox(Icons.image_outlined),
+              _buildTypeIconBox(isSvg ? Icons.draw_rounded : Icons.image_outlined),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1636,12 +1644,62 @@ class PropertiesPanel extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const MoreRingsIcon(
-                color: AppColors.textMuted,
-                size: 18,
-                ringRadius: 2.1,
-                strokeWidth: 1.4,
-                spacing: 1.0,
+              if (isSvg) ...[
+                // Vector Color Tint Swatch
+                _buildColorSwatch(
+                  context,
+                  layer.tintColor ?? Colors.white,
+                  (c) => context.read<EditorBloc>().add(UpdateLayerEvent(layer.copyWith(tintColor: c))),
+                ),
+                const SizedBox(width: 6),
+                // Edit SVG XML button
+                InkWell(
+                  onTap: () => _showSvgCodeEditorDialog(context, layer),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF55EFC4).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF55EFC4).withValues(alpha: 0.5)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.code_rounded, size: 12, color: Color(0xFF55EFC4)),
+                        SizedBox(width: 4),
+                        Text(
+                          'SVG Code',
+                          style: TextStyle(color: Color(0xFF55EFC4), fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              InkWell(
+                onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.5)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.cached_rounded, size: 12, color: Color(0xFFA78BFA)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Replace',
+                        style: TextStyle(color: Color(0xFFA78BFA), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -1649,31 +1707,35 @@ class PropertiesPanel extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.aspect_ratio_rounded,
-                        color: AppColors.textSecondary,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${layer.width.toInt()} × ${layer.height.toInt()} px',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                child: InkWell(
+                  onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
+                  borderRadius: BorderRadius.circular(19),
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(19),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isSvg ? Icons.draw_rounded : Icons.add_photo_alternate_rounded,
+                          color: const Color(0xFF55EFC4),
+                          size: 14,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          isSvg ? 'Vector SVG' : (layer.imagePath != null ? 'Change File' : 'Pick Image / SVG'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1688,7 +1750,7 @@ class PropertiesPanel extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    layer.fit.name.toUpperCase(),
+                    '${layer.width.toInt()} × ${layer.height.toInt()} px',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -1698,6 +1760,114 @@ class PropertiesPanel extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSvgCodeEditorDialog(BuildContext context, ImageLayer layer) {
+    String initialCode = layer.svgContent ?? '';
+    if (initialCode.isEmpty && layer.imagePath != null) {
+      try {
+        final f = File(layer.imagePath!);
+        if (f.existsSync()) {
+          initialCode = f.readAsStringSync();
+        }
+      } catch (_) {}
+    }
+    if (initialCode.isEmpty) {
+      initialCode = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">\n  <circle cx="50" cy="50" r="40" fill="#6C5CE7" />\n</svg>';
+    }
+
+    final textController = TextEditingController(text: initialCode);
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF161522),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF55EFC4).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.code_rounded, color: Color(0xFF55EFC4), size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Live SVG Code Editor',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 18),
+              onPressed: () => Navigator.pop(dialogCtx),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Edit or paste SVG XML markup below. Changes update the canvas in real time.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                height: 220,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F0E17),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF2E2A42)),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: TextField(
+                  controller: textController,
+                  maxLines: null,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    color: Color(0xFF55EFC4),
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C5CE7),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              final newCode = textController.text.trim();
+              if (newCode.isNotEmpty) {
+                context.read<EditorBloc>().add(
+                  UpdateLayerEvent(layer.copyWith(svgContent: newCode)),
+                );
+              }
+              Navigator.pop(dialogCtx);
+            },
+            child: const Text('Apply SVG to Canvas'),
           ),
         ],
       ),
@@ -1725,22 +1895,38 @@ class PropertiesPanel extends StatelessWidget {
             children: [
               _buildTypeIconBox(Icons.phone_iphone_rounded),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Device Mockup',
-                  style: TextStyle(
+                  layer.name,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              const MoreRingsIcon(
-                color: AppColors.textMuted,
-                size: 18,
-                ringRadius: 2.1,
-                strokeWidth: 1.4,
-                spacing: 1.0,
+              InkWell(
+                onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0984E3).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF0984E3).withValues(alpha: 0.5)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.phone_iphone_rounded, size: 12, color: Color(0xFF74B9FF)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Upload Screen',
+                        style: TextStyle(color: Color(0xFF74B9FF), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -1748,20 +1934,31 @@ class PropertiesPanel extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'iPhone Frame',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                child: InkWell(
+                  onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
+                  borderRadius: BorderRadius.circular(19),
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(19),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_a_photo_rounded, color: Color(0xFFA78BFA), size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          layer.screenImagePath != null ? 'Change Screen' : 'Set Mockup Screen',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1776,9 +1973,9 @@ class PropertiesPanel extends StatelessWidget {
                     borderRadius: BorderRadius.circular(19),
                   ),
                   alignment: Alignment.center,
-                  child: const Text(
-                    'Portrait',
-                    style: TextStyle(
+                  child: Text(
+                    layer.device == MockupDevice.macbook ? 'MacBook Pro' : 'iPhone 15 Pro',
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

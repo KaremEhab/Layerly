@@ -17,6 +17,8 @@ import 'package:layerly/core/widgets/more_rings_icon.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/components_picker_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/layouts_assets_sheet.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/layers_sheet.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/image_picker_sheet.dart';
 
 class BottomToolbox extends StatelessWidget {
   const BottomToolbox({super.key});
@@ -462,112 +464,11 @@ class BottomToolbox extends StatelessWidget {
   }
 
   void _showImagesSheet(BuildContext context) {
-    final bloc = context.read<EditorBloc>();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surfaceElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Add Device Mockup / Image',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(
-                  Icons.phone_iphone_rounded,
-                  color: AppColors.primary,
-                  size: 24,
-                ),
-                title: const Text(
-                  'iPhone Device Frame',
-                  style: TextStyle(color: Colors.white),
-                ),
-                subtitle: const Text(
-                  'Clean mobile frame mockup',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 11),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  bloc.add(
-                    AddLayerEvent(
-                      DeviceMockupLayer(
-                        id: UuidGenerator.generate(),
-                        name: 'iPhone Mockup',
-                        x: 200,
-                        y: 100,
-                        width: 440,
-                        height: 880,
-                        device: MockupDevice.iphone,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.check_circle_outline_rounded,
-                  color: AppColors.primary,
-                  size: 24,
-                ),
-                title: const Text(
-                  'Checklist Icon',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  bloc.add(
-                    AddLayerEvent(
-                      IconLayer(
-                        id: UuidGenerator.generate(),
-                        name: 'Icon Check',
-                        x: 100,
-                        y: 200,
-                        width: 40,
-                        height: 40,
-                        icon: Icons.check_circle_outline_rounded,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    showImagePickerBottomSheet(context, bloc: context.read<EditorBloc>());
   }
 
   void _showLayersSheet(BuildContext context) {
-    final bloc = context.read<EditorBloc>();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => BlocProvider.value(
-        value: bloc,
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: const LayersPanel(),
-        ),
-      ),
-    );
+    showLayersBottomSheet(context, bloc: context.read<EditorBloc>());
   }
 
   void _showComponentsSheet(BuildContext context) {

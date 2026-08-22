@@ -13,6 +13,7 @@ import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/transform_box.dart';
 
 class LayerView extends StatelessWidget {
@@ -206,26 +207,60 @@ class LayerView extends StatelessWidget {
   Widget _buildImageLayer(ImageLayer layer) {
     Widget imageContent;
 
-    if (layer.imagePath != null && layer.imagePath!.isNotEmpty) {
+    if (layer.svgContent != null && layer.svgContent!.isNotEmpty) {
+      imageContent = SvgPicture.string(
+        layer.svgContent!,
+        fit: layer.fit,
+        width: layer.width,
+        height: layer.height,
+        colorFilter: layer.tintColor != null
+            ? ColorFilter.mode(layer.tintColor!, BlendMode.srcIn)
+            : null,
+      );
+    } else if (layer.imagePath != null && layer.imagePath!.isNotEmpty) {
       final file = File(layer.imagePath!);
       if (file.existsSync()) {
-        imageContent = Image.file(
-          file,
-          fit: layer.fit,
-          width: layer.width,
-          height: layer.height,
-        );
+        if (layer.imagePath!.toLowerCase().endsWith('.svg')) {
+          imageContent = SvgPicture.file(
+            file,
+            fit: layer.fit,
+            width: layer.width,
+            height: layer.height,
+            colorFilter: layer.tintColor != null
+                ? ColorFilter.mode(layer.tintColor!, BlendMode.srcIn)
+                : null,
+          );
+        } else {
+          imageContent = Image.file(
+            file,
+            fit: layer.fit,
+            width: layer.width,
+            height: layer.height,
+          );
+        }
       } else {
         imageContent = _buildImagePlaceholder(layer);
       }
     } else if (layer.assetPath != null && layer.assetPath!.isNotEmpty) {
-      imageContent = Image.asset(
-        layer.assetPath!,
-        fit: layer.fit,
-        width: layer.width,
-        height: layer.height,
-        errorBuilder: (ctx, err, stack) => _buildImagePlaceholder(layer),
-      );
+      if (layer.assetPath!.toLowerCase().endsWith('.svg')) {
+        imageContent = SvgPicture.asset(
+          layer.assetPath!,
+          fit: layer.fit,
+          width: layer.width,
+          height: layer.height,
+          colorFilter: layer.tintColor != null
+              ? ColorFilter.mode(layer.tintColor!, BlendMode.srcIn)
+              : null,
+        );
+      } else {
+        imageContent = Image.asset(
+          layer.assetPath!,
+          fit: layer.fit,
+          width: layer.width,
+          height: layer.height,
+          errorBuilder: (ctx, err, stack) => _buildImagePlaceholder(layer),
+        );
+      }
     } else {
       imageContent = _buildImagePlaceholder(layer);
     }
@@ -315,13 +350,28 @@ class LayerView extends StatelessWidget {
           children: [
             // Inner Screen Content (or Simulated Uber/App UI)
             if (layer.screenImagePath != null)
-              Image.file(
-                File(layer.screenImagePath!),
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (ctx, err, stack) => _buildSimulatedAppScreen(),
-              )
+              Builder(builder: (ctx) {
+                final file = File(layer.screenImagePath!);
+                if (file.existsSync()) {
+                  if (layer.screenImagePath!.toLowerCase().endsWith('.svg')) {
+                    return SvgPicture.file(
+                      file,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    );
+                  } else {
+                    return Image.file(
+                      file,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (ctx, err, stack) => _buildSimulatedAppScreen(),
+                    );
+                  }
+                }
+                return _buildSimulatedAppScreen();
+              })
             else
               _buildSimulatedAppScreen(),
 

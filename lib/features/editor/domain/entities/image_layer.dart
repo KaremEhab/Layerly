@@ -5,6 +5,8 @@ import 'layer_enums.dart';
 class ImageLayer extends Layer {
   final String? imagePath; // Local path or asset path
   final String? assetPath;
+  final String? svgContent; // Raw SVG XML string for live vector editing
+  final Color? tintColor; // Dynamic vector recoloring/tint
   final BoxFit fit;
   final double borderRadius;
   final Color? borderColor;
@@ -25,6 +27,8 @@ class ImageLayer extends Layer {
     super.locked = false,
     this.imagePath,
     this.assetPath,
+    this.svgContent,
+    this.tintColor,
     this.fit = BoxFit.cover,
     this.borderRadius = 12.0,
     this.borderColor,
@@ -73,6 +77,9 @@ class ImageLayer extends Layer {
     bool? locked,
     String? imagePath,
     String? assetPath,
+    String? svgContent,
+    Color? tintColor,
+    bool clearTintColor = false,
     BoxFit? fit,
     double? borderRadius,
     Color? borderColor,
@@ -93,6 +100,8 @@ class ImageLayer extends Layer {
       locked: locked ?? this.locked,
       imagePath: imagePath ?? this.imagePath,
       assetPath: assetPath ?? this.assetPath,
+      svgContent: svgContent ?? this.svgContent,
+      tintColor: clearTintColor ? null : (tintColor ?? this.tintColor),
       fit: fit ?? this.fit,
       borderRadius: borderRadius ?? this.borderRadius,
       borderColor: borderColor ?? this.borderColor,
@@ -106,6 +115,8 @@ class ImageLayer extends Layer {
         ...super.props,
         imagePath,
         assetPath,
+        svgContent,
+        tintColor,
         fit,
         borderRadius,
         borderColor,
