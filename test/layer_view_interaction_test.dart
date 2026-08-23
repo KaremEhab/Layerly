@@ -8,7 +8,7 @@ import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/layer_view.dart';
 
 void main() {
-  testWidgets('auto-layout children are directly selectable', (tester) async {
+  testWidgets('auto-layout children are selectable on double-tap when container is selected', (tester) async {
     String? selectedId;
     final checklist = AutoLayoutLayer(
       id: 'checklist',
@@ -47,6 +47,7 @@ void main() {
       ],
     );
 
+    // 1. When container is NOT selected, double-tap should NOT dive into child
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -56,6 +57,7 @@ void main() {
               height: 40,
               child: LayerView(
                 layer: checklist,
+                selectedLayerIds: const [],
                 onSelectLayer: (id, _) => selectedId = id,
               ),
             ),
@@ -64,8 +66,27 @@ void main() {
       ),
     );
 
-    await tester.tapAt(const Offset(18, 20));
+    await _doubleTapAt(tester, const Offset(18, 20));
     expect(selectedId, isNull);
+
+    // 2. When container IS selected, double-tap dives into the direct child
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DeferredPointerHandler(
+            child: SizedBox(
+              width: 220,
+              height: 40,
+              child: LayerView(
+                layer: checklist,
+                selectedLayerIds: const ['checklist'],
+                onSelectLayer: (id, _) => selectedId = id,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
 
     await _doubleTapAt(tester, const Offset(18, 20));
     expect(selectedId, 'check-icon');
@@ -74,7 +95,7 @@ void main() {
     expect(selectedId, 'check-label');
   });
 
-  testWidgets('nested auto-layout footer content is directly selectable',
+  testWidgets('nested auto-layout requires selecting parent first before diving into child',
       (tester) async {
     String? selectedId;
     final footer = AutoLayoutLayer(
@@ -117,6 +138,7 @@ void main() {
       ],
     );
 
+    // 1. When outer footer is selected, double tapping selects immediate child 'footer-actions' (not innermost icon)
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -126,6 +148,29 @@ void main() {
               height: 48,
               child: LayerView(
                 layer: footer,
+                selectedLayerIds: const ['footer'],
+                onSelectLayer: (id, _) => selectedId = id,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await _doubleTapAt(tester, const Offset(18, 24));
+    expect(selectedId, 'footer-actions');
+
+    // 2. When 'footer-actions' is selected, double tapping selects 'footer-icon'
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DeferredPointerHandler(
+            child: SizedBox(
+              width: 220,
+              height: 48,
+              child: LayerView(
+                layer: footer,
+                selectedLayerIds: const ['footer-actions'],
                 onSelectLayer: (id, _) => selectedId = id,
               ),
             ),
@@ -141,7 +186,8 @@ void main() {
 
 Future<void> _doubleTapAt(WidgetTester tester, Offset position) async {
   await tester.tapAt(position);
-  await tester.pump(const Duration(milliseconds: 40));
+  await tester.pump(const Duration(milliseconds: 50));
   await tester.tapAt(position);
-  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pumpAndSettle();
 }
+

@@ -1111,6 +1111,9 @@ class LayerView extends StatelessWidget {
 
   Widget _buildAutoLayoutLayer(AutoLayoutLayer layer) {
     final size = measureAutoLayoutSize(layer);
+    final isContainerDirectlySelected = selectedLayerIds.contains(layer.id);
+    final isContainerOrDescendantSelected =
+        isContainerDirectlySelected || _isAnyChildSelected(layer, selectedLayerIds);
 
     if (layer.direction == AutoLayoutDirection.none) {
       final isHoveredFrame = hoveredFrameId == layer.id;
@@ -1178,15 +1181,19 @@ class LayerView extends StatelessWidget {
                 }
 
                 final childGestureDetector = GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                  behavior: isChildSelected || isContainerOrDescendantSelected
+                      ? HitTestBehavior.opaque
+                      : HitTestBehavior.translucent,
                   // When the child is already selected, tapping it keeps it selected
                   // and prevents the tap from bubbling up to the outer frame.
                   onTap: isChildSelected
                       ? () => onSelectLayer?.call(child.id, false)
                       : null,
-                  // First click selects the outer frame/layout. Double-clicking
-                  // dives 1 level down into this child layer or layout.
-                  onDoubleTap: () => onSelectLayer?.call(child.id, false),
+                  // Only allow diving into this child on double-click if the container
+                  // (or an element in this container hierarchy) is already selected!
+                  onDoubleTap: isContainerOrDescendantSelected
+                      ? () => onSelectLayer?.call(child.id, false)
+                      : null,
                   onPanStart: isChildSelected && onMoveLayer != null
                       ? (_) => onSelectLayer?.call(child.id, false)
                       : null,
@@ -1214,11 +1221,15 @@ class LayerView extends StatelessWidget {
         ),
       );
 
+      final frameWidget = layer.clipContent
+          ? frameContent
+          : DeferredPointerHandler(child: frameContent);
+
       // Always wrap so the highlight can fade in/out without mount/unmount jank
       return _FrameSnapHighlight(
         isActive: isHoveredFrame,
         cornerRadius: layer.cornerRadius,
-        child: frameContent,
+        child: frameWidget,
       );
     }
 
@@ -1254,7 +1265,7 @@ class LayerView extends StatelessWidget {
         : _getDistOffset(layer.distribution);
     final boxAlignment = Alignment(alignX, alignY);
 
-    return Container(
+    final autoLayoutWidget = Container(
       width: size.width,
       height: size.height,
       clipBehavior: Clip.none,
@@ -1357,11 +1368,15 @@ class LayerView extends StatelessWidget {
                   }
 
                   final childGestureWidget = GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                    behavior: isChildSelected || isContainerOrDescendantSelected
+                        ? HitTestBehavior.opaque
+                        : HitTestBehavior.translucent,
                     onTap: isChildSelected
                         ? () => onSelectLayer?.call(child.id, false)
                         : null,
-                    onDoubleTap: () => onSelectLayer?.call(child.id, false),
+                    onDoubleTap: isContainerOrDescendantSelected
+                        ? () => onSelectLayer?.call(child.id, false)
+                        : null,
                     onPanStart: isChildSelected ? (_) {} : null,
                     child: childView,
                   );
@@ -1380,6 +1395,10 @@ class LayerView extends StatelessWidget {
         ),
       ),
     );
+
+    return layer.clipContent
+        ? autoLayoutWidget
+        : DeferredPointerHandler(child: autoLayoutWidget);
   }
 
   double _getAlignOffset(AutoLayoutAlignment align) {
@@ -1430,6 +1449,17 @@ class LayerView extends StatelessWidget {
       case AutoLayoutAlignment.stretch:
         return CrossAxisAlignment.stretch;
     }
+  }
+
+  static bool _isAnyChildSelected(Layer layer, List<String> selectedIds) {
+    if (layer is AutoLayoutLayer) {
+      for (final child in layer.children) {
+        if (selectedIds.contains(child.id) || _isAnyChildSelected(child, selectedIds)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }
 
