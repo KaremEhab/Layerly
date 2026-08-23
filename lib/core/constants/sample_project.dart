@@ -10,7 +10,6 @@ import 'package:layerly/features/editor/domain/entities/image_layer.dart';
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_definition.dart';
-import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 
 class SampleProject {

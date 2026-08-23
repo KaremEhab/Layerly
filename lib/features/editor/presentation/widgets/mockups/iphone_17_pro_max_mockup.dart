@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
-import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 
 class Iphone17ProMaxMockup extends StatefulWidget {
   const Iphone17ProMaxMockup({

@@ -432,13 +432,13 @@ class SvgVectorParser {
       }
 
       if (elem.fill != null) {
-        final hex = '0x${elem.fill!.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+        final hex = '0x${elem.fill!.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
         buffer.writeln('      final fillPaint = Paint()..color = const Color($hex)..style = PaintingStyle.fill;');
         buffer.writeln('      canvas.drawPath(path, fillPaint);');
       }
 
       if (elem.strokeColor != null && elem.strokeWidth > 0) {
-        final hex = '0x${elem.strokeColor!.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+        final hex = '0x${elem.strokeColor!.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
         buffer.writeln('      final strokePaint = Paint()');
         buffer.writeln('        ..color = const Color($hex)');
         buffer.writeln('        ..strokeWidth = ${elem.strokeWidth}');

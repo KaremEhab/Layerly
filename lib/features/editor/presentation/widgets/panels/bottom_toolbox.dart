@@ -965,7 +965,7 @@ class _BottomToolboxState extends State<BottomToolbox> {
                   style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
                 value: state.showGrid,
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
                 onChanged: (_) {
                   bloc.add(const ToggleGridEvent());
                   Navigator.pop(ctx);
@@ -981,7 +981,7 @@ class _BottomToolboxState extends State<BottomToolbox> {
                   style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
                 value: state.snapEnabled,
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
                 onChanged: (_) {
                   bloc.add(const ToggleSnapEvent());
                   Navigator.pop(ctx);
@@ -1067,7 +1067,7 @@ class _AssetCategoryCard extends StatelessWidget {
 
 class _PhotoIconPainter extends CustomPainter {
   final Color color;
-  const _PhotoIconPainter({this.color = Colors.white});
+  const _PhotoIconPainter() : color = Colors.white;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1113,7 +1113,7 @@ class _PhotoIconPainter extends CustomPainter {
 
 class _LayersIconPainter extends CustomPainter {
   final Color color;
-  const _LayersIconPainter({this.color = Colors.white});
+  const _LayersIconPainter() : color = Colors.white;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1151,7 +1151,7 @@ class _LayersIconPainter extends CustomPainter {
 
 class _DiamondGridPainter extends CustomPainter {
   final Color color;
-  const _DiamondGridPainter({this.color = Colors.white});
+  const _DiamondGridPainter() : color = Colors.white;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1193,7 +1193,7 @@ class _DiamondGridPainter extends CustomPainter {
 
 class _BentoLayoutPainter extends CustomPainter {
   final Color color;
-  const _BentoLayoutPainter({this.color = Colors.white});
+  const _BentoLayoutPainter() : color = Colors.white;
 
   @override
   void paint(Canvas canvas, Size size) {

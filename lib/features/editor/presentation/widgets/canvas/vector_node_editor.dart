@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -461,7 +460,7 @@ class _VectorNodeEditorModalState extends State<_VectorNodeEditorModal> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _layer.elements.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (ctx, i) {
           final elem = _layer.elements[i];
           final isSelected = _selectedElementIndex == i;

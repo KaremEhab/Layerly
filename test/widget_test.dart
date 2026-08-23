@@ -7,6 +7,7 @@ import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
+import 'package:layerly/features/editor/presentation/widgets/panels/properties_panel.dart';
 import 'package:layerly/main.dart';
 
 void main() {
@@ -77,14 +78,14 @@ void main() {
   });
 
   testWidgets('Layerly Studio - Frame Properties Card with 3 Controllers (Radius, Height, Width) and More Dialog', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(393, 852);
+    tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(const LayerlyApp());
     await tester.pumpAndSettle();
 
-    final BuildContext context = tester.element(find.byType(SafeArea).first);
+    final BuildContext context = tester.element(find.byType(Scaffold).first);
     final bloc = context.read<EditorBloc>();
 
     // Add a freeform Frame
@@ -108,15 +109,16 @@ void main() {
 
     // Verify Frame Properties Card is displayed (NOT Auto layout)
     expect(find.text('Frame'), findsWidgets);
-    expect(find.text('Freeform (Frame)'), findsOneWidget);
+    expect(find.text('Add layout'), findsOneWidget);
 
     // Verify 3 Steppers are present (Radius 16, Height 260, Width 340)
     expect(find.text('16'), findsOneWidget);
     expect(find.text('260'), findsOneWidget);
     expect(find.text('340'), findsOneWidget);
 
-    // Click the More button
-    await tester.tap(find.byType(MoreRingsIcon).last);
+    // Click the More button in Frame properties card
+    final moreButton = find.descendant(of: find.byType(PropertiesPanel), matching: find.byType(MoreRingsIcon));
+    await tester.tap(moreButton.first);
     await tester.pumpAndSettle();
 
     // Verify Frame Properties Dialog opens with full settings

@@ -17,6 +17,7 @@ class AutoLayoutLayer extends Layer {
   final StrokePosition strokePosition;
   final AutoLayoutSizingMode horizontalSizing;
   final AutoLayoutSizingMode verticalSizing;
+  final bool clipContent;
 
   const AutoLayoutLayer({
     required super.id,
@@ -44,6 +45,7 @@ class AutoLayoutLayer extends Layer {
     this.strokeColor,
     this.strokeWidth = 0.0,
     this.strokePosition = StrokePosition.inside,
+    this.clipContent = false,
   }) : super(type: LayerType.autoLayout);
 
   @override
@@ -85,6 +87,7 @@ class AutoLayoutLayer extends Layer {
       strokeColor: strokeColor,
       strokeWidth: strokeWidth,
       strokePosition: strokePosition,
+      clipContent: clipContent,
     );
   }
 
@@ -115,6 +118,7 @@ class AutoLayoutLayer extends Layer {
     bool clearStrokeColor = false,
     double? strokeWidth,
     StrokePosition? strokePosition,
+    bool? clipContent,
   }) {
     return AutoLayoutLayer(
       id: id,
@@ -142,6 +146,7 @@ class AutoLayoutLayer extends Layer {
       strokeColor: clearStrokeColor ? null : (strokeColor ?? this.strokeColor),
       strokeWidth: strokeWidth ?? this.strokeWidth,
       strokePosition: strokePosition ?? this.strokePosition,
+      clipContent: clipContent ?? this.clipContent,
     );
   }
 
@@ -215,5 +220,6 @@ class AutoLayoutLayer extends Layer {
         strokeColor,
         strokeWidth,
         strokePosition,
+        clipContent,
       ];
 }

@@ -391,7 +391,7 @@ class _HexColorPickerWidgetState extends State<HexColorPickerWidget> {
 
 class _CheckeredPainter extends CustomPainter {
   final double cellSize;
-  const _CheckeredPainter({this.cellSize = 4.0});
+  const _CheckeredPainter() : cellSize = 4.0;
 
   @override
   void paint(Canvas canvas, Size size) {

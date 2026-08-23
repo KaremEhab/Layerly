@@ -694,7 +694,7 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Layouts & Asset Hub',
                       style: TextStyle(
                         color: Colors.white,
@@ -703,8 +703,8 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    const Text(
+                    SizedBox(height: 2),
+                    Text(
                       'Bento grids, device mockups, color palettes & typography',
                       style: TextStyle(
                         color: AppColors.textMuted,
@@ -830,7 +830,7 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       physics: const BouncingScrollPhysics(),
       itemCount: presets.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (ctx, idx) {
         final item = presets[idx];
         return InkWell(

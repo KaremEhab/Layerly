@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
-import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -200,14 +199,6 @@ class _EditorCanvasState extends State<EditorCanvas> {
         return Listener(
           onPointerDown: (event) {
             _activePointerPositions[event.pointer] = event.position;
-            if (_activePointerPositions.length == 2) {
-              final points = _activePointerPositions.values.toList();
-              final midPoint = Offset(
-                (points[0].dx + points[1].dx) / 2,
-                (points[0].dy + points[1].dy) / 2,
-              );
-              _openContextMenu(midPoint);
-            }
           },
           onPointerMove: (event) {
             if (_activePointerPositions.containsKey(event.pointer)) {
@@ -222,7 +213,10 @@ class _EditorCanvasState extends State<EditorCanvas> {
           },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTapDown: (_) {
+            // A tap on empty canvas clears selection. Doing this on tap-down
+            // used to clear a multi-selection before a child layer could claim
+            // the gesture, which made selection and dragging feel jumpy.
+            onTap: () {
               _focusNode.requestFocus();
               context.read<EditorBloc>().add(const ClearSelectionEvent());
             },
@@ -446,14 +440,6 @@ class _EditorCanvasState extends State<EditorCanvas> {
     return Listener(
       onPointerDown: (event) {
         _activePointerPositions[event.pointer] = event.position;
-        if (_activePointerPositions.length == 2) {
-          final points = _activePointerPositions.values.toList();
-          final midPoint = Offset(
-            (points[0].dx + points[1].dx) / 2,
-            (points[0].dy + points[1].dy) / 2,
-          );
-          _openContextMenu(midPoint);
-        }
       },
       onPointerMove: (event) {
         if (_activePointerPositions.containsKey(event.pointer)) {

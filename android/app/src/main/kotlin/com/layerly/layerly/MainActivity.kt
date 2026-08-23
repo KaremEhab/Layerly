@@ -1,4 +1,4 @@
-package com.example.layerly
+package com.layerly.layerly
 
 import io.flutter.embedding.android.FlutterActivity
 

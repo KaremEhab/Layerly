@@ -86,13 +86,13 @@ class _ImagePickerSheetModalState extends State<_ImagePickerSheetModal> {
 
   Future<void> _pickSvgFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['svg'],
       );
-      if (result != null && result.files.single.path != null && mounted) {
-        final path = result.files.single.path!;
-        final name = result.files.single.name;
+      if (result.isNotEmpty && result.first.path != null && mounted) {
+        final path = result.first.path!;
+        final name = result.first.name;
         _handlePickedFile(path, name);
       }
     } catch (e) {
@@ -102,13 +102,13 @@ class _ImagePickerSheetModalState extends State<_ImagePickerSheetModal> {
 
   Future<void> _pickGenericImageFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePickerPlatform.instance.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'],
       );
-      if (result != null && result.files.single.path != null && mounted) {
-        final path = result.files.single.path!;
-        final name = result.files.single.name;
+      if (result.isNotEmpty && result.first.path != null && mounted) {
+        final path = result.first.path!;
+        final name = result.first.name;
         _handlePickedFile(path, name);
       }
     } catch (e) {

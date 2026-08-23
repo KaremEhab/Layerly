@@ -250,7 +250,7 @@ class PropertiesPanel extends StatelessWidget {
                         scale: 0.7,
                         child: Switch(
                           value: activePage.showGuides,
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                           onChanged: (val) {
                             context.read<EditorBloc>().add(
                               const ToggleGuidesEvent(),
@@ -372,7 +372,7 @@ class PropertiesPanel extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: cards.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (ctx, idx) =>
             SizedBox(width: cardWidth, child: cards[idx]),
       ),
@@ -462,30 +462,28 @@ class PropertiesPanel extends StatelessWidget {
           Row(
             children: [
               _buildTypeIconBox(Icons.crop_free_rounded),
-              const SizedBox(width: 10),
-              const Text(
-                'Frame',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Frame',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 4),
               InkWell(
                 onTap: () {
-                  final nextDir = switch (layer.direction) {
-                    AutoLayoutDirection.none => AutoLayoutDirection.vertical,
-                    AutoLayoutDirection.vertical => AutoLayoutDirection.horizontal,
-                    AutoLayoutDirection.horizontal => AutoLayoutDirection.none,
-                  };
-                  onUpdate(layer.copyWith(direction: nextDir));
+                  onUpdate(layer.copyWith(direction: AutoLayoutDirection.horizontal));
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+                    horizontal: 7,
+                    vertical: 3,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSecondary,
@@ -495,24 +493,33 @@ class PropertiesPanel extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Freeform (Frame)',
+                        'Add layout',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      SizedBox(width: 4),
+                      SizedBox(width: 3),
                       Icon(
-                        Icons.sync_rounded,
-                        size: 14,
+                        Icons.add_rounded,
+                        size: 13,
                         color: AppColors.textSecondary,
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
+              _buildColorSwatch(
+                context,
+                layer.backgroundColor ?? Colors.transparent,
+                (c) => onUpdate(layer.copyWith(
+                  backgroundColor: c,
+                  clearBackgroundColor: c == Colors.transparent,
+                )),
+              ),
+              const SizedBox(width: 4),
               InkWell(
                 onTap: () {
                   _showFrameSettingsDialog(
@@ -537,7 +544,7 @@ class PropertiesPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Row 2: 3 Controllers: Radius, Height & Width (as requested)
+          // Row 2: 3 Controllers + Clip Toggle
           Row(
             children: [
               // Controller 1: Radius
@@ -584,6 +591,40 @@ class PropertiesPanel extends StatelessWidget {
                     final newW = (layer.width + 10).clamp(20.0, maxAllowedWidth);
                     onUpdate(layer.copyWith(width: newW));
                   },
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Clip Content Button
+              Tooltip(
+                message: 'Clip content',
+                waitDuration: const Duration(milliseconds: 300),
+                child: InkWell(
+                  onTap: () {
+                    onUpdate(layer.copyWith(clipContent: !layer.clipContent));
+                  },
+                  borderRadius: BorderRadius.circular(19),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: layer.clipContent 
+                          ? AppColors.primary.withValues(alpha: 0.2) 
+                          : AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(19),
+                      border: Border.all(
+                        color: layer.clipContent ? AppColors.primary : Colors.transparent,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        layer.clipContent ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                        size: 18,
+                        color: layer.clipContent ? AppColors.primary : AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -684,7 +725,7 @@ class PropertiesPanel extends StatelessWidget {
                 onTap: () {
                   final nextDir = switch (layer.direction) {
                     AutoLayoutDirection.horizontal => AutoLayoutDirection.vertical,
-                    AutoLayoutDirection.vertical => AutoLayoutDirection.none,
+                    AutoLayoutDirection.vertical => AutoLayoutDirection.horizontal,
                     AutoLayoutDirection.none => AutoLayoutDirection.horizontal,
                   };
                   onUpdate(layer.copyWith(direction: nextDir));
@@ -723,6 +764,30 @@ class PropertiesPanel extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () {
+                  onUpdate(layer.copyWith(direction: AutoLayoutDirection.none));
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(
+                    Icons.remove_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 2),
+              _buildColorSwatch(
+                context,
+                layer.backgroundColor ?? Colors.transparent,
+                (c) => onUpdate(layer.copyWith(
+                  backgroundColor: c,
+                  clearBackgroundColor: c == Colors.transparent,
+                )),
               ),
               const SizedBox(width: 6),
               InkWell(
@@ -1531,7 +1596,7 @@ class PropertiesPanel extends StatelessWidget {
                                 ),
                                 Switch(
                                   value: hasStroke,
-                                  activeColor: const Color(0xFF6C5CE7),
+                                  activeThumbColor: const Color(0xFF6C5CE7),
                                   onChanged: (val) {
                                     if (val) {
                                       currentLayer = currentLayer.copyWith(
@@ -1680,7 +1745,7 @@ class PropertiesPanel extends StatelessWidget {
                                 ),
                                 Switch(
                                   value: hasShadow,
-                                  activeColor: const Color(0xFF6C5CE7),
+                                  activeThumbColor: const Color(0xFF6C5CE7),
                                   onChanged: (val) {
                                     if (val) {
                                       currentLayer = currentLayer.copyWith(

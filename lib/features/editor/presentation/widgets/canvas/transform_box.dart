@@ -279,31 +279,43 @@ class TransformBox extends StatelessWidget {
     double borderWidth,
     MouseCursor cursor,
   ) {
+    // Keep the visual handle precise, but give both fingers and a mouse a
+    // comfortably sized target. This prevents near-edge drags from falling
+    // through to the layer move gesture on small objects or low zoom levels.
+    final hitSize = math
+        .max(size, (26.0 / scale.clamp(0.35, 3.0)))
+        .toDouble();
     return Positioned(
-      left: left,
-      top: top,
+      left: left - (hitSize - size) / 2,
+      top: top - (hitSize - size) / 2,
       child: GestureDetector(
         onPanUpdate: (details) => onResize(handle, details),
         onPanEnd: (details) => onResizeEnd(handle, details),
         child: MouseRegion(
           cursor: cursor,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(
-                color: const Color(0xFFA970FF),
-                width: borderWidth,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
+          child: SizedBox(
+            width: hitSize,
+            height: hitSize,
+            child: Center(
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(radius),
+                  border: Border.all(
+                    color: const Color(0xFFA970FF),
+                    width: borderWidth,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black38,
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

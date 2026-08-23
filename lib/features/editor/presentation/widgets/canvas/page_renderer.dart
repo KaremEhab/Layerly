@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
@@ -10,6 +11,7 @@ import 'package:layerly/features/editor/presentation/widgets/canvas/layer_view.d
 import 'package:layerly/features/editor/presentation/widgets/canvas/transform_box.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/smart_guides_overlay.dart';
 import 'package:layerly/features/editor/domain/services/snapping_service.dart';
+import 'package:defer_pointer/defer_pointer.dart';
 
 class PageRenderer extends StatelessWidget {
   final CanvasPage page;
@@ -49,45 +51,47 @@ class PageRenderer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: page.width,
-      height: page.height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Page background — clipped to page bounds for visual correctness
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                width: page.width,
-                height: page.height,
-                decoration: _buildBackgroundDecoration(),
-                clipBehavior: Clip.hardEdge,
-                child: Stack(
-                  children: [
-                    if (page.showGrid) _buildGridOverlay(),
-                    if (page.showGuides) _buildGuidesOverlay(),
-                  ],
+    return DeferredPointerHandler(
+      child: SizedBox(
+        width: page.width,
+        height: page.height,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Page background — clipped to page bounds for visual correctness
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  width: page.width,
+                  height: page.height,
+                  decoration: _buildBackgroundDecoration(),
+                  clipBehavior: Clip.hardEdge,
+                  child: Stack(
+                    children: [
+                      if (page.showGrid) _buildGridOverlay(),
+                      if (page.showGuides) _buildGuidesOverlay(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-
-          // Interactive layer tree — NOT clipped so layers outside page bounds
-          // remain fully selectable and draggable
-          ...page.layers.map((layer) => _buildLayerItem(layer)),
-
-          // Smart Guides overlay
-          IgnorePointer(
-            child: SmartGuidesOverlay(
-              guides: activeGuides,
-              measurements: activeSpacingMeasurements,
-              pageWidth: page.width,
-              pageHeight: page.height,
-              scale: scale,
+  
+            // Interactive layer tree — NOT clipped so layers outside page bounds
+            // remain fully selectable and draggable
+            ...page.layers.map((layer) => _buildLayerItem(layer)),
+  
+            // Smart Guides overlay
+            IgnorePointer(
+              child: SmartGuidesOverlay(
+                guides: activeGuides,
+                measurements: activeSpacingMeasurements,
+                pageWidth: page.width,
+                pageHeight: page.height,
+                scale: scale,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -141,14 +145,14 @@ class PageRenderer extends StatelessWidget {
   Widget _buildLayerItem(Layer layer) {
     final isSelected = selectedLayerIds.contains(layer.id);
     final effectiveLayer = layer is TextLayer
-        ? (layer as TextLayer).copyWith(
-            width: LayerView.measureTextSize(layer as TextLayer).width,
-            height: LayerView.measureTextSize(layer as TextLayer).height,
+        ? (layer).copyWith(
+            width: LayerView.measureTextSize(layer).width,
+            height: LayerView.measureTextSize(layer).height,
           )
         : (layer is AutoLayoutLayer
-            ? (layer as AutoLayoutLayer).copyWith(
-                width: LayerView.measureAutoLayoutSize(layer as AutoLayoutLayer).width,
-                height: LayerView.measureAutoLayoutSize(layer as AutoLayoutLayer).height,
+            ? (layer).copyWith(
+                width: LayerView.measureAutoLayoutSize(layer).width,
+                height: LayerView.measureAutoLayoutSize(layer).height,
               )
             : layer);
 
@@ -196,7 +200,7 @@ class PageRenderer extends StatelessWidget {
             behavior: HitTestBehavior.translucent,
             onTap: onSelectLayer != null
                 ? () {
-                    onSelectLayer?.call(layer.id, false);
+                    onSelectLayer?.call(layer.id, _isAdditiveSelection);
                   }
                 : null,
             onSecondaryTapDown: onContextMenu != null
@@ -216,7 +220,7 @@ class PageRenderer extends StatelessWidget {
             onPanStart: onMoveLayer != null
                 ? (details) {
                     if (!isSelected) {
-                      onSelectLayer?.call(layer.id, false);
+                      onSelectLayer?.call(layer.id, _isAdditiveSelection);
                     }
                   }
                 : null,
@@ -244,6 +248,17 @@ class PageRenderer extends StatelessWidget {
         child: interactiveWidget,
       ),
     );
+  }
+
+  /// Figma uses Shift / Ctrl (Cmd on macOS) to add or remove layers from the
+  /// active selection. Keeping this decision at the hit target also prevents a
+  /// canvas tap from clearing an existing multi-selection before the layer tap
+  /// is resolved.
+  bool get _isAdditiveSelection {
+    final keyboard = HardwareKeyboard.instance;
+    return keyboard.isShiftPressed ||
+        keyboard.isControlPressed ||
+        keyboard.isMetaPressed;
   }
 
   bool _isAnyChildSelected(Layer layer, List<String> selectedIds) {

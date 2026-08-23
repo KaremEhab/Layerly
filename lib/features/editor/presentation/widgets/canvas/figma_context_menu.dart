@@ -102,7 +102,7 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
         final hasSelection = selectedLayers.isNotEmpty;
         final singleLayer = selectedLayers.length == 1 ? selectedLayers.first : null;
         final isAutoLayout = singleLayer is AutoLayoutLayer;
-        final autoLayoutLayer = isAutoLayout ? singleLayer as AutoLayoutLayer : null;
+        final autoLayoutLayer = isAutoLayout ? singleLayer : null;
         final isLocked = singleLayer?.locked ?? false;
         final isVisible = singleLayer?.visible ?? true;
 

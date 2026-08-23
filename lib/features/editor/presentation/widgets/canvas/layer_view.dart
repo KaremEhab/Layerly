@@ -17,6 +17,7 @@ import 'package:layerly/features/editor/domain/entities/vector_layer.dart';
 import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/transform_box.dart';
+import 'package:defer_pointer/defer_pointer.dart';
 
 class LayerView extends StatelessWidget {
   final Layer layer;
@@ -1021,8 +1022,8 @@ class LayerView extends StatelessWidget {
       textAlign: textLayer.textAlign,
     )..layout();
 
-    final paddingH = textLayer.padding?.horizontal ?? 0.0;
-    final paddingV = textLayer.padding?.vertical ?? 0.0;
+    final paddingH = textLayer.padding.horizontal ?? 0.0;
+    final paddingV = textLayer.padding.vertical ?? 0.0;
 
     return Size(
       (textPainter.width * 1.06 + paddingH + 8.0).ceilToDouble().clamp(
@@ -1176,27 +1177,36 @@ class LayerView extends StatelessWidget {
                   );
                 }
 
+                final childGestureDetector = GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  // When the child is already selected, tapping it keeps it selected
+                  // and prevents the tap from bubbling up to the outer frame.
+                  onTap: isChildSelected
+                      ? () => onSelectLayer?.call(child.id, false)
+                      : null,
+                  // First click selects the outer frame/layout. Double-clicking
+                  // dives 1 level down into this child layer or layout.
+                  onDoubleTap: () => onSelectLayer?.call(child.id, false),
+                  onPanStart: isChildSelected && onMoveLayer != null
+                      ? (_) => onSelectLayer?.call(child.id, false)
+                      : null,
+                  onPanUpdate: isChildSelected && onMoveLayer != null
+                      ? (details) => onMoveLayer?.call(child.id, details)
+                      : null,
+                  onPanEnd: isChildSelected && onMoveLayerEnd != null
+                      ? (details) => onMoveLayerEnd?.call(child.id, details)
+                      : null,
+                  child: childView,
+                );
+
                 return Positioned(
                   left: child.x,
                   top: child.y,
                   width: child.width,
                   height: child.height,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      onSelectLayer?.call(child.id, false);
-                    },
-                    onPanStart: onMoveLayer != null
-                        ? (_) => onSelectLayer?.call(child.id, false)
-                        : null,
-                    onPanUpdate: onMoveLayer != null
-                        ? (details) => onMoveLayer?.call(child.id, details)
-                        : null,
-                    onPanEnd: onMoveLayerEnd != null
-                        ? (details) => onMoveLayerEnd?.call(child.id, details)
-                        : null,
-                    child: childView,
-                  ),
+                  child: layer.clipContent
+                      ? childGestureDetector
+                      : DeferPointer(child: childGestureDetector),
                 );
               }(),
             ],
@@ -1346,21 +1356,22 @@ class LayerView extends StatelessWidget {
                     );
                   }
 
-                  final isParentSelected = selectedLayerIds.contains(layer.id);
+                  final childGestureWidget = GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: isChildSelected
+                        ? () => onSelectLayer?.call(child.id, false)
+                        : null,
+                    onDoubleTap: () => onSelectLayer?.call(child.id, false),
+                    onPanStart: isChildSelected ? (_) {} : null,
+                    child: childView,
+                  );
 
                   return SizedBox(
                     width: childSize.width,
                     height: childSize.height,
-                    child: isParentSelected
-                        ? GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onDoubleTap: () {
-                              // Double-clicking dives directly into this immediate direct child layer (1 level down)
-                              onSelectLayer?.call(child.id, false);
-                            },
-                            child: childView,
-                          )
-                        : childView,
+                    child: layer.clipContent
+                        ? childGestureWidget
+                        : DeferPointer(child: childGestureWidget),
                   );
                 }(),
               ],

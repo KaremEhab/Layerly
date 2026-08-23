@@ -1,0 +1,36 @@
+workflows:
+  ios-testflight:
+    name: iOS TestFlight Release
+    max_build_duration: 120
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.layerly.layerly
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Set to iPhone only
+        # This script finds the device family setting and forces it to '1' (iPhone)
+        # It updates the project file before the build starts.
+        script: |
+          sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2"/TARGETED_DEVICE_FAMILY = "1"/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/TARGETED_DEVICE_FAMILY = 1,2/TARGETED_DEVICE_FAMILY = 1/g' ios/Runner.xcodeproj/project.pbxproj
+
+      - name: Build IPA
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        api_key: balanco
+        key_id: K3XZ43FD6Y
+        issuer_id: d1ad3ed1-c8a7-480a-8cba-f7e01bb89a2f
