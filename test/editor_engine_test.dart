@@ -16,6 +16,7 @@ import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
 import 'package:layerly/features/editor/domain/services/snapping_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
+import 'package:layerly/features/editor/presentation/widgets/canvas/layer_view.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1468,6 +1469,30 @@ void main() {
           (bloc.state.activePage.layers.singleWhere((l) => l.id == 'child')).x,
           lessThan(100),
         );
+      },
+    );
+
+    test(
+      'TextLayer calculates width based on the longest line for multi-line text',
+      () {
+        const multilineLayer = TextLayer(
+          id: 'multiline-text',
+          name: 'Multiline Headline',
+          x: 0,
+          y: 0,
+          width: 320,
+          height: 190,
+          content: "I redesigned\n[color:#6C5CE7]Uber's Eats[/color]\nscreen.",
+          fontSize: 48,
+          fontFamily: 'Outfit',
+          fontWeight: FontWeight.bold,
+        );
+
+        final measuredSize = LayerView.measureTextSize(multilineLayer);
+        // The width should hug the longest line ("I redesigned" = 12 chars * 48px font) instead of all lines concatenated (30+ chars)
+        expect(measuredSize.width, lessThan(650));
+        expect(measuredSize.width, greaterThan(200));
+        expect(measuredSize.height, greaterThan(120));
       },
     );
   });

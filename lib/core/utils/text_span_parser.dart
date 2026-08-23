@@ -25,9 +25,10 @@ class TextSpanParser {
       return TextSpan(text: '', style: baseStyle);
     }
 
-    final matches = _tagRegex.allMatches(content);
+    final normalized = content.replaceAll(r'\n', '\n');
+    final matches = _tagRegex.allMatches(normalized);
     if (matches.isEmpty) {
-      return TextSpan(text: content, style: baseStyle);
+      return TextSpan(text: normalized, style: baseStyle);
     }
 
     final spans = <InlineSpan>[];
@@ -36,7 +37,7 @@ class TextSpanParser {
     for (final match in matches) {
       if (match.start > lastIndex) {
         spans.add(TextSpan(
-          text: content.substring(lastIndex, match.start),
+          text: normalized.substring(lastIndex, match.start),
           style: baseStyle,
         ));
       }
@@ -53,9 +54,9 @@ class TextSpanParser {
       lastIndex = match.end;
     }
 
-    if (lastIndex < content.length) {
+    if (lastIndex < normalized.length) {
       spans.add(TextSpan(
-        text: content.substring(lastIndex),
+        text: normalized.substring(lastIndex),
         style: baseStyle,
       ));
     }
@@ -65,7 +66,8 @@ class TextSpanParser {
 
   /// Extracts plain text stripping color tags
   static String stripTags(String content) {
-    return content.replaceAllMapped(_tagRegex, (match) {
+    final normalized = content.replaceAll(r'\n', '\n');
+    return normalized.replaceAllMapped(_tagRegex, (match) {
       return match.group(3) ?? match.group(5) ?? '';
     });
   }
@@ -221,9 +223,10 @@ class TextSpanParser {
   static (String, List<ColoredRange>) parseTaggedTextToClean(String content) {
     if (content.isEmpty) return ('', <ColoredRange>[]);
 
-    final matches = _tagRegex.allMatches(content).toList();
+    final normalized = content.replaceAll(r'\n', '\n');
+    final matches = _tagRegex.allMatches(normalized).toList();
     if (matches.isEmpty) {
-      return (content, <ColoredRange>[]);
+      return (normalized, <ColoredRange>[]);
     }
 
     final cleanBuffer = StringBuffer();
@@ -232,7 +235,7 @@ class TextSpanParser {
 
     for (final match in matches) {
       if (match.start > lastIndex) {
-        cleanBuffer.write(content.substring(lastIndex, match.start));
+        cleanBuffer.write(normalized.substring(lastIndex, match.start));
       }
 
       final colorStr = match.group(2) ?? match.group(4) ?? '';
@@ -250,8 +253,8 @@ class TextSpanParser {
       lastIndex = match.end;
     }
 
-    if (lastIndex < content.length) {
-      cleanBuffer.write(content.substring(lastIndex));
+    if (lastIndex < normalized.length) {
+      cleanBuffer.write(normalized.substring(lastIndex));
     }
 
     return (cleanBuffer.toString(), ranges);

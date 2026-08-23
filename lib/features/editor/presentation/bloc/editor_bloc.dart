@@ -2099,8 +2099,10 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       height: textLayer.lineHeight,
     );
 
+    final cleanContent = textLayer.content.replaceAll(r'\n', '\n');
+
     final parsedSpan = TextSpanParser.parseToTextSpan(
-      textLayer.content.isEmpty ? ' ' : textLayer.content,
+      cleanContent.isEmpty ? ' ' : cleanContent,
       style,
     );
 
@@ -2110,11 +2112,25 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       textAlign: textLayer.textAlign,
     )..layout();
 
+    double maxLineWidth = textPainter.width;
+    final lines = textPainter.computeLineMetrics();
+    if (lines.isNotEmpty) {
+      double maxLine = 0.0;
+      for (final line in lines) {
+        if (line.width > maxLine) {
+          maxLine = line.width;
+        }
+      }
+      if (maxLine > 0) {
+        maxLineWidth = maxLine;
+      }
+    }
+
     final paddingH = (textLayer.padding.horizontal ?? 0.0);
     final paddingV = (textLayer.padding.vertical ?? 0.0);
 
     // Precise intrinsic width and height without artificial bloating
-    final measuredWidth = (textPainter.width + paddingH + 2.0)
+    final measuredWidth = (maxLineWidth + paddingH + 4.0)
         .ceilToDouble()
         .clamp(1.0, 5000.0);
     final measuredHeight = (textPainter.height + paddingV).ceilToDouble().clamp(

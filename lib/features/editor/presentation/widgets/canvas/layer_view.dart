@@ -1013,20 +1013,38 @@ class LayerView extends StatelessWidget {
       );
     }
 
+    final cleanContent = textLayer.content.replaceAll(r'\n', '\n');
+
+    final parsedSpan = TextSpanParser.parseToTextSpan(
+      cleanContent.isEmpty ? ' ' : cleanContent,
+      style,
+    );
+
     final textPainter = TextPainter(
-      text: TextSpan(
-        text: textLayer.content.isEmpty ? ' ' : textLayer.content,
-        style: style,
-      ),
+      text: parsedSpan,
       textDirection: TextDirection.ltr,
       textAlign: textLayer.textAlign,
     )..layout();
+
+    double maxLineWidth = textPainter.width;
+    final lines = textPainter.computeLineMetrics();
+    if (lines.isNotEmpty) {
+      double maxLine = 0.0;
+      for (final line in lines) {
+        if (line.width > maxLine) {
+          maxLine = line.width;
+        }
+      }
+      if (maxLine > 0) {
+        maxLineWidth = maxLine;
+      }
+    }
 
     final paddingH = textLayer.padding.horizontal ?? 0.0;
     final paddingV = textLayer.padding.vertical ?? 0.0;
 
     return Size(
-      (textPainter.width * 1.06 + paddingH + 8.0).ceilToDouble().clamp(
+      (maxLineWidth + paddingH + 4.0).ceilToDouble().clamp(
         1.0,
         5000.0,
       ),
