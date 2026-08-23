@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/constants/responsive_breakpoints.dart';
+import 'package:layerly/features/editor/domain/services/export_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
@@ -581,22 +582,32 @@ class LayerlyAppBar extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _buildFormatChip(context, 'PNG (Current)', () => _doExport(context, ctx, 'Current Page as PNG')),
+                  _buildFormatChip(
+                    context,
+                    'PNG (Photos)',
+                    () => _exportCurrentPage(context, ctx, state, ExportImageFormat.png),
+                  ),
                   const SizedBox(width: 8),
-                  _buildFormatChip(context, 'JPG (Current)', () => _doExport(context, ctx, 'Current Page as JPG')),
+                  _buildFormatChip(
+                    context,
+                    'JPG (Photos)',
+                    () => _exportCurrentPage(context, ctx, state, ExportImageFormat.jpg),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
-              const Text(
-                'All slides (${4} pages)',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+              Text(
+                'All slides (${state.project.pages.length} pages)',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _buildFormatChip(context, 'PNG Sequence', () => _doExport(context, ctx, 'All slides as PNG sequence')),
-                  const SizedBox(width: 8),
-                  _buildFormatChip(context, 'PDF Document', () => _doExport(context, ctx, 'Presentation PDF document')),
+                  _buildFormatChip(
+                    context,
+                    'All to Photos',
+                    () => _exportAllPages(context, ctx, state, ExportImageFormat.png),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -633,14 +644,120 @@ class LayerlyAppBar extends StatelessWidget {
     );
   }
 
-  void _doExport(BuildContext context, BuildContext sheetCtx, String description) {
+  void _exportCurrentPage(
+    BuildContext context,
+    BuildContext sheetCtx,
+    EditorState state,
+    ExportImageFormat format,
+  ) async {
     Navigator.pop(sheetCtx);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: AppColors.surfaceElevated,
+        duration: Duration(seconds: 2),
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+            ),
+            SizedBox(width: 12),
+            Text('Saving design to Photos (Layerly album)...', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
+    );
+
+    final result = await ExportService.exportPageToGallery(
+      page: state.activePage,
+      project: state.project,
+      format: format,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: AppColors.surfaceElevated,
-        content: Text(
-          'Exported $description locally to device!',
-          style: const TextStyle(color: AppColors.success),
+        content: Row(
+          children: [
+            Icon(
+              result.success ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+              color: result.success ? AppColors.success : Colors.redAccent,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                result.message ?? (result.success ? 'Saved to Photos!' : 'Export failed'),
+                style: TextStyle(
+                  color: result.success ? AppColors.success : Colors.redAccent,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _exportAllPages(
+    BuildContext context,
+    BuildContext sheetCtx,
+    EditorState state,
+    ExportImageFormat format,
+  ) async {
+    Navigator.pop(sheetCtx);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: AppColors.surfaceElevated,
+        duration: Duration(seconds: 4),
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+            ),
+            SizedBox(width: 12),
+            Text('Saving all slides to Photos (Layerly album)...', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
+    );
+
+    final result = await ExportService.exportAllPagesToGallery(
+      project: state.project,
+      format: format,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surfaceElevated,
+        content: Row(
+          children: [
+            Icon(
+              result.success ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+              color: result.success ? AppColors.success : Colors.redAccent,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                result.message ?? (result.success ? 'Saved all slides to Photos!' : 'Export failed'),
+                style: TextStyle(
+                  color: result.success ? AppColors.success : Colors.redAccent,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

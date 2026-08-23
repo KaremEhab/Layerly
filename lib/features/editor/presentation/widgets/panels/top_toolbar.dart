@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
+import 'package:layerly/features/editor/domain/services/export_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
@@ -207,9 +208,9 @@ class TopToolbar extends StatelessWidget {
         ),
         title: const Row(
           children: [
-            Icon(Icons.download_done_rounded, color: AppColors.primary),
+            Icon(Icons.photo_library_rounded, color: AppColors.primary),
             SizedBox(width: 10),
-            Text('Export Content', style: TextStyle(color: Colors.white, fontSize: 16)),
+            Text('Export to Photos', style: TextStyle(color: Colors.white, fontSize: 16)),
           ],
         ),
         content: Column(
@@ -217,22 +218,61 @@ class TopToolbar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Export ${state.project.pages.length} carousel slides directly to device.',
+              'Save design slides directly to your phone\'s Photo Gallery.',
               style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 16),
             _buildExportOption(
               icon: Icons.image_rounded,
-              title: 'PNG Image Sequence',
-              subtitle: '1080 × 1080 (High Resolution)',
-              onTap: () {
+              title: 'Current Slide (PNG)',
+              subtitle: '${state.activePage.width.round()} × ${state.activePage.height.round()} (High Resolution)',
+              onTap: () async {
                 Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: AppColors.surfaceElevated,
+                    content: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Saving to Photos (Layerly album)...', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                );
+
+                final res = await ExportService.exportPageToGallery(
+                  page: state.activePage,
+                  project: state.project,
+                );
+
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: AppColors.surfaceElevated,
-                    content: Text(
-                      'Exported ${state.project.pages.length} slides successfully to local storage (Offline)!',
-                      style: const TextStyle(color: AppColors.success),
+                    content: Row(
+                      children: [
+                        Icon(
+                          res.success ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+                          color: res.success ? AppColors.success : Colors.redAccent,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            res.message ?? (res.success ? 'Saved to Photos!' : 'Export failed'),
+                            style: TextStyle(
+                              color: res.success ? AppColors.success : Colors.redAccent,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -240,17 +280,55 @@ class TopToolbar extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _buildExportOption(
-              icon: Icons.picture_as_pdf_rounded,
-              title: 'PDF Carousel Document',
-              subtitle: 'Multi-page presentation',
-              onTap: () {
+              icon: Icons.collections_rounded,
+              title: 'All Slides (${state.project.pages.length} Pages)',
+              subtitle: 'Save entire carousel to Photos album',
+              onTap: () async {
                 Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: AppColors.surfaceElevated,
+                    content: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Saving all slides to Photos...', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                );
+
+                final res = await ExportService.exportAllPagesToGallery(
+                  project: state.project,
+                );
+
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: AppColors.surfaceElevated,
-                    content: const Text(
-                      'PDF generated successfully!',
-                      style: TextStyle(color: AppColors.success),
+                    content: Row(
+                      children: [
+                        Icon(
+                          res.success ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+                          color: res.success ? AppColors.success : Colors.redAccent,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            res.message ?? (res.success ? 'Saved all slides to Photos!' : 'Export failed'),
+                            style: TextStyle(
+                              color: res.success ? AppColors.success : Colors.redAccent,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
