@@ -20,7 +20,6 @@ import 'package:layerly/features/editor/domain/entities/component_instance_layer
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/vector_layer.dart';
 import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'package:layerly/features/editor/presentation/widgets/canvas/vector_node_editor.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
@@ -99,8 +98,9 @@ class PropertiesPanel extends StatelessWidget {
           );
         } else {
           final isMultiCard = selectedLayers.length == 1 &&
-              selectedLayers.first is AutoLayoutLayer &&
-              (selectedLayers.first as AutoLayoutLayer).children.isNotEmpty;
+              ((selectedLayers.first is AutoLayoutLayer &&
+               (selectedLayers.first as AutoLayoutLayer).children.isNotEmpty) ||
+               selectedLayers.first is DeviceMockupLayer);
 
           return Padding(
             padding: EdgeInsets.symmetric(
@@ -3022,8 +3022,59 @@ class PropertiesPanel extends StatelessWidget {
 
 
 
-  // 8. Device Mockup Properties
+  // 8. Device Mockup Properties (Horizontal Carousel of uniform compact cards)
   Widget _buildDeviceMockupProperties(
+    BuildContext context,
+    DeviceMockupLayer layer,
+  ) {
+    final cards = <Widget>[
+      _buildMockupDeviceCard(context, layer),
+      _buildMockupFramingCard(context, layer),
+      _buildMockupEffectsCard(context, layer),
+    ];
+
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    if (isDesktop) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          cards[0],
+          const SizedBox(height: 12),
+          cards[1],
+          const SizedBox(height: 12),
+          cards[2],
+        ],
+      );
+    }
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = math.max(350.0, screenWidth * 0.85);
+
+    return SizedBox(
+      height: 108,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: cards.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (ctx, idx) =>
+            SizedBox(width: cardWidth, child: cards[idx]),
+      ),
+    );
+  }
+
+  IconData _getDeviceIcon(MockupDevice device) {
+    return switch (device) {
+      MockupDevice.macbook || MockupDevice.browser => Icons.laptop_mac_rounded,
+      MockupDevice.ipadPro => Icons.tablet_mac_rounded,
+      MockupDevice.appleWatch => Icons.watch_rounded,
+      _ => Icons.phone_iphone_rounded,
+    };
+  }
+
+  Widget _buildMockupDeviceCard(
     BuildContext context,
     DeviceMockupLayer layer,
   ) {
@@ -3031,24 +3082,26 @@ class PropertiesPanel extends StatelessWidget {
     final currentDef = MockupDefinition.fromDevice(layer.device);
 
     return Container(
+      constraints: const BoxConstraints(minHeight: 104),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Device Icon, Name, and Quick Upload
+          // Header: Device Icon, Name, Subtitle, and Gallery / More Actions
           Row(
             children: [
-              _buildTypeIconBox(Icons.phone_iphone_rounded),
+              _buildTypeIconBox(_getDeviceIcon(layer.device)),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       layer.name,
@@ -3057,6 +3110,7 @@ class PropertiesPanel extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       currentDef.name,
@@ -3064,61 +3118,89 @@ class PropertiesPanel extends StatelessWidget {
                         color: AppColors.textSecondary,
                         fontSize: 11,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
               InkWell(
-                onTap: () async {
-                  final picker = ImagePicker();
-                  final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
-                  if (picked != null) {
-                    bloc.add(UpdateLayerEvent(layer.copyWith(screenImagePath: picked.path)));
-                  }
-                },
+                onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0984E3).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF0984E3).withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: const Color(0xFF0984E3).withValues(alpha: 0.5),
+                    ),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.photo_library_outlined, size: 12, color: Color(0xFF74B9FF)),
+                      Icon(Icons.photo_library_outlined, size: 13, color: Color(0xFF74B9FF)),
                       SizedBox(width: 4),
                       Text(
                         'Gallery',
-                        style: TextStyle(color: Color(0xFF74B9FF), fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Color(0xFF74B9FF),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Device Selector Dropdown
-          Row(
-            children: [
-              const SizedBox(
-                width: 65,
-                child: Text(
-                  'Device',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+              const SizedBox(width: 6),
+              Builder(
+                builder: (btnContext) => InkWell(
+                  onTap: () {
+                    final box = btnContext.findRenderObject() as RenderBox?;
+                    final pos = box != null
+                        ? box.localToGlobal(Offset(0, box.size.height + 6))
+                        : const Offset(300, 200);
+                    showFigmaContextMenu(
+                      context: context,
+                      globalPosition: pos,
+                      state: context.read<EditorBloc>().state,
+                      bloc: context.read<EditorBloc>(),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: const MoreRingsIcon(
+                      color: Colors.white70,
+                      size: 18,
+                      ringRadius: 2.1,
+                      strokeWidth: 1.4,
+                      spacing: 1.0,
+                    ),
+                  ),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Controls Row: Device Model Dropdown + Pick / Replace Image Pill
+          Row(
+            children: [
+              // Device Selector Dropdown
               Expanded(
+                flex: 5,
                 child: Container(
                   height: 36,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<MockupDevice>(
@@ -3179,46 +3261,43 @@ class PropertiesPanel extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
+              const SizedBox(width: 8),
 
-          // Artwork Image Management Row
-          Row(
-            children: [
-              const SizedBox(
-                width: 65,
-                child: Text(
-                  'Artwork',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
-                ),
-              ),
+              // Pick/Replace Image Action Pill
               Expanded(
+                flex: 4,
                 child: InkWell(
-                  onTap: () async {
-                    final picker = ImagePicker();
-                    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
-                    if (picked != null) {
-                      bloc.add(UpdateLayerEvent(layer.copyWith(screenImagePath: picked.path)));
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => showImagePickerBottomSheet(context, targetLayer: layer),
+                  borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    height: 34,
+                    height: 36,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceSecondary,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     alignment: Alignment.center,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.add_photo_alternate_outlined, color: Color(0xFFA78BFA), size: 14),
+                        Icon(
+                          layer.screenImagePath != null
+                              ? Icons.sync_rounded
+                              : Icons.add_photo_alternate_rounded,
+                          color: const Color(0xFFA78BFA),
+                          size: 14,
+                        ),
                         const SizedBox(width: 6),
-                        Text(
-                          layer.screenImagePath != null ? 'Replace image' : 'Pick image',
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        Flexible(
+                          child: Text(
+                            layer.screenImagePath != null ? 'Replace' : 'Pick image',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -3231,38 +3310,106 @@ class PropertiesPanel extends StatelessWidget {
                   onTap: () {
                     bloc.add(UpdateLayerEvent(layer.copyWith(screenImagePath: null)));
                   },
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    width: 34,
-                    height: 34,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: const Color(0xFFFF5C67).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(Icons.delete_outline, color: Color(0xFFFF5C67), size: 16),
+                    child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF5C67), size: 16),
                   ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
 
-          // Image Fit Row: Cover, Contain, Fill
+  Widget _buildMockupFramingCard(
+    BuildContext context,
+    DeviceMockupLayer layer,
+  ) {
+    final bloc = context.read<EditorBloc>();
+    final isNonDefaultScale = (layer.imageScale - 1.0).abs() > 0.01;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 104),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Framing Icon, Title, Subtitle, Scale reset button
           Row(
             children: [
-              const SizedBox(
-                width: 65,
-                child: Text(
-                  'Fit',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+              _buildTypeIconBox(Icons.aspect_ratio_rounded),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Artwork Framing',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${layer.imageFit.name.toUpperCase()} • ${(layer.imageScale * 100).toInt()}% Zoom',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
+              if (isNonDefaultScale)
+                InkWell(
+                  onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(imageScale: 1.0))),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: const Text(
+                      'Reset 100%',
+                      style: TextStyle(color: Color(0xFF9B6CFF), fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Controls Row: Fit Segmented (Cover / Contain / Fill) + Scale Slider
+          Row(
+            children: [
+              // Fit Segmented Control
               Expanded(
+                flex: 5,
                 child: Container(
-                  height: 32,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
                     children: [
@@ -3291,65 +3438,123 @@ class PropertiesPanel extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+
+              // Scale Slider Pill
+              Expanded(
+                flex: 5,
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.zoom_in_rounded, size: 14, color: AppColors.textSecondary),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderThemeData(
+                            trackHeight: 3,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                            activeTrackColor: const Color(0xFF9B6CFF),
+                            inactiveTrackColor: Colors.white12,
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: layer.imageScale.clamp(0.5, 2.5),
+                            min: 0.5,
+                            max: 2.5,
+                            onChanged: (v) {
+                              bloc.add(UpdateLayerEvent(layer.copyWith(imageScale: (v * 100).round() / 100)));
+                            },
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${(layer.imageScale * 100).toInt()}%',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
 
-          // Scale Slider Row
+  Widget _buildMockupEffectsCard(
+    BuildContext context,
+    DeviceMockupLayer layer,
+  ) {
+    final bloc = context.read<EditorBloc>();
+    final currentDef = MockupDefinition.fromDevice(layer.device);
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 104),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Overlays Icon, Title, Subtitle
           Row(
             children: [
-              const SizedBox(
-                width: 65,
-                child: Text(
-                  'Scale',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
-                ),
-              ),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderThemeData(
-                    trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                    activeTrackColor: const Color(0xFF9B6CFF),
-                    inactiveTrackColor: Colors.white12,
-                    thumbColor: Colors.white,
-                  ),
-                  child: Slider(
-                    value: layer.imageScale.clamp(0.5, 2.5),
-                    min: 0.5,
-                    max: 2.5,
-                    onChanged: (v) {
-                      bloc.add(UpdateLayerEvent(layer.copyWith(imageScale: (v * 100).round() / 100)));
-                    },
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 44,
-                child: Text(
-                  '${(layer.imageScale * 100).toInt()}%',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+              _buildTypeIconBox(Icons.auto_awesome_rounded),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Device Overlays',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Dynamic Island, Glass Glare & Realistic Shadow',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
-          // Toggles: Dynamic Island & Glass Glare
+          // Controls Row: Island, Glare, Shadow toggles
           Row(
             children: [
               if (currentDef.hasDynamicIsland) ...[
                 Expanded(
                   child: InkWell(
                     onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(showDynamicIsland: !layer.showDynamicIsland))),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(18),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         color: layer.showDynamicIsland ? const Color(0xFF9B6CFF).withValues(alpha: 0.18) : AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(
                           color: layer.showDynamicIsland ? const Color(0xFF9B6CFF).withValues(alpha: 0.4) : Colors.transparent,
                         ),
@@ -3362,12 +3567,12 @@ class PropertiesPanel extends StatelessWidget {
                             size: 13,
                             color: layer.showDynamicIsland ? const Color(0xFFB388FF) : AppColors.textSecondary,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 5),
                           Text(
                             'Island',
                             style: TextStyle(
                               color: layer.showDynamicIsland ? Colors.white : AppColors.textSecondary,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -3381,12 +3586,13 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: InkWell(
                   onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(showGlare: !layer.showGlare))),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: layer.showGlare ? const Color(0xFF9B6CFF).withValues(alpha: 0.18) : AppColors.surfaceSecondary,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: layer.showGlare ? const Color(0xFF9B6CFF).withValues(alpha: 0.4) : Colors.transparent,
                       ),
@@ -3399,12 +3605,12 @@ class PropertiesPanel extends StatelessWidget {
                           size: 13,
                           color: layer.showGlare ? const Color(0xFFB388FF) : AppColors.textSecondary,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 5),
                         Text(
                           'Glare',
                           style: TextStyle(
                             color: layer.showGlare ? Colors.white : AppColors.textSecondary,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -3417,12 +3623,13 @@ class PropertiesPanel extends StatelessWidget {
               Expanded(
                 child: InkWell(
                   onTap: () => bloc.add(UpdateLayerEvent(layer.copyWith(showShadow: !layer.showShadow))),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: layer.showShadow ? const Color(0xFF9B6CFF).withValues(alpha: 0.18) : AppColors.surfaceSecondary,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: layer.showShadow ? const Color(0xFF9B6CFF).withValues(alpha: 0.4) : Colors.transparent,
                       ),
@@ -3435,12 +3642,12 @@ class PropertiesPanel extends StatelessWidget {
                           size: 13,
                           color: layer.showShadow ? const Color(0xFFB388FF) : AppColors.textSecondary,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 5),
                         Text(
                           'Shadow',
                           style: TextStyle(
                             color: layer.showShadow ? Colors.white : AppColors.textSecondary,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -3465,16 +3672,17 @@ class PropertiesPanel extends StatelessWidget {
       onTap: onTap,
       child: Container(
         alignment: Alignment.center,
+        margin: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF9B6CFF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: isSelected ? Colors.white : AppColors.textSecondary,
             fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
       ),
