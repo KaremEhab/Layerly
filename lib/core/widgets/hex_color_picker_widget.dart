@@ -154,7 +154,7 @@ class _HexColorPickerWidgetState extends State<HexColorPickerWidget> {
         ColorPicker(
           pickerColor: _currentColor,
           onColorChanged: _onColorPicked,
-          showLabel: false,
+          labelTypes: const [],
           enableAlpha: false,
           pickerAreaHeightPercent: widget.pickerAreaHeightPercent,
         ),

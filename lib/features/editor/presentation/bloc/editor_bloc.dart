@@ -2126,8 +2126,8 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       }
     }
 
-    final paddingH = (textLayer.padding.horizontal ?? 0.0);
-    final paddingV = (textLayer.padding.vertical ?? 0.0);
+    final paddingH = textLayer.padding.horizontal;
+    final paddingV = textLayer.padding.vertical;
 
     // Precise intrinsic width and height without artificial bloating
     final measuredWidth = (maxLineWidth + paddingH + 4.0)

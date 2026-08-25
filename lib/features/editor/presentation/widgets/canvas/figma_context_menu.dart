@@ -931,197 +931,7 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
     );
   }
 
-  void _showScaleDialog(BuildContext context, Layer layer) {
-    double scaleFactor = 1.0;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) {
-          final isAutoLayout = layer is AutoLayoutLayer;
-          final currentW = layer.width;
-          final currentH = layer.height;
-          final newW = (currentW * scaleFactor).round();
-          final newH = (currentH * scaleFactor).round();
-
-          return AlertDialog(
-            backgroundColor: const Color(0xFF1E1E24),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-            ),
-            title: Row(
-              children: [
-                const Icon(Icons.aspect_ratio_rounded, size: 18, color: Color(0xFF0D99FF)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Scale ${layer.name}',
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (isAutoLayout) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D99FF).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF0D99FF).withValues(alpha: 0.3)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF0D99FF)),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Scales container, font sizes, gaps, padding, and all nested elements proportionally.',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-
-                  // Percentage Stepper & Input
-                  const Text('Scale Percentage', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2A2A35),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove, size: 16, color: Colors.white70),
-                              onPressed: () {
-                                setDialogState(() {
-                                  scaleFactor = (scaleFactor - 0.1).clamp(0.1, 10.0);
-                                });
-                              },
-                            ),
-                            SizedBox(
-                              width: 50,
-                              child: Text(
-                                '${(scaleFactor * 100).round()}%',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add, size: 16, color: Colors.white70),
-                              onPressed: () {
-                                setDialogState(() {
-                                  scaleFactor = (scaleFactor + 0.1).clamp(0.1, 10.0);
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2A2A32),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.white12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Dimensions', style: TextStyle(color: Colors.white38, fontSize: 10)),
-                              const SizedBox(height: 2),
-                              Text(
-                                '$newW × $newH px',
-                                style: const TextStyle(color: Color(0xFF0D99FF), fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Quick Presets
-                  const Text('Quick Presets', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final preset in [0.5, 0.75, 0.9, 1.1, 1.25, 1.5, 2.0])
-                        InkWell(
-                          onTap: () {
-                            setDialogState(() {
-                              scaleFactor = preset;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: (scaleFactor - preset).abs() < 0.01 ? const Color(0xFF0D99FF) : const Color(0xFF2A2A35),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${preset}x',
-                              style: TextStyle(
-                                color: (scaleFactor - preset).abs() < 0.01 ? Colors.white : Colors.white70,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  widget.bloc.add(ScaleLayerEvent(
-                    layerId: layer.id,
-                    scaleFactor: scaleFactor,
-                  ));
-                  Navigator.pop(ctx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D99FF),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Apply Scale'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
 
   void _showAutoLayoutSettingsDialog(BuildContext context, AutoLayoutLayer layer) {
     Color? selectedBgColor = layer.backgroundColor;
@@ -1196,7 +1006,7 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                       hasBgFill = true;
                     });
                   },
-                  showLabel: false,
+                  labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
                 ),
@@ -1445,7 +1255,7 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                       hasStroke = true;
                     });
                   },
-                  showLabel: false,
+                  labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
                 ),

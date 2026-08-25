@@ -1040,8 +1040,8 @@ class LayerView extends StatelessWidget {
       }
     }
 
-    final paddingH = textLayer.padding.horizontal ?? 0.0;
-    final paddingV = textLayer.padding.vertical ?? 0.0;
+    final paddingH = textLayer.padding.horizontal;
+    final paddingV = textLayer.padding.vertical;
 
     return Size(
       (maxLineWidth + paddingH + 4.0).ceilToDouble().clamp(
@@ -1443,18 +1443,7 @@ class LayerView extends StatelessWidget {
     }
   }
 
-  MainAxisAlignment _getFlexMainAxis(AutoLayoutDistribution dist) {
-    switch (dist) {
-      case AutoLayoutDistribution.start:
-        return MainAxisAlignment.start;
-      case AutoLayoutDistribution.center:
-        return MainAxisAlignment.center;
-      case AutoLayoutDistribution.end:
-        return MainAxisAlignment.end;
-      case AutoLayoutDistribution.spaceBetween:
-        return MainAxisAlignment.spaceBetween;
-    }
-  }
+
 
   CrossAxisAlignment _getFlexCrossAxis(AutoLayoutAlignment align) {
     switch (align) {

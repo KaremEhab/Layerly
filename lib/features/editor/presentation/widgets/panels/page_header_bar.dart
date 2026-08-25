@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
-import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/figma_context_menu.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
@@ -20,7 +19,6 @@ class PageHeaderBar extends StatelessWidget {
     return BlocBuilder<EditorBloc, EditorState>(
       builder: (context, state) {
         final activePage = state.activePage;
-        final activeIndex = state.project.activePageIndex;
 
         return Container(
           height: 48,
@@ -75,125 +73,6 @@ class PageHeaderBar extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  void _showPageOptionsSheet(BuildContext context, int pageIndex, EditorState state) {
-    final bloc = context.read<EditorBloc>();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B1927),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  'Page options',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.copy_rounded, color: AppColors.text, size: 18),
-                title: const Text('Duplicate page', style: TextStyle(color: Colors.white, fontSize: 14)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  bloc.add(DuplicatePageEvent(pageIndex));
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.edit_outlined, color: AppColors.text, size: 18),
-                title: const Text('Rename page', style: TextStyle(color: Colors.white, fontSize: 14)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showRenamePageDialog(context, pageIndex, state.project.pages[pageIndex].name);
-                },
-              ),
-              if (state.project.pages.length > 1)
-                ListTile(
-                  leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 18),
-                  title: const Text('Delete page', style: TextStyle(color: AppColors.danger, fontSize: 14)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    bloc.add(DeletePageEvent(pageIndex));
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showRenamePageDialog(BuildContext context, int pageIndex, String currentName) {
-    final controller = TextEditingController(text: currentName);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: const Text(
-          'Rename page',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surfaceSecondary,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.primary),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                context.read<EditorBloc>().add(RenamePageEvent(pageIndex, controller.text.trim()));
-              }
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
     );
   }
 }

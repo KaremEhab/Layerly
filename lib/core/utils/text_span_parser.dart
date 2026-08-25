@@ -325,6 +325,11 @@ class RichColorTextEditingController extends TextEditingController {
     notifyListeners();
   }
 
+  void clearRanges() {
+    ranges.clear();
+    notifyListeners();
+  }
+
   String toTaggedString() {
     if (ranges.isEmpty) return text;
     final buffer = StringBuffer();

@@ -1031,39 +1031,7 @@ class _BottomToolboxState extends State<BottomToolbox> {
   }
 }
 
-class _AssetCategoryCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
 
-  const _AssetCategoryCard({required this.icon, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 90,
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.primary, size: 22),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _PhotoIconPainter extends CustomPainter {
   final Color color;

@@ -556,6 +556,8 @@ void main() {
 
         final fixedLayout =
             bloc.state.activePage.layers.first as AutoLayoutLayer;
+        expect(fixedLayout.horizontalSizing, AutoLayoutSizingMode.fixed);
+
         // 3. Change width sizing to fill (takes full page margin width: 1080 - 2 * 60 = 960)
         bloc.add(
           const UpdateAutoLayoutEvent(

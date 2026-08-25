@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -2674,18 +2673,7 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  String _getHeadLabel(ArrowHeadStyle style) {
-    return switch (style) {
-      ArrowHeadStyle.none => 'None',
-      ArrowHeadStyle.round => 'Round',
-      ArrowHeadStyle.square => 'Square',
-      ArrowHeadStyle.lineArrow => 'Line arrow',
-      ArrowHeadStyle.triangleArrow => 'Triangle',
-      ArrowHeadStyle.reversedTriangle => 'Rev triangle',
-      ArrowHeadStyle.circleArrow => 'Circle',
-      ArrowHeadStyle.diamondArrow => 'Diamond',
-    };
-  }
+
 
   Widget _buildHeadPreviewIcon(ArrowHeadStyle style, {required bool isStart}) {
     return SizedBox(
@@ -3032,113 +3020,7 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  void _showSvgCodeEditorDialog(BuildContext context, ImageLayer layer) {
-    String initialCode = layer.svgContent ?? '';
-    if (initialCode.isEmpty && layer.imagePath != null) {
-      try {
-        final f = File(layer.imagePath!);
-        if (f.existsSync()) {
-          initialCode = f.readAsStringSync();
-        }
-      } catch (_) {}
-    }
-    if (initialCode.isEmpty) {
-      initialCode = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">\n  <circle cx="50" cy="50" r="40" fill="#6C5CE7" />\n</svg>';
-    }
 
-    final textController = TextEditingController(text: initialCode);
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF161522),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF55EFC4).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.code_rounded, color: Color(0xFF55EFC4), size: 18),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Live SVG Code Editor',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 18),
-              onPressed: () => Navigator.pop(dialogCtx),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 500,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Edit or paste SVG XML markup below. Changes update the canvas in real time.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                height: 220,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F0E17),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF2E2A42)),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: TextField(
-                  controller: textController,
-                  maxLines: null,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: Color(0xFF55EFC4),
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6C5CE7),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              final newCode = textController.text.trim();
-              if (newCode.isNotEmpty) {
-                context.read<EditorBloc>().add(
-                  UpdateLayerEvent(layer.copyWith(svgContent: newCode)),
-                );
-              }
-              Navigator.pop(dialogCtx);
-            },
-            child: const Text('Apply SVG to Canvas'),
-          ),
-        ],
-      ),
-    );
-  }
 
   // 8. Device Mockup Properties
   Widget _buildDeviceMockupProperties(
@@ -4094,47 +3976,7 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildAutoLayoutSettingsSquare(
-    BuildContext context,
-    AutoLayoutLayer layer,
-    ValueChanged<AutoLayoutLayer> onUpdate,
-  ) {
-    final hasStroke =
-        layer.strokeColor != null &&
-        layer.strokeColor != Colors.transparent &&
-        layer.strokeWidth > 0;
-    return InkWell(
-      onTap: () => _showAutoLayoutSettingsDialog(
-        context,
-        layer: layer,
-        onUpdate: onUpdate,
-      ),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceSecondary,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: hasStroke
-                ? (layer.strokeColor ?? Colors.white)
-                : Colors.white.withValues(alpha: 0.18),
-            width: hasStroke ? (layer.strokeWidth.clamp(1.0, 3.0)) : 1.2,
-          ),
-        ),
-        child: Center(
-          child: Icon(
-            Icons.tune_rounded,
-            size: 14,
-            color: hasStroke
-                ? (layer.strokeColor ?? Colors.white)
-                : Colors.white60,
-          ),
-        ),
-      ),
-    );
-  }
+
 
   void _showAutoLayoutSettingsDialog(
     BuildContext context, {
@@ -4247,7 +4089,7 @@ class PropertiesPanel extends StatelessWidget {
                       hasBgFill = true;
                     });
                   },
-                  showLabel: false,
+                  labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
                 ),
@@ -4620,7 +4462,7 @@ class PropertiesPanel extends StatelessWidget {
                       hasStroke = true;
                     });
                   },
-                  showLabel: false,
+                  labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
                 ),
@@ -4980,7 +4822,7 @@ class PropertiesPanel extends StatelessWidget {
                       hasBgFill = true;
                     });
                   },
-                  showLabel: false,
+                  labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
                 ),
@@ -5343,7 +5185,7 @@ class PropertiesPanel extends StatelessWidget {
                       hasStroke = true;
                     });
                   },
-                  showLabel: false,
+                  labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
                 ),
@@ -5469,11 +5311,6 @@ class PropertiesPanel extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          final words = TextSpanParser.extractCleanWordSegments(
-            controller.text,
-            controller.ranges,
-          );
-
           // Update active color based on cursor position
           if (controller.selection.isValid && controller.selection.isCollapsed) {
             final cursorColor = controller.getColorAtCursor(controller.selection.baseOffset);
@@ -5853,8 +5690,7 @@ class PropertiesPanel extends StatelessWidget {
                                 if (controller.selection.isValid && !controller.selection.isCollapsed) {
                                   controller.applyColorToSelection(null);
                                 } else {
-                                  controller.ranges.clear();
-                                  controller.notifyListeners();
+                                  controller.clearRanges();
                                 }
                                 setModalState(() {});
                               },

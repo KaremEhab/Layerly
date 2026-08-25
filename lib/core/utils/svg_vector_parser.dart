@@ -48,7 +48,7 @@ class SvgVectorParser {
     );
   }
 
-  /// Parses all SVG elements (<path>, <circle>, <rect>, <polygon>, <polyline>, <ellipse>)
+  /// Parses all SVG elements (`<path>`, `<circle>`, `<rect>`, `<polygon>`, `<polyline>`, `<ellipse>`)
   /// into discrete [VectorPathElement] sub-layers preserving fills, strokes, and coordinates.
   static List<VectorPathElement> parseSvgElements(String svgXml) {
     final List<_RawSvgElement> rawElements = [];

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -152,12 +151,8 @@ class ExportService {
       }
 
       // 2. Desktop (Windows / macOS / Linux) or mobile fallback: Save to Downloads / Documents
-      final Directory? baseDir = await getDownloadsDirectory() ??
+      final Directory baseDir = await getDownloadsDirectory() ??
           await getApplicationDocumentsDirectory();
-
-      if (baseDir == null) {
-        throw Exception('Could not determine local storage directory.');
-      }
 
       final exportDir = Directory('${baseDir.path}${Platform.pathSeparator}Layerly');
       if (!await exportDir.exists()) {

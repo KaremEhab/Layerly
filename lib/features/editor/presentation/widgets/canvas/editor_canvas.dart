@@ -66,7 +66,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
 
     _transformController.value = Matrix4.identity()
       ..setTranslationRaw(dx > 0 ? dx : 40.0, dy > 0 ? dy : 40.0, 0.0)
-      ..scale(state.zoom, state.zoom, 1.0);
+      ..scaleByDouble(state.zoom, state.zoom, 1.0, 1.0);
   }
 
   @override
