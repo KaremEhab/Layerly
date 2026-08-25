@@ -876,7 +876,11 @@ class _LayersPanelState extends State<LayersPanel> {
             ? Border.all(color: AppColors.primary.withValues(alpha: 0.5))
             : Border.all(color: Colors.transparent),
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
         dense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
         leading: Row(
@@ -980,7 +984,8 @@ class _LayersPanelState extends State<LayersPanel> {
           context.read<EditorBloc>().add(SelectLayerEvent(layer.id, isMultiSelect: true));
         },
       ),
-    );
+    ),
+  );
 
     return LongPressDraggable<Layer>(
       data: layer,

@@ -9,6 +9,7 @@ import 'package:layerly/features/editor/domain/entities/shape_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
 
 class PageStrip extends StatefulWidget {
@@ -184,63 +185,41 @@ class _PageStripState extends State<PageStrip> {
 
   void _showAddSlideTemplateSheet(BuildContext context) {
     final bloc = context.read<EditorBloc>();
-    showModalBottomSheet(
+    showAppModalSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B1927),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text(
-                  'Create new slide',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _buildTemplateChip(ctx, bloc, 'Blank', _createBlankPage),
-                  _buildTemplateChip(ctx, bloc, 'Redesign', _createRedesignPage),
-                  _buildTemplateChip(ctx, bloc, 'Problem', _createProblemPage),
-                  _buildTemplateChip(ctx, bloc, 'Solution', _createSolutionPage),
-                  _buildTemplateChip(ctx, bloc, 'Comparison', _createComparisonPage),
-                  _buildTemplateChip(ctx, bloc, 'Case Study', _createCaseStudyPage),
-                  _buildTemplateChip(ctx, bloc, 'Conclusion', _createConclusionPage),
-                  _buildTemplateChip(ctx, bloc, 'Custom', _createBlankPage),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
+      builder: (ctx) => AppModalSheet(
+        icon: Icons.post_add_rounded,
+        title: 'New Slide',
+        subtitle: 'Choose a preset layout template or start blank',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildTemplateCard(ctx, bloc, 'Blank', Icons.crop_portrait_rounded, 'Empty canvas', _createBlankPage),
+                _buildTemplateCard(ctx, bloc, 'Redesign', Icons.auto_awesome_rounded, 'App showcase', _createRedesignPage),
+                _buildTemplateCard(ctx, bloc, 'Problem', Icons.warning_amber_rounded, 'Pain point spotlight', _createProblemPage),
+                _buildTemplateCard(ctx, bloc, 'Solution', Icons.lightbulb_outline_rounded, 'Feature answer', _createSolutionPage),
+                _buildTemplateCard(ctx, bloc, 'Comparison', Icons.compare_arrows_rounded, 'Before vs After', _createComparisonPage),
+                _buildTemplateCard(ctx, bloc, 'Case Study', Icons.auto_stories_rounded, 'Story breakdown', _createCaseStudyPage),
+                _buildTemplateCard(ctx, bloc, 'Conclusion', Icons.task_alt_rounded, 'Summary & CTA', _createConclusionPage),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTemplateChip(
+  Widget _buildTemplateCard(
     BuildContext sheetCtx,
     EditorBloc bloc,
     String label,
+    IconData icon,
+    String subtitle,
     CanvasPage Function(String name) creator,
   ) {
     return InkWell(
@@ -248,17 +227,28 @@ class _PageStripState extends State<PageStrip> {
         Navigator.pop(sheetCtx);
         bloc.add(AddPageEvent(page: creator(label)));
       },
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.surfaceSecondary,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: const Color(0xFFA78BFA)),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -408,52 +398,39 @@ class _PageStripState extends State<PageStrip> {
 
   void _showSlideOptions(BuildContext context, int pageIndex, bool canDelete, String slideName) {
     final bloc = context.read<EditorBloc>();
-    showModalBottomSheet(
+    showAppModalSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B1927),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Wrap(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Text(
-                  'Slide options ($slideName)',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ListTile(
-              leading: const Icon(Icons.copy_rounded, color: Colors.white, size: 18),
-              title: const Text('Duplicate slide', style: TextStyle(color: Colors.white, fontSize: 13)),
+      builder: (ctx) => AppModalSheet(
+        icon: Icons.layers_rounded,
+        title: 'Slide Options',
+        subtitle: slideName,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSheetActionTile(
+              icon: Icons.copy_rounded,
+              iconColor: const Color(0xFFA78BFA),
+              title: 'Duplicate Slide',
+              subtitle: 'Create an exact copy right after this slide',
               onTap: () {
                 Navigator.pop(ctx);
                 bloc.add(DuplicatePageEvent(pageIndex));
               },
             ),
-            if (canDelete)
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 18),
-                title: const Text('Delete slide', style: TextStyle(color: AppColors.danger, fontSize: 13)),
+            if (canDelete) ...[
+              const SizedBox(height: 6),
+              AppSheetActionTile(
+                icon: Icons.delete_outline_rounded,
+                isDestructive: true,
+                title: 'Delete Slide',
+                subtitle: 'Permanently remove this slide from project',
                 onTap: () {
                   Navigator.pop(ctx);
                   bloc.add(DeletePageEvent(pageIndex));
                 },
               ),
             ],
-          ),
+          ],
         ),
       ),
     );

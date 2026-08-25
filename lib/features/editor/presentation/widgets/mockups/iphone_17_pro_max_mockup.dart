@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/features/editor/domain/entities/mockup_definition.dart';
 
 class Iphone17ProMaxMockup extends StatefulWidget {
@@ -44,13 +45,15 @@ class _Iphone17ProMaxMockupState extends State<Iphone17ProMaxMockup> {
   @override
   void didUpdateWidget(covariant Iphone17ProMaxMockup oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialImage != oldWidget.initialImage) {
-      _image = widget.initialImage;
+    if (oldWidget.initialImage != widget.initialImage) {
+      setState(() {
+        _image = widget.initialImage;
+      });
     }
   }
 
   Future<void> _pickImage() async {
-    final XFile? picked = await _picker.pickImage(
+    final picked = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 100,
     );
@@ -62,69 +65,42 @@ class _Iphone17ProMaxMockupState extends State<Iphone17ProMaxMockup> {
   }
 
   Future<void> _showPickerOptions() async {
-    await showModalBottomSheet<void>(
+    await showAppModalSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF191622),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(28),
-        ),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF706A7D),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Choose design',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _PickerOption(
-                  icon: Icons.photo_library_outlined,
-                  title: 'Choose from gallery',
-                  subtitle: 'Use an existing design image',
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _pickImage();
+      builder: (sheetCtx) {
+        return AppModalSheet(
+          icon: Icons.phone_iphone_rounded,
+          title: 'Device Screen Image',
+          subtitle: 'Choose or replace the device mockup screenshot',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppSheetActionTile(
+                icon: Icons.photo_library_outlined,
+                title: 'Choose from gallery',
+                subtitle: 'Use an existing design or screenshot image',
+                onTap: () async {
+                  Navigator.pop(sheetCtx);
+                  await _pickImage();
+                },
+              ),
+              if (_image != null) ...[
+                const SizedBox(height: 8),
+                AppSheetActionTile(
+                  icon: Icons.delete_outline_rounded,
+                  title: 'Remove design',
+                  subtitle: 'Return to the empty default screen',
+                  isDestructive: true,
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    setState(() {
+                      _image = null;
+                    });
+                    widget.onImageChanged?.call(null);
                   },
                 ),
-                if (_image != null) ...[
-                  const SizedBox(height: 10),
-                  _PickerOption(
-                    icon: Icons.delete_outline,
-                    title: 'Remove design',
-                    subtitle: 'Return to the empty mockup',
-                    destructive: true,
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() {
-                        _image = null;
-                      });
-                      widget.onImageChanged?.call(null);
-                    },
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         );
       },
@@ -386,79 +362,6 @@ class _EmptyScreen extends StatelessWidget {
                   color: Color(0xFFA7A1B5),
                   fontSize: 12,
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PickerOption extends StatelessWidget {
-  const _PickerOption({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.destructive = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final bool destructive;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = destructive ? const Color(0xFFFF5C67) : const Color(0xFF9B6CFF);
-    return Material(
-      color: const Color(0xFF211D2C),
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF706A7D),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: Color(0xFF706A7D),
               ),
             ],
           ),

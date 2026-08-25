@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/constants/responsive_breakpoints.dart';
+import 'package:layerly/core/widgets/app_dialog.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/features/editor/domain/services/export_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -444,58 +446,40 @@ class LayerlyAppBar extends StatelessWidget {
   }
 
   void _showLeaveConfirmDialog(BuildContext context) {
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: const Text(
-          'Leave design?',
-          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-        ),
+      builder: (ctx) => AppDialog(
+        icon: Icons.exit_to_app_rounded,
+        title: 'Leave design?',
+        subtitle: 'Return to your projects hub',
+        confirmLabel: 'Leave',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          Navigator.of(context).maybePop();
+        },
         content: const Text(
-          'Your latest changes are saved locally.',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          'Your latest changes are safely saved in local storage.',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Stay', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.of(context).maybePop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Leave'),
-          ),
-        ],
       ),
     );
   }
 
   void _showRenameDialog(BuildContext context, String currentName) {
     final controller = TextEditingController(text: currentName);
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: const Text(
-          'Rename design',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+      builder: (ctx) => AppDialog(
+        icon: Icons.edit_note_rounded,
+        title: 'Rename design',
+        subtitle: 'Update project title',
+        confirmLabel: 'Save',
+        onConfirm: () {
+          if (controller.text.trim().isNotEmpty) {
+            context.read<EditorBloc>().add(RenameProjectEvent(controller.text.trim()));
+          }
+          Navigator.pop(ctx);
+        },
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -503,116 +487,68 @@ class LayerlyAppBar extends StatelessWidget {
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.surfaceSecondary,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.primary),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                context.read<EditorBloc>().add(RenameProjectEvent(controller.text.trim()));
-              }
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
 
   void _showExportDialog(BuildContext context, EditorState state) {
-    showModalBottomSheet(
+    showAppModalSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B1927),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Export',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.textMuted, size: 20),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const Divider(color: AppColors.border, height: 24),
-              const Text(
-                'Current slide',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildFormatChip(
-                    context,
-                    'PNG (Photos)',
-                    () => _exportCurrentPage(context, ctx, state, ExportImageFormat.png),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildFormatChip(
-                    context,
-                    'JPG (Photos)',
-                    () => _exportCurrentPage(context, ctx, state, ExportImageFormat.jpg),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'All slides (${state.project.pages.length} pages)',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildFormatChip(
-                    context,
-                    'All to Photos',
-                    () => _exportAllPages(context, ctx, state, ExportImageFormat.png),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
+      builder: (ctx) => AppModalSheet(
+        icon: Icons.file_upload_outlined,
+        title: 'Export Studio',
+        subtitle: 'Save high-res renders to Photos or share',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Current slide',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildFormatChip(
+                  context,
+                  'PNG (Photos)',
+                  () => _exportCurrentPage(context, ctx, state, ExportImageFormat.png),
+                ),
+                const SizedBox(width: 8),
+                _buildFormatChip(
+                  context,
+                  'JPG (Photos)',
+                  () => _exportCurrentPage(context, ctx, state, ExportImageFormat.jpg),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'All slides (${state.project.pages.length} pages)',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildFormatChip(
+                  context,
+                  'All to Photos',
+                  () => _exportAllPages(context, ctx, state, ExportImageFormat.png),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
@@ -16,10 +17,8 @@ import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 /// Opens the professional Layer Hierarchy bottom sheet.
 void showLayersBottomSheet(BuildContext context, {EditorBloc? bloc}) {
   final editorBloc = bloc ?? context.read<EditorBloc>();
-  showModalBottomSheet(
+  showAppModalSheet(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
     builder: (ctx) => BlocProvider.value(
       value: editorBloc,
       child: _LayersSheetModal(bloc: editorBloc),
@@ -79,6 +78,7 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
         final layers = state.activePageLayers;
         final selectedCount = state.selectedLayerIds.length;
         final isMultiActive = _isMultiSelectMode || selectedCount > 1;
+        final allExpanded = _expandedLayerIds.isNotEmpty;
 
         if (!_initialized) {
           _expandAllAutoLayouts(layers);
@@ -87,146 +87,14 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
 
         final filteredLayers = _filterLayers(layers);
 
-        return SafeArea(
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-            height: MediaQuery.of(context).size.height * 0.78,
-            decoration: BoxDecoration(
-              color: const Color(0xFF131219),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  blurRadius: 32,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Sleek Header
-                _buildHeader(context, state, layers, isMultiActive, selectedCount),
-
-                // 2. Streamlined Search & Filter Bar
-                _buildSearchBar(),
-
-                // 3. Multi-Select Batch Actions Bar (shown when active)
-                if (isMultiActive)
-                  _buildBatchActionsBar(context, state, selectedCount),
-
-                const Divider(height: 1, color: Color(0xFF242232)),
-
-                // 4. Layers Tree View
-                Expanded(
-                  child: filteredLayers.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: filteredLayers.length + 1,
-                          itemBuilder: (ctx, index) {
-                            if (index == filteredLayers.length) {
-                              return _buildDropSlot(
-                                context,
-                                targetParentId: null,
-                                targetIndex: filteredLayers.length,
-                              );
-                            }
-
-                            final layer = filteredLayers[index];
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildDropSlot(
-                                  context,
-                                  targetParentId: null,
-                                  targetIndex: index,
-                                ),
-                                if (layer is AutoLayoutLayer)
-                                  _buildAutoLayoutTreeNode(
-                                    context,
-                                    state,
-                                    layer,
-                                    isMultiMode: isMultiActive,
-                                  )
-                                else
-                                  _buildStandardLayerTile(
-                                    context,
-                                    state,
-                                    layer,
-                                    isMultiMode: isMultiActive,
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHeader(
-    BuildContext context,
-    EditorState state,
-    List<Layer> layers,
-    bool isMultiActive,
-    int selectedCount,
-  ) {
-    final allExpanded = _expandedLayerIds.isNotEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 16, 6),
-      child: Column(
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
+        return AppModalSheet(
+          icon: Icons.layers_rounded,
+          title: 'Layers (${layers.length})',
+          subtitle: 'Hierarchy, auto layouts, ordering & locks',
+          maxHeightFactor: 0.82,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Layers',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF221F32),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF322E48)),
-                ),
-                child: Text(
-                  '${layers.length}',
-                  style: const TextStyle(
-                    color: Color(0xFFA78BFA),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-
-              const Spacer(),
-
               // Multi-Select toggle button
               InkWell(
                 onTap: () {
@@ -254,7 +122,7 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        isMultiActive && selectedCount > 0 ? '$selectedCount Selected' : 'Select',
+                        isMultiActive && selectedCount > 0 ? '$selectedCount' : 'Select',
                         style: TextStyle(
                           color: isMultiActive ? Colors.white : AppColors.textSecondary,
                           fontSize: 11,
@@ -266,18 +134,18 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
                 ),
               ),
 
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
 
               // Expand / Collapse all
               IconButton(
                 icon: Icon(
                   allExpanded ? Icons.unfold_less_rounded : Icons.unfold_more_rounded,
                   color: Colors.white70,
-                  size: 20,
+                  size: 18,
                 ),
                 tooltip: allExpanded ? 'Collapse All' : 'Expand All',
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 onPressed: () {
                   if (allExpanded) {
                     _collapseAll();
@@ -286,27 +154,69 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
                   }
                 },
               ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Streamlined Search & Filter Bar
+              _buildSearchBar(),
 
-              const SizedBox(width: 4),
+              // 2. Multi-Select Batch Actions Bar (shown when active)
+              if (isMultiActive)
+                _buildBatchActionsBar(context, state, selectedCount),
 
-              // Close
-              InkWell(
-                onTap: () => Navigator.pop(context),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22202C),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                ),
+              const SizedBox(height: 6),
+
+              // 3. Layers Tree View
+              Expanded(
+                child: filteredLayers.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: filteredLayers.length + 1,
+                        itemBuilder: (ctx, index) {
+                          if (index == filteredLayers.length) {
+                            return _buildDropSlot(
+                              context,
+                              targetParentId: null,
+                              targetIndex: filteredLayers.length,
+                            );
+                          }
+
+                          final layer = filteredLayers[index];
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildDropSlot(
+                                context,
+                                targetParentId: null,
+                                targetIndex: index,
+                              ),
+                              if (layer is AutoLayoutLayer)
+                                _buildAutoLayoutTreeNode(
+                                  context,
+                                  state,
+                                  layer,
+                                  isMultiMode: isMultiActive,
+                                ),
+                              if (layer is! AutoLayoutLayer)
+                                _buildStandardLayerTile(
+                                  context,
+                                  state,
+                                  layer,
+                                  isMultiMode: isMultiActive,
+                                ),
+                            ],
+                          );
+                        },
+                      ),
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

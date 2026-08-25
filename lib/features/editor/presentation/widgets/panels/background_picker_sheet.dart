@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/widgets/hex_color_picker_widget.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
+import 'package:layerly/core/widgets/app_dialog.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
@@ -266,10 +268,8 @@ const Map<String, List<Color>> kSolidPalettes = {
 
 void showBackgroundPickerSheet(BuildContext context, CanvasPage activePage, {EditorBloc? bloc}) {
   final editorBloc = bloc ?? context.read<EditorBloc>();
-  showModalBottomSheet(
+  showAppModalSheet(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
     builder: (ctx) => BlocProvider.value(
       value: editorBloc,
       child: _BackgroundPickerModal(activePage: activePage, bloc: editorBloc),
@@ -291,7 +291,7 @@ class _BackgroundPickerModal extends StatefulWidget {
 }
 
 class _BackgroundPickerModalState extends State<_BackgroundPickerModal>
-    with SingleTickerProviderStateMixin {
+  with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late BackgroundType _currentType;
   Color? _currentColor;
@@ -349,169 +349,88 @@ class _BackgroundPickerModalState extends State<_BackgroundPickerModal>
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-        maxWidth: 640,
-      ),
-      margin: EdgeInsets.only(
-        left: 12,
-        right: 12,
-        bottom: bottomInset > 0 ? bottomInset : 16,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFF16151E),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.6),
-            blurRadius: 36,
-            offset: const Offset(0, 16),
+    return AppModalSheet(
+      icon: Icons.auto_awesome_rounded,
+      title: 'Background Studio',
+      subtitle: 'Gradients, solid colors, and custom palettes',
+      maxHeightFactor: 0.85,
+      trailing: InkWell(
+        onTap: () {
+          _applyBackground(
+            type: BackgroundType.transparent,
+            color: Colors.transparent,
+          );
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: _currentType == BackgroundType.transparent
+                ? const Color(0xFF9E77F6).withValues(alpha: 0.25)
+                : const Color(0xFF24222E),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: _currentType == BackgroundType.transparent
+                  ? const Color(0xFF9E77F6)
+                  : Colors.white12,
+            ),
           ),
-        ],
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.block_rounded, size: 12, color: Colors.white70),
+              SizedBox(width: 4),
+              Text(
+                'Transparent',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Drag Handle & Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
-            child: Column(
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+          // Tabs Switcher Pill
+          Container(
+            height: 38,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1C28),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: const Color(0xFF6C5CE7),
+                borderRadius: BorderRadius.circular(9),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF9E77F6).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.auto_awesome_rounded,
-                        color: Color(0xFFB692F6),
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Background Studio',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Gradients, solid colors, and custom palettes',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Quick Transparent / No Fill Button
-                    InkWell(
-                      onTap: () {
-                        _applyBackground(
-                          type: BackgroundType.transparent,
-                          color: Colors.transparent,
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _currentType == BackgroundType.transparent
-                              ? const Color(0xFF9E77F6).withValues(alpha: 0.25)
-                              : const Color(0xFF24222E),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _currentType == BackgroundType.transparent
-                                ? const Color(0xFF9E77F6)
-                                : Colors.white12,
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.block_rounded, size: 13, color: Colors.white70),
-                            SizedBox(width: 5),
-                            Text(
-                              'Transparent',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 20),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
+                ],
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white60,
+              labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              tabs: const [
+                Tab(text: '✨ Gradients'),
+                Tab(text: '🎨 Solid'),
+                Tab(text: '⚙️ Custom'),
               ],
             ),
           ),
-
-          // Tabs Switcher Pill
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-            child: Container(
-              height: 40,
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: const Color(0xFF22202C),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicator: BoxDecoration(
-                  color: const Color(0xFF9E77F6),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white60,
-                labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                tabs: const [
-                  Tab(text: '✨ Gradients'),
-                  Tab(text: '🎨 Solid'),
-                  Tab(text: '⚙️ Custom'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
           // Tab Content
           Flexible(
@@ -943,24 +862,20 @@ class _BackgroundPickerModalState extends State<_BackgroundPickerModal>
 
     return InkWell(
       onTap: () {
-        showDialog(
+        showAppDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF1E1E24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text('Pick $label', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          builder: (ctx) => AppDialog(
+            icon: Icons.palette_rounded,
+            title: 'Pick $label',
+            subtitle: 'Choose custom hex or swatch color',
+            confirmLabel: 'Done',
+            onConfirm: () => Navigator.pop(ctx),
             content: SingleChildScrollView(
               child: HexColorPickerWidget(
                 initialColor: color,
                 onColorChanged: onChanged,
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Done', style: TextStyle(color: Color(0xFF9E77F6), fontWeight: FontWeight.bold)),
-              ),
-            ],
           ),
         );
       },

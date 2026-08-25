@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/utils/uuid_generator.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
 import 'package:layerly/features/editor/domain/entities/image_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
@@ -18,10 +19,8 @@ void showImagePickerBottomSheet(
   Layer? targetLayer,
 }) {
   final editorBloc = bloc ?? context.read<EditorBloc>();
-  showModalBottomSheet(
+  showAppModalSheet(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
     builder: (ctx) => BlocProvider.value(
       value: editorBloc,
       child: _ImagePickerSheetModal(
@@ -103,8 +102,7 @@ class _ImagePickerSheetModalState extends State<_ImagePickerSheetModal> {
   Future<void> _pickGenericImageFile() async {
     try {
       final result = await FilePickerPlatform.instance.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'],
+        type: FileType.image,
       );
       if (result.isNotEmpty && result.first.path != null && mounted) {
         final path = result.first.path!;
@@ -119,19 +117,14 @@ class _ImagePickerSheetModalState extends State<_ImagePickerSheetModal> {
   void _handlePickedFile(String filePath, String fileName) {
     Navigator.pop(context);
 
-    // If targetLayer is provided, update it in place
-    if (widget.targetLayer != null) {
-      if (widget.targetLayer is DeviceMockupLayer) {
-        final updated = (widget.targetLayer as DeviceMockupLayer).copyWith(
-          screenImagePath: filePath,
-        );
-        widget.bloc.add(UpdateLayerEvent(updated));
-      } else if (widget.targetLayer is ImageLayer) {
-        final updated = (widget.targetLayer as ImageLayer).copyWith(
-          imagePath: filePath,
-        );
-        widget.bloc.add(UpdateLayerEvent(updated));
-      }
+    // 📱 If target is DeviceMockupLayer, set it as the device screen
+    if (widget.targetLayer is DeviceMockupLayer) {
+      final mockup = widget.targetLayer as DeviceMockupLayer;
+      widget.bloc.add(
+        UpdateLayerEvent(
+          mockup.copyWith(screenImagePath: filePath),
+        ),
+      );
       return;
     }
 
@@ -172,126 +165,18 @@ class _ImagePickerSheetModalState extends State<_ImagePickerSheetModal> {
     return BlocBuilder<EditorBloc, EditorState>(
       bloc: widget.bloc,
       builder: (context, state) {
-        return SafeArea(
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF131219),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  blurRadius: 32,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Header
-                _buildHeader(context),
-
-                const Divider(height: 1, color: Color(0xFF242232)),
-
-                // 2. Upload Actions Grid
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-                  child: _buildUploadActionGrid(),
-                ),
-              ],
-            ),
+        return AppModalSheet(
+          icon: Icons.add_photo_alternate_rounded,
+          iconGradient: const LinearGradient(
+            colors: [Color(0xFF0984E3), Color(0xFF6C5CE7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          title: 'Media & Gallery Studio',
+          subtitle: 'Take photos, pick gallery, upload SVG or browse files',
+          child: _buildUploadActionGrid(),
         );
       },
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
-      child: Column(
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0984E3), Color(0xFF6C5CE7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0984E3).withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.add_photo_alternate_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Media & Gallery Studio',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Take photos, pick gallery, upload SVG or browse files',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              InkWell(
-                onTap: () => Navigator.pop(context),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22202C),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 

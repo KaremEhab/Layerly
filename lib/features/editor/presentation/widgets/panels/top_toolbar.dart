@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/features/editor/domain/services/export_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -198,31 +199,16 @@ class TopToolbar extends StatelessWidget {
   }
 
   void _showExportDialog(BuildContext context, EditorState state) {
-    showDialog(
+    showAppModalSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.photo_library_rounded, color: AppColors.primary),
-            SizedBox(width: 10),
-            Text('Export to Photos', style: TextStyle(color: Colors.white, fontSize: 16)),
-          ],
-        ),
-        content: Column(
+      builder: (ctx) => AppModalSheet(
+        icon: Icons.photo_library_rounded,
+        title: 'Export to Photos',
+        subtitle: 'Save design slides directly to your Photo Gallery',
+        child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Save design slides directly to your phone\'s Photo Gallery.',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            _buildExportOption(
+            AppSheetActionTile(
               icon: Icons.image_rounded,
               title: 'Current Slide (PNG)',
               subtitle: '${state.activePage.width.round()} × ${state.activePage.height.round()} (High Resolution)',
@@ -278,8 +264,8 @@ class TopToolbar extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 10),
-            _buildExportOption(
+            const SizedBox(height: 8),
+            AppSheetActionTile(
               icon: Icons.collections_rounded,
               title: 'All Slides (${state.project.pages.length} Pages)',
               subtitle: 'Save entire carousel to Photos album',
@@ -334,61 +320,6 @@ class TopToolbar extends StatelessWidget {
                 );
               },
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExportOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceSecondary,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.primary, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
           ],
         ),
       ),

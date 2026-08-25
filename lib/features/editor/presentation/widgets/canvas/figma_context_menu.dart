@@ -10,6 +10,7 @@ import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 import 'package:layerly/core/widgets/hex_color_picker_widget.dart';
+import 'package:layerly/core/widgets/app_dialog.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 
 void showFigmaContextMenu({
@@ -863,70 +864,58 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
   void _openColorPicker(BuildContext context, Color initialColor, ValueChanged<Color> onColorChanged) {
     Color selected = initialColor == Colors.transparent ? const Color(0xFF6C5CE7) : initialColor;
 
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E24),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-        ),
-        title: Row(
+      builder: (ctx) => AppDialog(
+        icon: Icons.palette_rounded,
+        title: 'Custom Color',
+        subtitle: 'Pick exact hex, rgb or swatch color',
+        confirmLabel: 'Apply',
+        onConfirm: () {
+          onColorChanged(selected);
+          Navigator.pop(ctx);
+        },
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Expanded(
-              child: Text('Custom Color', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                onTap: () {
+                  onColorChanged(Colors.transparent);
+                  Navigator.pop(ctx);
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF24222E),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.block_rounded, size: 12, color: Colors.white70),
+                      SizedBox(width: 5),
+                      Text('No Fill', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            InkWell(
-              onTap: () {
-                onColorChanged(Colors.transparent);
-                Navigator.pop(ctx);
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A35),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.block_rounded, size: 12, color: Colors.white70),
-                    SizedBox(width: 4),
-                    Text('No Fill', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
-                  ],
-                ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              child: HexColorPickerWidget(
+                initialColor: selected,
+                onColorChanged: (c) {
+                  selected = c;
+                },
               ),
             ),
           ],
         ),
-        content: SingleChildScrollView(
-          child: HexColorPickerWidget(
-            initialColor: selected,
-            onColorChanged: (c) {
-              selected = c;
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              onColorChanged(selected);
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D99FF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Apply'),
-          ),
-        ],
       ),
     );
   }
@@ -942,24 +931,25 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
     StrokePosition selectedStrokePos = layer.strokePosition;
     bool hasStroke = layer.strokeColor != null && layer.strokeColor != Colors.transparent && layer.strokeWidth > 0;
 
-    showDialog(
+    showAppDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.tune_rounded, size: 18, color: Color(0xFF0D99FF)),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text('Layout Settings', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+        builder: (dialogCtx, setDialogState) => AppDialog(
+          icon: Icons.tune_rounded,
+          title: 'Layout Settings',
+          subtitle: 'Configure fill background, border radius and strokes',
+          confirmLabel: 'Apply',
+          onConfirm: () {
+            widget.bloc.add(UpdateAutoLayoutEvent(
+              layerId: layer.id,
+              backgroundColor: hasBgFill ? selectedBgColor : Colors.transparent,
+              cornerRadius: selectedCornerRadius,
+              strokeColor: hasStroke ? selectedStrokeColor : Colors.transparent,
+              strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
+              strokePosition: selectedStrokePos,
+            ));
+            Navigator.pop(ctx);
+          },
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1007,39 +997,9 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                     });
                   },
                   labelTypes: const [],
-                  enableAlpha: false,
+                  enableAlpha: true,
                   pickerAreaHeightPercent: 0.55,
                 ),
-                if (hasBgFill && selectedBgColor != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2A2A35),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: selectedBgColor,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '#${(selectedBgColor!).toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 16),
 
                 // Corner Radius Section
@@ -1089,7 +1049,7 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                           decoration: BoxDecoration(
-                            color: selectedCornerRadius == r ? const Color(0xFF0D99FF) : const Color(0xFF2A2A35),
+                            color: selectedCornerRadius == r ? const Color(0xFF6C5CE7) : const Color(0xFF2A2A35),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text('${r.toInt()}px', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
@@ -1185,7 +1145,7 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                           decoration: BoxDecoration(
-                            color: selectedStrokeWidth == w && hasStroke ? const Color(0xFF0D99FF) : const Color(0xFF2A2A35),
+                            color: selectedStrokeWidth == w && hasStroke ? const Color(0xFF6C5CE7) : const Color(0xFF2A2A35),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text('${w.toInt()}px', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
@@ -1223,7 +1183,7 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                             child: Container(
                               decoration: BoxDecoration(
                                 color: selectedStrokePos == pos && hasStroke
-                                    ? const Color(0xFF0D99FF)
+                                    ? const Color(0xFF6C5CE7)
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -1292,31 +1252,6 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                widget.bloc.add(UpdateAutoLayoutEvent(
-                  layerId: layer.id,
-                  backgroundColor: hasBgFill ? selectedBgColor : Colors.transparent,
-                  cornerRadius: selectedCornerRadius,
-                  strokeColor: hasStroke ? selectedStrokeColor : Colors.transparent,
-                  strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
-                  strokePosition: selectedStrokePos,
-                ));
-                Navigator.pop(ctx);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0D99FF),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Apply'),
-            ),
-          ],
         ),
       ),
     );
@@ -1324,18 +1259,19 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
 
   void _showRenameDialog(BuildContext context, int pageIndex, String currentName) {
     final controller = TextEditingController(text: currentName);
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E24),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-        ),
-        title: const Text(
-          'Rename Page',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+      builder: (ctx) => AppDialog(
+        icon: Icons.edit_note_rounded,
+        title: 'Rename Page',
+        subtitle: 'Enter a new title for this canvas slide',
+        confirmLabel: 'Save',
+        onConfirm: () {
+          if (controller.text.trim().isNotEmpty) {
+            widget.bloc.add(RenamePageEvent(pageIndex, controller.text.trim()));
+          }
+          Navigator.pop(ctx);
+        },
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -1345,32 +1281,17 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
             fillColor: const Color(0xFF2A2A32),
             hintText: 'Enter page name',
             hintStyle: const TextStyle(color: Colors.white38),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF0D99FF)),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF6C5CE7), width: 1.5),
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                widget.bloc.add(RenamePageEvent(pageIndex, controller.text.trim()));
-              }
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D99FF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
@@ -1379,18 +1300,19 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
     final widthController = TextEditingController(text: currentWidth.toInt().toString());
     final heightController = TextEditingController(text: currentHeight.toInt().toString());
 
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E24),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-        ),
-        title: const Text(
-          'Custom Page Dimensions',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+      builder: (ctx) => AppDialog(
+        icon: Icons.aspect_ratio_rounded,
+        title: 'Custom Page Dimensions',
+        subtitle: 'Set custom width and height in pixels',
+        confirmLabel: 'Apply',
+        onConfirm: () {
+          final w = double.tryParse(widthController.text) ?? currentWidth;
+          final h = double.tryParse(heightController.text) ?? currentHeight;
+          widget.bloc.add(UpdatePageDimensionsEvent(width: w, height: h));
+          Navigator.pop(ctx);
+        },
         content: Row(
           children: [
             Expanded(
@@ -1407,7 +1329,11 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFF2A2A32),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ],
@@ -1433,7 +1359,11 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFF2A2A32),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ],
@@ -1441,26 +1371,6 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final w = double.tryParse(widthController.text) ?? currentWidth;
-              final h = double.tryParse(heightController.text) ?? currentHeight;
-              widget.bloc.add(UpdatePageDimensionsEvent(width: w, height: h));
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D99FF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Apply'),
-          ),
-        ],
       ),
     );
   }

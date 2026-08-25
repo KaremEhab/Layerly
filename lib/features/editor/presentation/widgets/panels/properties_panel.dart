@@ -28,6 +28,8 @@ import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/figma_context_menu.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
 import 'package:layerly/core/widgets/hex_color_picker_widget.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
+import 'package:layerly/core/widgets/app_dialog.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/image_picker_sheet.dart';
 
@@ -1127,125 +1129,21 @@ class PropertiesPanel extends StatelessWidget {
   ) {
     var currentLayer = initialLayer;
 
-    showModalBottomSheet(
+    showAppModalSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          return SafeArea(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-              height: MediaQuery.of(context).size.height * 0.76,
-              decoration: BoxDecoration(
-                color: const Color(0xFF14131A),
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    blurRadius: 32,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          return AppModalSheet(
+            icon: Icons.text_fields_rounded,
+            title: 'Typography & Spacing',
+            subtitle: 'Letter spacing, line height & alignment studio',
+            maxHeightFactor: 0.82,
+            child: Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                physics: const BouncingScrollPhysics(),
                 children: [
-                // 1. Drag handle & Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
-                  child: Column(
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.white24,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(7),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF9E77F6), Color(0xFF6C5CE7)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.text_fields_rounded,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Typography & Spacing',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Letter spacing, line height & alignment studio',
-                                  style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () => Navigator.pop(modalCtx),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF22202C),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white10),
-                              ),
-                              child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const Divider(color: Color(0xFF242232), height: 1),
-
-                // 2. Scrollable Body
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
-                    physics: const BouncingScrollPhysics(),
-                    children: [
-                      // A. Live Preview Box
+                  // A. Live Preview Box
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
@@ -1931,14 +1829,11 @@ class PropertiesPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         );
-      },
-    ),
-  );
-}
+      }
 
   Widget _buildSheetMicroButton({required IconData icon, required VoidCallback onTap}) {
     return InkWell(
@@ -2401,10 +2296,8 @@ class PropertiesPanel extends StatelessWidget {
     ValueChanged<ShapeLayer> onUpdate, {
     bool isStart = true,
   }) {
-    showModalBottomSheet(
+    showAppModalSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
       builder: (sheetCtx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -2419,73 +2312,14 @@ class PropertiesPanel extends StatelessWidget {
               (ArrowHeadStyle.diamondArrow, 'Diamond arrow', 'Solid diamond terminal'),
             ];
 
-            return SafeArea(
-              child: Container(
-                margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.75,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161522),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      blurRadius: 32,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 12, 16, 12),
-                      child: Column(
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 36,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Terminal Endpoints',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () => Navigator.pop(sheetCtx),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: const EdgeInsets.all(5),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF22202E),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const Divider(height: 1, color: Color(0xFF242135)),
+            return AppModalSheet(
+              icon: Icons.alt_route_rounded,
+              title: 'Terminal Endpoints',
+              subtitle: 'Select starting or ending cap head styles',
+              maxHeightFactor: 0.78,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
 
                     // Switcher Tabs for Start Point vs End Point + Reverse Button
                     Padding(
@@ -2665,13 +2499,12 @@ class PropertiesPanel extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+              );
+            },
+          );
+        },
+      );
+    }
 
 
 
@@ -4096,58 +3929,50 @@ class PropertiesPanel extends StatelessWidget {
         ? const Color(0xFF6C5CE7)
         : initialColor;
 
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Pick Color',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            InkWell(
-              onTap: () {
-                onColorChanged(Colors.transparent);
-                Navigator.pop(ctx);
-              },
+      builder: (ctx) => AppDialog(
+        icon: Icons.palette_rounded,
+        title: 'Pick Color',
+        subtitle: 'Select solid hex color or clear fill',
+        confirmLabel: 'Apply',
+        onConfirm: () {
+          onColorChanged(selected);
+          Navigator.pop(ctx);
+        },
+        trailingHeader: InkWell(
+          onTap: () {
+            onColorChanged(Colors.transparent);
+            Navigator.pop(ctx);
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSecondary,
               borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceSecondary,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.block_rounded,
-                      size: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                    SizedBox(width: 4),
-                    Text(
-                      'No Fill',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              border: Border.all(color: AppColors.border),
             ),
-          ],
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.block_rounded,
+                  size: 12,
+                  color: AppColors.textSecondary,
+                ),
+                SizedBox(width: 4),
+                Text(
+                  'No Fill',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         content: SingleChildScrollView(
           child: HexColorPickerWidget(
@@ -4157,29 +3982,6 @@ class PropertiesPanel extends StatelessWidget {
             },
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textMuted),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              onColorChanged(selected);
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Apply'),
-          ),
-        ],
       ),
     );
   }
@@ -4206,30 +4008,29 @@ class PropertiesPanel extends StatelessWidget {
         layer.strokeColor != Colors.transparent &&
         layer.strokeWidth > 0;
 
-    showDialog(
+    showAppDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surfaceElevated,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.tune_rounded, size: 18, color: AppColors.primary),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Auto Layout Settings',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+        builder: (dialogCtx, setDialogState) => AppDialog(
+          maxWidth: 480,
+          icon: Icons.tune_rounded,
+          title: 'Auto Layout Settings',
+          subtitle: 'Background fill, corner radius & stroke appearance',
+          confirmLabel: 'Apply',
+          onConfirm: () {
+            onUpdate(
+              layer.copyWith(
+                backgroundColor: hasBgFill ? selectedBgColor : null,
+                clearBackgroundColor: !hasBgFill || selectedBgColor == null,
+                cornerRadius: selectedCornerRadius,
+                strokeColor: hasStroke ? selectedStrokeColor : null,
+                clearStrokeColor: !hasStroke || selectedStrokeColor == null,
+                strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
+                strokePosition: selectedStrokePos,
               ),
-            ],
-          ),
+            );
+            Navigator.pop(ctx);
+          },
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -4258,12 +4059,16 @@ class PropertiesPanel extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
-                          vertical: 3,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceSecondary,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: !hasBgFill
+                                ? AppColors.primary
+                                : AppColors.border,
+                          ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -4275,7 +4080,7 @@ class PropertiesPanel extends StatelessWidget {
                             ),
                             SizedBox(width: 4),
                             Text(
-                              'No Fill',
+                              'None',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 10,
@@ -4290,13 +4095,14 @@ class PropertiesPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 ColorPicker(
-                  pickerColor: selectedBgColor ?? const Color(0xFF1E1E24),
+                  pickerColor: selectedBgColor ?? const Color(0xFF22202E),
                   onColorChanged: (c) {
                     setDialogState(() {
                       selectedBgColor = c;
                       hasBgFill = true;
                     });
                   },
+                  portraitOnly: true,
                   labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
@@ -4351,102 +4157,111 @@ class PropertiesPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(18),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.remove,
+                                size: 14,
+                                color: Colors.white70,
+                              ),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedCornerRadius =
+                                      (selectedCornerRadius - 2).clamp(
+                                        0.0,
+                                        200.0,
+                                      );
+                                });
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${selectedCornerRadius.toInt()} px',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.add,
+                                size: 14,
+                                color: Colors.white70,
+                              ),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedCornerRadius =
+                                      (selectedCornerRadius + 2).clamp(
+                                        0.0,
+                                        200.0,
+                                      );
+                                });
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.remove,
-                              size: 14,
-                              color: Colors.white70,
+                      const SizedBox(width: 8),
+                      for (final r in [0.0, 8.0, 16.0, 24.0]) ...[
+                        InkWell(
+                          onTap: () {
+                            setDialogState(() {
+                              selectedCornerRadius = r;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 7,
                             ),
-                            onPressed: () {
-                              setDialogState(() {
-                                selectedCornerRadius =
-                                    (selectedCornerRadius - 2).clamp(
-                                      0.0,
-                                      100.0,
-                                    );
-                              });
-                            },
-                          ),
-                          Text(
-                            '${selectedCornerRadius.toInt()} px',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                            decoration: BoxDecoration(
+                              color: selectedCornerRadius == r
+                                  ? AppColors.primary
+                                  : AppColors.surfaceSecondary,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.add,
-                              size: 14,
-                              color: Colors.white70,
-                            ),
-                            onPressed: () {
-                              setDialogState(() {
-                                selectedCornerRadius =
-                                    (selectedCornerRadius + 2).clamp(
-                                      0.0,
-                                      100.0,
-                                    );
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    for (final r in [0.0, 8.0, 12.0, 20.0]) ...[
-                      InkWell(
-                        onTap: () {
-                          setDialogState(() {
-                            selectedCornerRadius = r;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selectedCornerRadius == r
-                                ? AppColors.primary
-                                : AppColors.surfaceSecondary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${r.toInt()}px',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                            child: Text(
+                              '${r.toInt()}px',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
+                        const SizedBox(width: 4),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 16),
 
-                // Stroke Settings Header
+                // Stroke Settings
                 Row(
                   children: [
                     const Text(
-                      'Stroke',
+                      'Stroke Width',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
@@ -4464,13 +4279,11 @@ class PropertiesPanel extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
+                          horizontal: 8,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: !hasStroke
-                              ? AppColors.primary.withValues(alpha: 0.2)
-                              : AppColors.surfaceSecondary,
+                          color: AppColors.surfaceSecondary,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: !hasStroke
@@ -4530,7 +4343,10 @@ class PropertiesPanel extends StatelessWidget {
                                 selectedStrokeColor ??= const Color(0xFFFFFFFF);
                               });
                             },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
+                          const SizedBox(width: 6),
                           Text(
                             '${selectedStrokeWidth.toInt()} px',
                             style: const TextStyle(
@@ -4539,6 +4355,7 @@ class PropertiesPanel extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          const SizedBox(width: 6),
                           IconButton(
                             icon: const Icon(
                               Icons.add,
@@ -4553,44 +4370,13 @@ class PropertiesPanel extends StatelessWidget {
                                 selectedStrokeColor ??= const Color(0xFFFFFFFF);
                               });
                             },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
-                    for (final w in [1.0, 2.0, 4.0]) ...[
-                      InkWell(
-                        onTap: () {
-                          setDialogState(() {
-                            selectedStrokeWidth = w;
-                            hasStroke = true;
-                            selectedStrokeColor ??= const Color(0xFFFFFFFF);
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selectedStrokeWidth == w && hasStroke
-                                ? AppColors.primary
-                                : AppColors.surfaceSecondary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${w.toInt()}px',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                    ],
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -4607,7 +4393,7 @@ class PropertiesPanel extends StatelessWidget {
                 const SizedBox(height: 6),
                 Container(
                   height: 36,
-                  padding: const EdgeInsets.all(2),
+                  padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSecondary,
                     borderRadius: BorderRadius.circular(10),
@@ -4624,8 +4410,8 @@ class PropertiesPanel extends StatelessWidget {
                                 selectedStrokeColor ??= const Color(0xFFFFFFFF);
                               });
                             },
-                            borderRadius: BorderRadius.circular(8),
                             child: Container(
+                              margin: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
                                 color: selectedStrokePos == pos && hasStroke
                                     ? AppColors.primary
@@ -4670,6 +4456,7 @@ class PropertiesPanel extends StatelessWidget {
                       hasStroke = true;
                     });
                   },
+                  portraitOnly: true,
                   labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
@@ -4715,39 +4502,6 @@ class PropertiesPanel extends StatelessWidget {
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.textMuted),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                onUpdate(
-                  layer.copyWith(
-                    backgroundColor: hasBgFill ? selectedBgColor : null,
-                    clearBackgroundColor: !hasBgFill || selectedBgColor == null,
-                    cornerRadius: selectedCornerRadius,
-                    strokeColor: hasStroke ? selectedStrokeColor : null,
-                    clearStrokeColor: !hasStroke || selectedStrokeColor == null,
-                    strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
-                    strokePosition: selectedStrokePos,
-                  ),
-                );
-                Navigator.pop(ctx);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Apply'),
-            ),
-          ],
         ),
       ),
     );
@@ -4776,30 +4530,32 @@ class PropertiesPanel extends StatelessWidget {
         layer.strokeWidth > 0;
     AutoLayoutDirection selectedDirection = layer.direction;
 
-    showDialog(
+    showAppDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surfaceElevated,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.crop_free_rounded, size: 18, color: AppColors.primary),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Frame Properties',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+        builder: (dialogCtx, setDialogState) => AppDialog(
+          maxWidth: 480,
+          icon: Icons.crop_free_rounded,
+          title: 'Frame Properties',
+          subtitle: 'Layout mode, dimensions, background fill & stroke',
+          confirmLabel: 'Apply',
+          onConfirm: () {
+            onUpdate(
+              layer.copyWith(
+                direction: selectedDirection,
+                width: selectedWidth,
+                height: selectedHeight,
+                backgroundColor: hasBgFill ? selectedBgColor : null,
+                clearBackgroundColor: !hasBgFill || selectedBgColor == null,
+                cornerRadius: selectedCornerRadius,
+                strokeColor: hasStroke ? selectedStrokeColor : null,
+                clearStrokeColor: !hasStroke || selectedStrokeColor == null,
+                strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
+                strokePosition: selectedStrokePos,
               ),
-            ],
-          ),
+            );
+            Navigator.pop(ctx);
+          },
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -5030,6 +4786,7 @@ class PropertiesPanel extends StatelessWidget {
                       hasBgFill = true;
                     });
                   },
+                  portraitOnly: true,
                   labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
@@ -5084,94 +4841,103 @@ class PropertiesPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(18),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.remove,
+                                size: 14,
+                                color: Colors.white70,
+                              ),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedCornerRadius =
+                                      (selectedCornerRadius - 2).clamp(
+                                        0.0,
+                                        200.0,
+                                      );
+                                });
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${selectedCornerRadius.toInt()} px',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.add,
+                                size: 14,
+                                color: Colors.white70,
+                              ),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedCornerRadius =
+                                      (selectedCornerRadius + 2).clamp(
+                                        0.0,
+                                        200.0,
+                                      );
+                                });
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.remove,
-                              size: 14,
-                              color: Colors.white70,
+                      const SizedBox(width: 8),
+                      for (final r in [0.0, 8.0, 16.0, 24.0, 32.0]) ...[
+                        InkWell(
+                          onTap: () {
+                            setDialogState(() {
+                              selectedCornerRadius = r;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 7,
                             ),
-                            onPressed: () {
-                              setDialogState(() {
-                                selectedCornerRadius =
-                                    (selectedCornerRadius - 2).clamp(
-                                      0.0,
-                                      200.0,
-                                    );
-                              });
-                            },
-                          ),
-                          Text(
-                            '${selectedCornerRadius.toInt()} px',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                            decoration: BoxDecoration(
+                              color: selectedCornerRadius == r
+                                  ? AppColors.primary
+                                  : AppColors.surfaceSecondary,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.add,
-                              size: 14,
-                              color: Colors.white70,
-                            ),
-                            onPressed: () {
-                              setDialogState(() {
-                                selectedCornerRadius =
-                                    (selectedCornerRadius + 2).clamp(
-                                      0.0,
-                                      200.0,
-                                    );
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    for (final r in [0.0, 8.0, 16.0, 24.0, 32.0]) ...[
-                      InkWell(
-                        onTap: () {
-                          setDialogState(() {
-                            selectedCornerRadius = r;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selectedCornerRadius == r
-                                ? AppColors.primary
-                                : AppColors.surfaceSecondary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${r.toInt()}px',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                            child: Text(
+                              '${r.toInt()}px',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
+                        const SizedBox(width: 4),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -5263,7 +5029,10 @@ class PropertiesPanel extends StatelessWidget {
                                 selectedStrokeColor ??= const Color(0xFFFFFFFF);
                               });
                             },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
+                          const SizedBox(width: 6),
                           Text(
                             '${selectedStrokeWidth.toInt()} px',
                             style: const TextStyle(
@@ -5272,6 +5041,7 @@ class PropertiesPanel extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          const SizedBox(width: 6),
                           IconButton(
                             icon: const Icon(
                               Icons.add,
@@ -5286,6 +5056,8 @@ class PropertiesPanel extends StatelessWidget {
                                 selectedStrokeColor ??= const Color(0xFFFFFFFF);
                               });
                             },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
@@ -5393,6 +5165,7 @@ class PropertiesPanel extends StatelessWidget {
                       hasStroke = true;
                     });
                   },
+                  portraitOnly: true,
                   labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.55,
@@ -5438,42 +5211,6 @@ class PropertiesPanel extends StatelessWidget {
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.textMuted),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                onUpdate(
-                  layer.copyWith(
-                    direction: selectedDirection,
-                    width: selectedWidth,
-                    height: selectedHeight,
-                    backgroundColor: hasBgFill ? selectedBgColor : null,
-                    clearBackgroundColor: !hasBgFill || selectedBgColor == null,
-                    cornerRadius: selectedCornerRadius,
-                    strokeColor: hasStroke ? selectedStrokeColor : null,
-                    clearStrokeColor: !hasStroke || selectedStrokeColor == null,
-                    strokeWidth: hasStroke ? selectedStrokeWidth : 0.0,
-                    strokePosition: selectedStrokePos,
-                  ),
-                );
-                Navigator.pop(ctx);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Apply'),
-            ),
-          ],
         ),
       ),
     );
@@ -5513,10 +5250,8 @@ class PropertiesPanel extends StatelessWidget {
       );
     }
 
-    showModalBottomSheet(
+    showAppModalSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (ctx, setModalState) {
           // Update active color based on cursor position
@@ -5528,123 +5263,19 @@ class PropertiesPanel extends StatelessWidget {
             }
           }
 
-          return SafeArea(
-            child: Container(
-              margin: EdgeInsets.only(
-                left: 14,
-                right: 14,
-                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 16,
-              ),
-              height: MediaQuery.of(context).size.height * 0.78,
-              decoration: BoxDecoration(
-                color: const Color(0xFF14131A),
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    blurRadius: 32,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Drag handle & Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
-                    child: Column(
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 36,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.white24,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF9E77F6), Color(0xFF6C5CE7)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.title_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Edit Text & Multi-Colors',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    'Type & format directly with live inline styling',
-                                    style: TextStyle(
-                                      color: AppColors.textMuted,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () => Navigator.pop(modalCtx),
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF22202C),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white10),
-                                ),
-                                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const Divider(color: Color(0xFF242232), height: 1),
-
-                  // 2. Scrollable Content Area
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        // A. Live WYSIWYG Editable Text Area
+          return AppModalSheet(
+            icon: Icons.title_rounded,
+            title: 'Edit Text & Multi-Colors',
+            subtitle: 'Type & format directly with live inline styling',
+            maxHeightFactor: 0.84,
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      // A. Live WYSIWYG Editable Text Area
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -5989,12 +5620,11 @@ class PropertiesPanel extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+            );
+          },
+        ),
+      );
+    }
 }
 
 class _RepeatableActionButton extends StatefulWidget {

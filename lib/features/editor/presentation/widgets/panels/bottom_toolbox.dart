@@ -11,6 +11,7 @@ import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/components_picker_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/layouts_assets_sheet.dart';
@@ -444,207 +445,240 @@ class _BottomToolboxState extends State<BottomToolbox> {
                 ),
                 const SizedBox(height: 14),
 
-                // Glassy Shapes Grid / List
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                // Glassy Shapes 2-Column Grid
+                Row(
                   children: [
-                    _buildGlassShapeTile(
-                      icon: Icons.crop_free_rounded,
-                      title: 'Frame',
-                      subtitle: 'Auto container',
-                      shortcut: 'F',
-                      accentColor: const Color(0xFF9E77F6),
-                      onTap: () {
-                        bloc.add(
-                          AddLayerEvent(
-                            AutoLayoutLayer(
-                              id: UuidGenerator.generate(),
-                              name: 'Frame',
-                              direction: AutoLayoutDirection.none,
-                              x: 120,
-                              y: 160,
-                              width: 340,
-                              height: 260,
-                              backgroundColor: const Color(0xFF1E1C2B),
-                              cornerRadius: 16,
-                              strokeColor: const Color(0xFF37334F),
-                              strokeWidth: 1.5,
-                              horizontalSizing: AutoLayoutSizingMode.fixed,
-                              verticalSizing: AutoLayoutSizingMode.fixed,
+                    Expanded(
+                      child: _buildGlassShapeTile(
+                        icon: Icons.crop_free_rounded,
+                        title: 'Frame',
+                        subtitle: 'Auto container',
+                        shortcut: 'F',
+                        accentColor: const Color(0xFF9E77F6),
+                        onTap: () {
+                          bloc.add(
+                            AddLayerEvent(
+                              AutoLayoutLayer(
+                                id: UuidGenerator.generate(),
+                                name: 'Frame',
+                                direction: AutoLayoutDirection.none,
+                                x: 120,
+                                y: 160,
+                                width: 340,
+                                height: 260,
+                                backgroundColor: const Color(0xFF1E1C2B),
+                                cornerRadius: 16,
+                                strokeColor: const Color(0xFF37334F),
+                                strokeWidth: 1.5,
+                                horizontalSizing: AutoLayoutSizingMode.fixed,
+                                verticalSizing: AutoLayoutSizingMode.fixed,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                    _buildGlassShapeTile(
-                      icon: Icons.crop_square_rounded,
-                      title: 'Rectangle',
-                      subtitle: 'Sharp box',
-                      shortcut: 'R',
-                      accentColor: const Color(0xFF0D99FF),
-                      onTap: () {
-                        bloc.add(
-                          AddLayerEvent(
-                            ShapeLayer(
-                              id: UuidGenerator.generate(),
-                              name: 'Rectangle',
-                              shapeType: ShapeType.rectangle,
-                              x: 180,
-                              y: 200,
-                              width: 240,
-                              height: 150,
-                              fill: const Color(0xFF262438),
-                              cornerRadius: 0,
-                              strokeColor: const Color(0xFF3B3754),
-                              strokeWidth: 1.5,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildGlassShapeTile(
+                        icon: Icons.crop_square_rounded,
+                        title: 'Rectangle',
+                        subtitle: 'Sharp box',
+                        shortcut: 'R',
+                        accentColor: const Color(0xFF0D99FF),
+                        onTap: () {
+                          bloc.add(
+                            AddLayerEvent(
+                              ShapeLayer(
+                                id: UuidGenerator.generate(),
+                                name: 'Rectangle',
+                                shapeType: ShapeType.rectangle,
+                                x: 180,
+                                y: 200,
+                                width: 240,
+                                height: 150,
+                                fill: const Color(0xFF262438),
+                                cornerRadius: 0,
+                                strokeColor: const Color(0xFF3B3754),
+                                strokeWidth: 1.5,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                    _buildGlassShapeTile(
-                      icon: Icons.rectangle_outlined,
-                      title: 'Rounded',
-                      subtitle: 'Pill / card',
-                      shortcut: 'U',
-                      accentColor: const Color(0xFF00F298),
-                      onTap: () {
-                        bloc.add(
-                          AddLayerEvent(
-                            ShapeLayer(
-                              id: UuidGenerator.generate(),
-                              name: 'Rounded Rectangle',
-                              shapeType: ShapeType.roundedRectangle,
-                              x: 180,
-                              y: 200,
-                              width: 240,
-                              height: 150,
-                              fill: const Color(0xFF262438),
-                              cornerRadius: 16,
-                              strokeColor: const Color(0xFF3B3754),
-                              strokeWidth: 1.5,
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildGlassShapeTile(
+                        icon: Icons.rectangle_outlined,
+                        title: 'Rounded',
+                        subtitle: 'Pill / card',
+                        shortcut: 'U',
+                        accentColor: const Color(0xFF00F298),
+                        onTap: () {
+                          bloc.add(
+                            AddLayerEvent(
+                              ShapeLayer(
+                                id: UuidGenerator.generate(),
+                                name: 'Rounded Rectangle',
+                                shapeType: ShapeType.roundedRectangle,
+                                x: 180,
+                                y: 200,
+                                width: 240,
+                                height: 150,
+                                fill: const Color(0xFF262438),
+                                cornerRadius: 16,
+                                strokeColor: const Color(0xFF3B3754),
+                                strokeWidth: 1.5,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                    _buildGlassShapeTile(
-                      icon: Icons.circle_outlined,
-                      title: 'Ellipse',
-                      subtitle: 'Circle',
-                      shortcut: 'O',
-                      accentColor: const Color(0xFF6C5CE7),
-                      onTap: () {
-                        bloc.add(
-                          AddLayerEvent(
-                            ShapeLayer(
-                              id: UuidGenerator.generate(),
-                              name: 'Ellipse',
-                              shapeType: ShapeType.circle,
-                              x: 200,
-                              y: 200,
-                              width: 180,
-                              height: 180,
-                              fill: const Color(0xFF6C5CE7),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildGlassShapeTile(
+                        icon: Icons.circle_outlined,
+                        title: 'Ellipse',
+                        subtitle: 'Circle',
+                        shortcut: 'O',
+                        accentColor: const Color(0xFF6C5CE7),
+                        onTap: () {
+                          bloc.add(
+                            AddLayerEvent(
+                              ShapeLayer(
+                                id: UuidGenerator.generate(),
+                                name: 'Ellipse',
+                                shapeType: ShapeType.circle,
+                                x: 200,
+                                y: 200,
+                                width: 180,
+                                height: 180,
+                                fill: const Color(0xFF6C5CE7),
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                    _buildGlassShapeTile(
-                      icon: Icons.horizontal_rule_rounded,
-                      title: 'Line',
-                      subtitle: 'Stroke vector',
-                      shortcut: 'L',
-                      accentColor: const Color(0xFF00D2D3),
-                      onTap: () {
-                        bloc.add(
-                          AddLayerEvent(
-                            ShapeLayer(
-                              id: UuidGenerator.generate(),
-                              name: 'Line',
-                              shapeType: ShapeType.line,
-                              x: 180,
-                              y: 240,
-                              width: 220,
-                              height: 4,
-                              strokeWidth: 3.0,
-                              fill: const Color(0xFF8B5CF6),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildGlassShapeTile(
+                        icon: Icons.horizontal_rule_rounded,
+                        title: 'Line',
+                        subtitle: 'Stroke vector',
+                        shortcut: 'L',
+                        accentColor: const Color(0xFF00D2D3),
+                        onTap: () {
+                          bloc.add(
+                            AddLayerEvent(
+                              ShapeLayer(
+                                id: UuidGenerator.generate(),
+                                name: 'Line',
+                                shapeType: ShapeType.line,
+                                x: 180,
+                                y: 240,
+                                width: 220,
+                                height: 4,
+                                strokeWidth: 3.0,
+                                fill: const Color(0xFF8B5CF6),
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                    _buildGlassShapeTile(
-                      icon: Icons.arrow_outward_rounded,
-                      title: 'Arrow',
-                      subtitle: 'Directional',
-                      shortcut: 'Shift+L',
-                      accentColor: const Color(0xFFFF4757),
-                      onTap: () {
-                        bloc.add(
-                          AddLayerEvent(
-                            ShapeLayer(
-                              id: UuidGenerator.generate(),
-                              name: 'Arrow',
-                              shapeType: ShapeType.arrow,
-                              x: 180,
-                              y: 200,
-                              width: 220,
-                              height: 24,
-                              strokeWidth: 3.0,
-                              fill: const Color(0xFFFF4757),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildGlassShapeTile(
+                        icon: Icons.arrow_outward_rounded,
+                        title: 'Arrow',
+                        subtitle: 'Directional',
+                        shortcut: 'Shift+L',
+                        accentColor: const Color(0xFFFF4757),
+                        onTap: () {
+                          bloc.add(
+                            AddLayerEvent(
+                              ShapeLayer(
+                                id: UuidGenerator.generate(),
+                                name: 'Arrow',
+                                shapeType: ShapeType.arrow,
+                                x: 180,
+                                y: 200,
+                                width: 220,
+                                height: 24,
+                                strokeWidth: 3.0,
+                                fill: const Color(0xFFFF4757),
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                    _buildGlassShapeTile(
-                      icon: Icons.change_history_rounded,
-                      title: 'Polygon',
-                      subtitle: 'Triangle',
-                      shortcut: 'P',
-                      accentColor: const Color(0xFFFFA502),
-                      onTap: () {
-                        bloc.add(
-                          AddLayerEvent(
-                            ShapeLayer(
-                              id: UuidGenerator.generate(),
-                              name: 'Polygon',
-                              shapeType: ShapeType.triangle,
-                              x: 200,
-                              y: 200,
-                              width: 180,
-                              height: 180,
-                              fill: const Color(0xFFFFA502),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildGlassShapeTile(
+                        icon: Icons.change_history_rounded,
+                        title: 'Polygon',
+                        subtitle: 'Triangle',
+                        shortcut: 'P',
+                        accentColor: const Color(0xFFFFA502),
+                        onTap: () {
+                          bloc.add(
+                            AddLayerEvent(
+                              ShapeLayer(
+                                id: UuidGenerator.generate(),
+                                name: 'Polygon',
+                                shapeType: ShapeType.triangle,
+                                x: 200,
+                                y: 200,
+                                width: 180,
+                                height: 180,
+                                fill: const Color(0xFFFFA502),
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                    _buildGlassShapeTile(
-                      icon: Icons.star_border_rounded,
-                      title: 'Star',
-                      subtitle: '5-Point badge',
-                      shortcut: 'S',
-                      accentColor: const Color(0xFFFFB800),
-                      onTap: () {
-                        bloc.add(
-                          AddLayerEvent(
-                            ShapeLayer(
-                              id: UuidGenerator.generate(),
-                              name: 'Star',
-                              shapeType: ShapeType.star,
-                              x: 200,
-                              y: 200,
-                              width: 180,
-                              height: 180,
-                              fill: const Color(0xFFFFB800),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildGlassShapeTile(
+                        icon: Icons.star_border_rounded,
+                        title: 'Star',
+                        subtitle: '5-Point badge',
+                        shortcut: 'S',
+                        accentColor: const Color(0xFFFFB800),
+                        onTap: () {
+                          bloc.add(
+                            AddLayerEvent(
+                              ShapeLayer(
+                                id: UuidGenerator.generate(),
+                                name: 'Star',
+                                shapeType: ShapeType.star,
+                                x: 200,
+                                y: 200,
+                                width: 180,
+                                height: 180,
+                                fill: const Color(0xFFFFB800),
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -664,8 +698,6 @@ class _BottomToolboxState extends State<BottomToolbox> {
     required Color accentColor,
     required VoidCallback onTap,
   }) {
-    final width = (MediaQuery.of(context).size.width - 68) / 2;
-
     return InkWell(
       onTap: () {
         _closeShapes();
@@ -673,8 +705,7 @@ class _BottomToolboxState extends State<BottomToolbox> {
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: width.clamp(140.0, 220.0),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFF241F38).withValues(alpha: 0.50),
           borderRadius: BorderRadius.circular(16),
@@ -759,147 +790,90 @@ class _BottomToolboxState extends State<BottomToolbox> {
 
   void _showTextSheet(BuildContext context) {
     final bloc = context.read<EditorBloc>();
-    showModalBottomSheet(
+    showAppModalSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B1927),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Add Text',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Text(
-                  'H1',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                title: const Text(
-                  'Heading',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  bloc.add(
-                    AddLayerEvent(
-                      TextLayer(
-                        id: UuidGenerator.generate(),
-                        name: 'Heading',
-                        x: 100,
-                        y: 200,
-                        width: 500,
-                        height: 70,
-                        content: 'Heading Text',
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Outfit',
-                      ),
+      builder: (ctx) => AppModalSheet(
+        icon: Icons.title_rounded,
+        title: 'Add Text',
+        subtitle: 'Select typography level to insert on canvas',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSheetActionTile(
+              icon: Icons.format_size_rounded,
+              iconColor: AppColors.primaryLight,
+              title: 'Heading',
+              subtitle: '48px Outfit Bold — Main hero titles',
+              onTap: () {
+                Navigator.pop(ctx);
+                bloc.add(
+                  AddLayerEvent(
+                    TextLayer(
+                      id: UuidGenerator.generate(),
+                      name: 'Heading',
+                      x: 100,
+                      y: 200,
+                      width: 500,
+                      height: 70,
+                      content: 'Heading Text',
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Outfit',
                     ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Text(
-                  'H2',
-                  style: TextStyle(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
                   ),
-                ),
-                title: const Text(
-                  'Subheading',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  bloc.add(
-                    AddLayerEvent(
-                      TextLayer(
-                        id: UuidGenerator.generate(),
-                        name: 'Subheading',
-                        x: 100,
-                        y: 200,
-                        width: 440,
-                        height: 50,
-                        content: 'Subheading description',
-                        fontSize: 28,
-                        fontWeight: FontWeight.w600,
-                      ),
+                );
+              },
+            ),
+            const SizedBox(height: 6),
+            AppSheetActionTile(
+              icon: Icons.text_fields_rounded,
+              iconColor: const Color(0xFF00CEC9),
+              title: 'Subheading',
+              subtitle: '28px SemiBold — Section subtitles',
+              onTap: () {
+                Navigator.pop(ctx);
+                bloc.add(
+                  AddLayerEvent(
+                    TextLayer(
+                      id: UuidGenerator.generate(),
+                      name: 'Subheading',
+                      x: 100,
+                      y: 200,
+                      width: 440,
+                      height: 50,
+                      content: 'Subheading description',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
                     ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Text(
-                  'P',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
                   ),
-                ),
-                title: const Text(
-                  'Body Text',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  bloc.add(
-                    AddLayerEvent(
-                      TextLayer(
-                        id: UuidGenerator.generate(),
-                        name: 'Body',
-                        x: 100,
-                        y: 200,
-                        width: 400,
-                        height: 60,
-                        content: 'Add your clean paragraph content here.',
-                        fontSize: 16,
-                      ),
+                );
+              },
+            ),
+            const SizedBox(height: 6),
+            AppSheetActionTile(
+              icon: Icons.notes_rounded,
+              iconColor: const Color(0xFFA78BFA),
+              title: 'Body Text',
+              subtitle: '16px Regular — Paragraphs and details',
+              onTap: () {
+                Navigator.pop(ctx);
+                bloc.add(
+                  AddLayerEvent(
+                    TextLayer(
+                      id: UuidGenerator.generate(),
+                      name: 'Body',
+                      x: 100,
+                      y: 200,
+                      width: 400,
+                      height: 60,
+                      content: 'Add your clean paragraph content here.',
+                      fontSize: 16,
                     ),
-                  );
-                },
-              ),
-            ],
-          ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -924,107 +898,80 @@ class _BottomToolboxState extends State<BottomToolbox> {
   void _showMoreSheet(BuildContext context) {
     final bloc = context.read<EditorBloc>();
     final state = bloc.state;
-    showModalBottomSheet(
+    showAppModalSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B1927),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFF2C283F), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Wrap(
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'More Settings & Tools',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-              SwitchListTile(
-                secondary: const Icon(
-                  Icons.grid_on_rounded,
-                  color: AppColors.text,
-                ),
-                title: const Text(
-                  'Show Grid',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
+      builder: (ctx) => AppModalSheet(
+        icon: Icons.tune_rounded,
+        title: 'Settings & Tools',
+        subtitle: 'Canvas layout, snapping, and background options',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSheetActionTile(
+              icon: Icons.grid_on_rounded,
+              iconColor: state.showGrid ? AppColors.primary : AppColors.textSecondary,
+              title: 'Show Grid',
+              subtitle: 'Toggle alignment grid overlay',
+              trailing: Switch(
                 value: state.showGrid,
                 activeThumbColor: AppColors.primary,
+                activeTrackColor: AppColors.primary.withValues(alpha: 0.3),
                 onChanged: (_) {
                   bloc.add(const ToggleGridEvent());
                   Navigator.pop(ctx);
                 },
               ),
-              SwitchListTile(
-                secondary: const Icon(
-                  Icons.align_horizontal_left_rounded,
-                  color: AppColors.text,
-                ),
-                title: const Text(
-                  'Smart Snapping Guides',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
+              onTap: () {
+                bloc.add(const ToggleGridEvent());
+                Navigator.pop(ctx);
+              },
+            ),
+            const SizedBox(height: 6),
+            AppSheetActionTile(
+              icon: Icons.align_horizontal_left_rounded,
+              iconColor: state.snapEnabled ? AppColors.primary : AppColors.textSecondary,
+              title: 'Smart Snapping Guides',
+              subtitle: 'Snap layers to center and neighbor edges',
+              trailing: Switch(
                 value: state.snapEnabled,
                 activeThumbColor: AppColors.primary,
+                activeTrackColor: AppColors.primary.withValues(alpha: 0.3),
                 onChanged: (_) {
                   bloc.add(const ToggleSnapEvent());
                   Navigator.pop(ctx);
                 },
               ),
-              ListTile(
-                leading: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: Color(0xFFB692F6),
+              onTap: () {
+                bloc.add(const ToggleSnapEvent());
+                Navigator.pop(ctx);
+              },
+            ),
+            const SizedBox(height: 6),
+            AppSheetActionTile(
+              icon: Icons.auto_awesome_rounded,
+              iconColor: const Color(0xFFB692F6),
+              title: 'Background Studio',
+              subtitle: 'Gradients, solid colors & curated palettes',
+              trailing: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: state.activePage.backgroundColor,
+                  gradient: state.activePage.backgroundGradient,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.white30),
                 ),
-                title: const Text(
-                  'Background Studio',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: const Text(
-                  'Gradients, solid colors & palettes',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 11),
-                ),
-                trailing: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: state.activePage.backgroundColor,
-                    gradient: state.activePage.backgroundGradient,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.white30),
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  showBackgroundPickerSheet(
-                    context,
-                    state.activePage,
-                    bloc: bloc,
-                  );
-                },
               ),
-            ],
-          ),
+              onTap: () {
+                Navigator.pop(ctx);
+                showBackgroundPickerSheet(
+                  context,
+                  state.activePage,
+                  bloc: bloc,
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

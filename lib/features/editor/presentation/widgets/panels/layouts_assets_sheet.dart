@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/utils/uuid_generator.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
 import 'package:layerly/features/editor/domain/entities/icon_layer.dart';
@@ -16,10 +17,8 @@ import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 /// Opens the professional Layouts & Assets Studio bottom sheet.
 void showLayoutsAssetsSheet(BuildContext context, {EditorBloc? bloc}) {
   final editorBloc = bloc ?? context.read<EditorBloc>();
-  showModalBottomSheet(
+  showAppModalSheet(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
     builder: (ctx) => BlocProvider.value(
       value: editorBloc,
       child: _LayoutsAssetsModal(bloc: editorBloc),
@@ -595,35 +594,26 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
     return BlocBuilder<EditorBloc, EditorState>(
       bloc: widget.bloc,
       builder: (context, state) {
-        return SafeArea(
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-            height: MediaQuery.of(context).size.height * 0.80,
-            decoration: BoxDecoration(
-              color: const Color(0xFF131219),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0xFF2A273C), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  blurRadius: 32,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Drag Handle & Header
-                _buildHeader(context),
+        return AppModalSheet(
+          icon: Icons.dashboard_customize_rounded,
+          iconGradient: const LinearGradient(
+            colors: [Color(0xFF6C5CE7), Color(0xFF00CEC9)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          title: 'Layouts & Asset Kit',
+          subtitle: 'Bento grids, mockups, typography & color palettes',
+          maxHeightFactor: 0.82,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Live Search Bar
+              _buildSearchBar(),
 
-                // 2. Live Search Bar
-                _buildSearchBar(),
-
-              // 3. Navigation Tabs
+              // 2. Navigation Tabs
               _buildTabs(),
 
-              // 4. Tab Views
+              // 3. Tab Views
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
@@ -641,96 +631,8 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
               ),
             ],
           ),
-        ),
-      );
-    },
-  );
-}
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
-      child: Column(
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF00B894), Color(0xFF00CEC9)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF00B894).withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.dashboard_customize_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Layouts & Asset Hub',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Bento grids, device mockups, color palettes & typography',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              InkWell(
-                onTap: () => Navigator.pop(context),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22202C),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -860,12 +762,16 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
                     children: [
                       Row(
                         children: [
-                          Text(
-                            item.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: Text(
+                              item.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -1106,10 +1012,15 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                palette.name,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  palette.name,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
                 palette.mood,
                 style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
@@ -1157,7 +1068,11 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF2C283F)),
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         title: Text(
           typo.sample,
@@ -1195,8 +1110,9 @@ class _LayoutsAssetsModalState extends State<_LayoutsAssetsModal>
           _showSuccessToast(context, '🔤 Inserted ${typo.name}');
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
 
 

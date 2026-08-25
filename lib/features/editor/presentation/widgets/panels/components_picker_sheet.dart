@@ -12,16 +12,16 @@ import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
+import 'package:layerly/core/widgets/app_dialog.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 
 /// Opens the professional Component Studio bottom sheet.
 void showComponentsPickerSheet(BuildContext context, {EditorBloc? bloc}) {
   final editorBloc = bloc ?? context.read<EditorBloc>();
-  showModalBottomSheet(
+  showAppModalSheet(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
     builder: (ctx) => BlocProvider.value(
       value: editorBloc,
       child: _ComponentsPickerModal(bloc: editorBloc),
@@ -427,39 +427,25 @@ class _ComponentsPickerModalState extends State<_ComponentsPickerModal>
         final projectComponents = state.project.components;
         final selectedLayers = state.selectedLayers;
 
-        return SafeArea(
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-            height: MediaQuery.of(context).size.height * 0.78,
-            decoration: BoxDecoration(
-              color: const Color(0xFF14131A),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0xFF2A2838), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  blurRadius: 32,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Drag Handle & Header
-                _buildHeader(context, selectedLayers),
-
-              // 2. Search Box
+        return AppModalSheet(
+          icon: Icons.widgets_rounded,
+          title: 'Component Studio',
+          subtitle: 'Reusable design system elements & UI blocks',
+          maxHeightFactor: 0.82,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Search Box
               _buildSearchBar(),
 
-              // 3. Navigation Tabs
+              // 2. Navigation Tabs
               _buildTabs(projectComponents.length),
 
-              // 4. Quick Selection Create Banner
+              // 3. Quick Selection Create Banner
               if (selectedLayers.isNotEmpty)
                 _buildCreateFromSelectionBanner(context, selectedLayers),
 
-              // 5. Main Tab Content
+              // 4. Main Tab Content
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
@@ -483,96 +469,8 @@ class _ComponentsPickerModalState extends State<_ComponentsPickerModal>
               ),
             ],
           ),
-        ),
-      );
-    },
-  );
-}
-
-  Widget _buildHeader(BuildContext context, List<Layer> selectedLayers) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
-      child: Column(
-        children: [
-          // Drag Handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF9E77F6), Color(0xFF6C5CE7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.widgets_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Component Studio',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Reusable design system elements & UI blocks',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              InkWell(
-                onTap: () => Navigator.pop(context),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22202C),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1163,18 +1061,46 @@ class _ComponentsPickerModalState extends State<_ComponentsPickerModal>
       text: selectedLayers.length == 1 ? selectedLayers.first.name : 'Custom Component',
     );
 
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.widgets_rounded, color: AppColors.primary, size: 20),
-            SizedBox(width: 8),
-            Text('Create Component', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
+      builder: (dialogCtx) => AppDialog(
+        icon: Icons.widgets_rounded,
+        title: 'Create Component',
+        subtitle: 'Save selected layers as reusable component',
+        confirmLabel: 'Create Component',
+        onConfirm: () {
+          final compName = controller.text.trim().isNotEmpty ? controller.text.trim() : 'Custom Component';
+          Navigator.pop(dialogCtx);
+
+          // Calculate bounding box
+          final minX = selectedLayers.map((l) => l.x).reduce(math.min);
+          final minY = selectedLayers.map((l) => l.y).reduce(math.min);
+          final maxX = selectedLayers.map((l) => l.x + l.width).reduce(math.max);
+          final maxY = selectedLayers.map((l) => l.y + l.height).reduce(math.max);
+
+          final normalizedLayers = selectedLayers
+              .map((l) => l.copyWithTransform(x: l.x - minX, y: l.y - minY))
+              .toList();
+
+          final newDef = ComponentDefinition(
+            id: UuidGenerator.generate(),
+            name: compName,
+            description: 'Custom reusable component',
+            width: math.max(20.0, maxX - minX),
+            height: math.max(20.0, maxY - minY),
+            layers: normalizedLayers,
+          );
+
+          widget.bloc.add(RegisterComponentDefinitionEvent(newDef));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❖ Registered "$compName" in design system!'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: const Color(0xFF6C5CE7),
+            ),
+          );
+        },
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1202,86 +1128,27 @@ class _ComponentsPickerModalState extends State<_ComponentsPickerModal>
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final compName = controller.text.trim().isNotEmpty ? controller.text.trim() : 'Custom Component';
-              Navigator.pop(dialogCtx);
-
-              // Calculate bounding box
-              final minX = selectedLayers.map((l) => l.x).reduce(math.min);
-              final minY = selectedLayers.map((l) => l.y).reduce(math.min);
-              final maxX = selectedLayers.map((l) => l.x + l.width).reduce(math.max);
-              final maxY = selectedLayers.map((l) => l.y + l.height).reduce(math.max);
-
-              final normalizedLayers = selectedLayers
-                  .map((l) => l.copyWithTransform(x: l.x - minX, y: l.y - minY))
-                  .toList();
-
-              final newDef = ComponentDefinition(
-                id: UuidGenerator.generate(),
-                name: compName,
-                description: 'Custom reusable component',
-                width: math.max(20.0, maxX - minX),
-                height: math.max(20.0, maxY - minY),
-                layers: normalizedLayers,
-              );
-
-              widget.bloc.add(RegisterComponentDefinitionEvent(newDef));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('❖ Registered "$compName" in design system!'),
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: const Color(0xFF6C5CE7),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Create Component'),
-          ),
-        ],
       ),
     );
   }
 
   void _confirmDeleteComponent(BuildContext context, ComponentDefinition comp) {
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Component?', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+      builder: (dialogCtx) => AppDialog(
+        icon: Icons.delete_outline_rounded,
+        isDestructiveConfirm: true,
+        title: 'Delete Component?',
+        subtitle: comp.name,
+        confirmLabel: 'Delete',
+        onConfirm: () {
+          Navigator.pop(dialogCtx);
+          widget.bloc.add(DeleteComponentDefinitionEvent(comp.id));
+        },
         content: Text(
-          'Are you sure you want to remove "${comp.name}" from your component library?',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          'Are you sure you want to remove "${comp.name}" from your component library? Existing instances will remain intact.',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              widget.bloc.add(DeleteComponentDefinitionEvent(comp.id));
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF5C5C),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
       ),
     );
   }

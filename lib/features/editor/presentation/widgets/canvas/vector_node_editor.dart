@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/utils/svg_vector_parser.dart';
+import 'package:layerly/core/widgets/app_modal_sheet.dart';
+import 'package:layerly/core/widgets/app_dialog.dart';
 import 'package:layerly/features/editor/domain/entities/vector_layer.dart';
 
 /// Opens the interactive Figma-style Vector Node & Multi-Layer Studio.
@@ -11,10 +13,8 @@ void showVectorNodeEditorSheet(
   VectorLayer layer, {
   required ValueChanged<VectorLayer> onUpdate,
 }) {
-  showModalBottomSheet(
+  showAppModalSheet(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
     builder: (ctx) => _VectorNodeEditorModal(
       initialLayer: layer,
       onUpdate: onUpdate,
@@ -138,45 +138,31 @@ class _VectorNodeEditorModalState extends State<_VectorNodeEditorModal> {
   void _showFlutterCodeDialog(BuildContext context) {
     final code = SvgVectorParser.generateFlutterPainterCode(_layer);
 
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF161522),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF00CEC9).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.flutter_dash_rounded, color: Color(0xFF00CEC9), size: 20),
+      builder: (dialogCtx) => AppDialog(
+        icon: Icons.flutter_dash_rounded,
+        title: 'Flutter CustomPainter',
+        subtitle: 'GPU-accelerated bezier paths for vector sub-layers',
+        confirmLabel: 'Copy Code',
+        confirmIcon: Icons.copy_rounded,
+        onConfirm: () {
+          Clipboard.setData(ClipboardData(text: code));
+          Navigator.pop(dialogCtx);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Flutter CustomPainter code copied to clipboard!'),
+              backgroundColor: Color(0xFF00CEC9),
+              duration: Duration(seconds: 2),
             ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Flutter CustomPainter Code',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 18),
-              onPressed: () => Navigator.pop(dialogCtx),
-            ),
-          ],
-        ),
+          );
+        },
         content: SizedBox(
           width: 540,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Native Flutter CustomPainter with GPU-accelerated bezier paths for every sub-layer.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
               Container(
                 height: 260,
                 decoration: BoxDecoration(
@@ -199,32 +185,6 @@ class _VectorNodeEditorModalState extends State<_VectorNodeEditorModal> {
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Close', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6C5CE7),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            icon: const Icon(Icons.copy_rounded, size: 14),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: code));
-              Navigator.pop(dialogCtx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Flutter CustomPainter code copied to clipboard!'),
-                  backgroundColor: Color(0xFF00CEC9),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            label: const Text('Copy Flutter Code'),
-          ),
-        ],
       ),
     );
   }
@@ -741,11 +701,12 @@ class _VectorNodeEditorModalState extends State<_VectorNodeEditorModal> {
   }
 
   void _showColorPicker(BuildContext context, Color initialColor, ValueChanged<Color> onColorChanged) {
-    showDialog(
+    showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1826),
-        title: const Text('Pick Color', style: TextStyle(color: Colors.white, fontSize: 14)),
+      builder: (ctx) => AppDialog(
+        icon: Icons.palette_rounded,
+        title: 'Pick Color',
+        subtitle: 'Select vector element fill or stroke color',
         content: SingleChildScrollView(
           child: BlockPicker(
             pickerColor: initialColor,
