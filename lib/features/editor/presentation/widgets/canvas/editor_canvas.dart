@@ -342,8 +342,8 @@ class _EditorCanvasState extends State<EditorCanvas> {
                                           context.read<EditorBloc>().add(
                                                 MoveLayerDeltaEvent(
                                                   layerId: layerId,
-                                                  dx: details.delta.dx / scale,
-                                                  dy: details.delta.dy / scale,
+                                                  dx: details.delta.dx,
+                                                  dy: details.delta.dy,
                                                   isFinal: false,
                                                 ),
                                               );
@@ -367,8 +367,8 @@ class _EditorCanvasState extends State<EditorCanvas> {
                                                 ResizeLayerHandleEvent(
                                                   layerId: layerId,
                                                   handle: handle,
-                                                  dx: details.delta.dx / scale,
-                                                  dy: details.delta.dy / scale,
+                                                  dx: details.delta.dx,
+                                                  dy: details.delta.dy,
                                                   isFinal: false,
                                                 ),
                                               );
