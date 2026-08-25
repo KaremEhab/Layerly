@@ -17,6 +17,7 @@ class ComponentInstanceLayer extends Layer {
     super.zIndex = 0,
     super.visible = true,
     super.locked = false,
+    super.scale = 1.0,
     required this.componentDefinitionId,
     this.variableOverrides = const {},
   }) : super(type: LayerType.componentInstance);
@@ -33,6 +34,7 @@ class ComponentInstanceLayer extends Layer {
     bool? visible,
     bool? locked,
     String? name,
+    double? scale,
   }) {
     return copyWith(
       x: x,
@@ -45,6 +47,7 @@ class ComponentInstanceLayer extends Layer {
       visible: visible,
       locked: locked,
       name: name,
+      scale: scale,
     );
   }
 
@@ -60,6 +63,7 @@ class ComponentInstanceLayer extends Layer {
     int? zIndex,
     bool? visible,
     bool? locked,
+    double? scale,
     String? componentDefinitionId,
     Map<String, dynamic>? variableOverrides,
   }) {
@@ -75,6 +79,7 @@ class ComponentInstanceLayer extends Layer {
       zIndex: zIndex ?? this.zIndex,
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
+      scale: scale ?? this.scale,
       componentDefinitionId:
           componentDefinitionId ?? this.componentDefinitionId,
       variableOverrides: variableOverrides ?? this.variableOverrides,

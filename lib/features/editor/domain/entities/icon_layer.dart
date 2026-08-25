@@ -21,6 +21,7 @@ class IconLayer extends Layer {
     super.zIndex = 0,
     super.visible = true,
     super.locked = false,
+    super.scale = 1.0,
     this.icon = Icons.check_circle_rounded,
     this.color = const Color(0xFFA970FF),
     this.backgroundColor,
@@ -40,6 +41,7 @@ class IconLayer extends Layer {
     bool? visible,
     bool? locked,
     String? name,
+    double? scale,
   }) {
     return copyWith(
       x: x,
@@ -52,6 +54,7 @@ class IconLayer extends Layer {
       visible: visible,
       locked: locked,
       name: name,
+      scale: scale,
     );
   }
 
@@ -67,6 +70,7 @@ class IconLayer extends Layer {
     int? zIndex,
     bool? visible,
     bool? locked,
+    double? scale,
     IconData? icon,
     Color? color,
     Color? backgroundColor,
@@ -85,6 +89,7 @@ class IconLayer extends Layer {
       zIndex: zIndex ?? this.zIndex,
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
+      scale: scale ?? this.scale,
       icon: icon ?? this.icon,
       color: color ?? this.color,
       backgroundColor: backgroundColor ?? this.backgroundColor,

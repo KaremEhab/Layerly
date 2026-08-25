@@ -15,6 +15,7 @@ abstract class Layer extends Equatable {
   final int zIndex;
   final bool visible;
   final bool locked;
+  final double scale;
 
   const Layer({
     required this.id,
@@ -29,6 +30,7 @@ abstract class Layer extends Equatable {
     this.zIndex = 0,
     this.visible = true,
     this.locked = false,
+    this.scale = 1.0,
   });
 
   Rect get bounds => Rect.fromLTWH(x, y, width, height);
@@ -46,6 +48,7 @@ abstract class Layer extends Equatable {
     bool? visible,
     bool? locked,
     String? name,
+    double? scale,
   });
 
   @override
@@ -62,5 +65,6 @@ abstract class Layer extends Equatable {
         zIndex,
         visible,
         locked,
+        scale,
       ];
 }

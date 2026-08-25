@@ -1893,8 +1893,24 @@ class _MenuScaleScrubber extends StatefulWidget {
 }
 
 class _MenuScaleScrubberState extends State<_MenuScaleScrubber> {
-  double _currentPercent = 100.0;
+  late double _currentPercent;
   bool _isDragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPercent = (widget.layer.scale * 100).roundToDouble();
+    if (_currentPercent <= 0) _currentPercent = 100.0;
+  }
+
+  @override
+  void didUpdateWidget(covariant _MenuScaleScrubber oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((widget.layer.scale - oldWidget.layer.scale).abs() > 0.001) {
+      _currentPercent = (widget.layer.scale * 100).roundToDouble();
+      if (_currentPercent <= 0) _currentPercent = 100.0;
+    }
+  }
 
   void _applyDelta(double deltaPercent) {
     final nextPercent = (_currentPercent + deltaPercent).clamp(10.0, 500.0);
@@ -1946,8 +1962,20 @@ class _MenuScaleScrubberState extends State<_MenuScaleScrubber> {
               ),
             ),
             const SizedBox(width: 4),
-            // Draggable / Scrubbable % Badge
+            // Draggable / Scrubbable % Badge (tap or double-tap to reset)
             GestureDetector(
+              onDoubleTap: () {
+                if (_currentPercent != 100.0) {
+                  final factor = 100.0 / _currentPercent;
+                  setState(() {
+                    _currentPercent = 100.0;
+                  });
+                  widget.bloc.add(ScaleLayerEvent(
+                    layerId: widget.layer.id,
+                    scaleFactor: factor,
+                  ));
+                }
+              },
               onHorizontalDragStart: (_) => setState(() => _isDragging = true),
               onHorizontalDragUpdate: (details) {
                 _applyDelta(details.delta.dx * 0.75);

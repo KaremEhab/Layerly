@@ -26,6 +26,7 @@ class ShapeLayer extends Layer {
     super.zIndex = 0,
     super.visible = true,
     super.locked = false,
+    super.scale = 1.0,
     this.shapeType = ShapeType.roundedRectangle,
     this.fill = const Color(0xFF1D1E24),
     this.gradient,
@@ -50,6 +51,7 @@ class ShapeLayer extends Layer {
     bool? visible,
     bool? locked,
     String? name,
+    double? scale,
   }) {
     return copyWith(
       x: x,
@@ -62,6 +64,7 @@ class ShapeLayer extends Layer {
       visible: visible,
       locked: locked,
       name: name,
+      scale: scale,
     );
   }
 
@@ -77,6 +80,7 @@ class ShapeLayer extends Layer {
     int? zIndex,
     bool? visible,
     bool? locked,
+    double? scale,
     ShapeType? shapeType,
     Color? fill,
     Gradient? gradient,
@@ -100,6 +104,7 @@ class ShapeLayer extends Layer {
       zIndex: zIndex ?? this.zIndex,
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
+      scale: scale ?? this.scale,
       shapeType: shapeType ?? this.shapeType,
       fill: fill ?? this.fill,
       gradient: gradient ?? this.gradient,

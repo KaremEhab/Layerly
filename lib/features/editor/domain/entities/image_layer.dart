@@ -25,6 +25,7 @@ class ImageLayer extends Layer {
     super.zIndex = 0,
     super.visible = true,
     super.locked = false,
+    super.scale = 1.0,
     this.imagePath,
     this.assetPath,
     this.svgContent,
@@ -48,6 +49,7 @@ class ImageLayer extends Layer {
     bool? visible,
     bool? locked,
     String? name,
+    double? scale,
   }) {
     return copyWith(
       x: x,
@@ -60,6 +62,7 @@ class ImageLayer extends Layer {
       visible: visible,
       locked: locked,
       name: name,
+      scale: scale,
     );
   }
 
@@ -75,6 +78,7 @@ class ImageLayer extends Layer {
     int? zIndex,
     bool? visible,
     bool? locked,
+    double? scale,
     String? imagePath,
     String? assetPath,
     String? svgContent,
@@ -98,6 +102,7 @@ class ImageLayer extends Layer {
       zIndex: zIndex ?? this.zIndex,
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
+      scale: scale ?? this.scale,
       imagePath: imagePath ?? this.imagePath,
       assetPath: assetPath ?? this.assetPath,
       svgContent: svgContent ?? this.svgContent,

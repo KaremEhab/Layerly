@@ -30,6 +30,7 @@ class DeviceMockupLayer extends Layer {
     super.zIndex = 0,
     super.visible = true,
     super.locked = false,
+    super.scale = 1.0,
     this.device = MockupDevice.iphone17ProMax,
     this.screenImagePath,
     this.frameColor = const Color(0xFF050507),
@@ -58,6 +59,7 @@ class DeviceMockupLayer extends Layer {
     bool? visible,
     bool? locked,
     String? name,
+    double? scale,
   }) {
     return copyWith(
       x: x,
@@ -70,6 +72,7 @@ class DeviceMockupLayer extends Layer {
       visible: visible,
       locked: locked,
       name: name,
+      scale: scale,
     );
   }
 
@@ -85,6 +88,7 @@ class DeviceMockupLayer extends Layer {
     int? zIndex,
     bool? visible,
     bool? locked,
+    double? scale,
     MockupDevice? device,
     String? screenImagePath,
     Color? frameColor,
@@ -112,6 +116,7 @@ class DeviceMockupLayer extends Layer {
       zIndex: zIndex ?? this.zIndex,
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
+      scale: scale ?? this.scale,
       device: device ?? this.device,
       screenImagePath: screenImagePath ?? this.screenImagePath,
       frameColor: frameColor ?? this.frameColor,

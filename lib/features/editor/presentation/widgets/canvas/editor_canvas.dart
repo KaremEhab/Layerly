@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
+import 'package:layerly/features/editor/domain/entities/layer.dart';
+import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -33,6 +35,11 @@ class _EditorCanvasState extends State<EditorCanvas> {
   Offset? _marqueeEnd;
   bool _isMarqueeActive = false;
   final Map<int, Offset> _activePointerPositions = {};
+  final Map<int, Offset> _pointerStartPositions = {};
+  final Map<int, DateTime> _pointerDownTimes = {};
+  bool _twoFingerTapCandidate = false;
+  Offset? _twoFingerMidpoint;
+  DateTime? _twoFingerStartTime;
 
   void _openContextMenu(Offset globalPosition) {
     final bloc = context.read<EditorBloc>();
@@ -42,6 +49,62 @@ class _EditorCanvasState extends State<EditorCanvas> {
       state: bloc.state,
       bloc: bloc,
     );
+  }
+
+  Layer? _hitTestLayer(List<Layer> layers, double x, double y) {
+    for (int i = layers.length - 1; i >= 0; i--) {
+      final l = layers[i];
+      if (!l.visible) continue;
+      if (l is AutoLayoutLayer && l.children.isNotEmpty) {
+        final child = _hitTestLayer(l.children, x - l.x, y - l.y);
+        if (child != null) return child;
+      }
+      if (x >= l.x && x <= l.x + l.width && y >= l.y && y <= l.y + l.height) {
+        return l;
+      }
+    }
+    return null;
+  }
+
+  void _handleTwoFingerTap(
+    Offset screenPos,
+    double scale,
+    Offset pageOrigin,
+    CanvasPage activePage,
+  ) {
+    final canvasX = (screenPos.dx - pageOrigin.dx) / scale;
+    final canvasY = (screenPos.dy - pageOrigin.dy) / scale;
+    final hit = _hitTestLayer(activePage.layers, canvasX, canvasY);
+    _focusNode.requestFocus();
+    if (hit != null) {
+      context.read<EditorBloc>().add(SelectLayerEvent(hit.id));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _openContextMenu(screenPos);
+      });
+    } else {
+      _openContextMenu(screenPos);
+    }
+  }
+
+  void _handleTwoFingerTapInfinite(
+    Offset screenPos,
+    CanvasPage activePage,
+  ) {
+    final scenePos = _transformController.toScene(screenPos);
+    final canvasX = scenePos.dx - 200;
+    final canvasY = scenePos.dy - 200;
+    final hit = _hitTestLayer(activePage.layers, canvasX, canvasY);
+    _focusNode.requestFocus();
+    if (hit != null) {
+      context.read<EditorBloc>().add(SelectLayerEvent(hit.id));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _openContextMenu(screenPos);
+      });
+    } else {
+      _openContextMenu(screenPos);
+    }
   }
 
   @override
@@ -199,17 +262,54 @@ class _EditorCanvasState extends State<EditorCanvas> {
         return Listener(
           onPointerDown: (event) {
             _activePointerPositions[event.pointer] = event.position;
+            _pointerStartPositions[event.pointer] = event.position;
+            _pointerDownTimes[event.pointer] = DateTime.now();
+
+            if (_activePointerPositions.length == 2) {
+              final entries = _activePointerPositions.values.toList();
+              final times = _pointerDownTimes.values.toList();
+              if (times.length >= 2 &&
+                  (times[1].difference(times[0])).abs().inMilliseconds < 400) {
+                _twoFingerTapCandidate = true;
+                _twoFingerMidpoint = (entries[0] + entries[1]) / 2;
+                _twoFingerStartTime = DateTime.now();
+              }
+            } else if (_activePointerPositions.length > 2) {
+              _twoFingerTapCandidate = false;
+            }
           },
           onPointerMove: (event) {
             if (_activePointerPositions.containsKey(event.pointer)) {
               _activePointerPositions[event.pointer] = event.position;
             }
+            if (_pointerStartPositions.containsKey(event.pointer)) {
+              final start = _pointerStartPositions[event.pointer]!;
+              if ((event.position - start).distance > 24.0) {
+                _twoFingerTapCandidate = false;
+              }
+            }
           },
           onPointerUp: (event) {
+            if (_twoFingerTapCandidate &&
+                _twoFingerMidpoint != null &&
+                _twoFingerStartTime != null) {
+              final elapsed =
+                  DateTime.now().difference(_twoFingerStartTime!).inMilliseconds;
+              if (elapsed < 500) {
+                _twoFingerTapCandidate = false;
+                final midpoint = _twoFingerMidpoint!;
+                _handleTwoFingerTap(midpoint, scale, pageOrigin, activePage);
+              }
+            }
             _activePointerPositions.remove(event.pointer);
+            _pointerStartPositions.remove(event.pointer);
+            _pointerDownTimes.remove(event.pointer);
           },
           onPointerCancel: (event) {
+            _twoFingerTapCandidate = false;
             _activePointerPositions.remove(event.pointer);
+            _pointerStartPositions.remove(event.pointer);
+            _pointerDownTimes.remove(event.pointer);
           },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -440,17 +540,54 @@ class _EditorCanvasState extends State<EditorCanvas> {
     return Listener(
       onPointerDown: (event) {
         _activePointerPositions[event.pointer] = event.position;
+        _pointerStartPositions[event.pointer] = event.position;
+        _pointerDownTimes[event.pointer] = DateTime.now();
+
+        if (_activePointerPositions.length == 2) {
+          final entries = _activePointerPositions.values.toList();
+          final times = _pointerDownTimes.values.toList();
+          if (times.length >= 2 &&
+              (times[1].difference(times[0])).abs().inMilliseconds < 400) {
+            _twoFingerTapCandidate = true;
+            _twoFingerMidpoint = (entries[0] + entries[1]) / 2;
+            _twoFingerStartTime = DateTime.now();
+          }
+        } else if (_activePointerPositions.length > 2) {
+          _twoFingerTapCandidate = false;
+        }
       },
       onPointerMove: (event) {
         if (_activePointerPositions.containsKey(event.pointer)) {
           _activePointerPositions[event.pointer] = event.position;
         }
+        if (_pointerStartPositions.containsKey(event.pointer)) {
+          final start = _pointerStartPositions[event.pointer]!;
+          if ((event.position - start).distance > 24.0) {
+            _twoFingerTapCandidate = false;
+          }
+        }
       },
       onPointerUp: (event) {
+        if (_twoFingerTapCandidate &&
+            _twoFingerMidpoint != null &&
+            _twoFingerStartTime != null) {
+          final elapsed =
+              DateTime.now().difference(_twoFingerStartTime!).inMilliseconds;
+          if (elapsed < 500) {
+            _twoFingerTapCandidate = false;
+            final midpoint = _twoFingerMidpoint!;
+            _handleTwoFingerTapInfinite(midpoint, activePage);
+          }
+        }
         _activePointerPositions.remove(event.pointer);
+        _pointerStartPositions.remove(event.pointer);
+        _pointerDownTimes.remove(event.pointer);
       },
       onPointerCancel: (event) {
+        _twoFingerTapCandidate = false;
         _activePointerPositions.remove(event.pointer);
+        _pointerStartPositions.remove(event.pointer);
+        _pointerDownTimes.remove(event.pointer);
       },
       child: Container(
         color: AppColors.canvasBackground,

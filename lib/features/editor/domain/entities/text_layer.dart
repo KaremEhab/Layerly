@@ -33,6 +33,7 @@ class TextLayer extends Layer {
     super.zIndex = 0,
     super.visible = true,
     super.locked = false,
+    super.scale = 1.0,
     required this.content,
     this.fontFamily = 'Inter',
     this.fontSize = 28.0,
@@ -64,6 +65,7 @@ class TextLayer extends Layer {
     bool? visible,
     bool? locked,
     String? name,
+    double? scale,
   }) {
     return copyWith(
       x: x,
@@ -76,6 +78,7 @@ class TextLayer extends Layer {
       visible: visible,
       locked: locked,
       name: name,
+      scale: scale,
     );
   }
 
@@ -91,6 +94,7 @@ class TextLayer extends Layer {
     int? zIndex,
     bool? visible,
     bool? locked,
+    double? scale,
     String? content,
     String? fontFamily,
     double? fontSize,
@@ -124,6 +128,7 @@ class TextLayer extends Layer {
       zIndex: zIndex ?? this.zIndex,
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
+      scale: scale ?? this.scale,
       content: content ?? this.content,
       fontFamily: fontFamily ?? this.fontFamily,
       fontSize: fontSize ?? this.fontSize,

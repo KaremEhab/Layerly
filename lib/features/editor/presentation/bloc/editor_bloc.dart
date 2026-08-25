@@ -876,6 +876,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
 
   static Layer _scaleLayerRecursive(Layer layer, double factor) {
     if (factor <= 0) return layer;
+    final newScale = (layer.scale * factor).clamp(0.1, 10.0);
 
     if (layer is AutoLayoutLayer) {
       final scaledChildren = layer.children
@@ -884,6 +885,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       final scaled = layer.copyWith(
         width: (layer.width * factor).clamp(10.0, 50000.0),
         height: (layer.height * factor).clamp(10.0, 50000.0),
+        scale: newScale,
         gap: (layer.gap * factor).clamp(0.0, 1000.0),
         paddingHorizontal: (layer.paddingHorizontal * factor).clamp(
           0.0,
@@ -909,6 +911,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       final scaledRadius = layer.backgroundRadius * factor;
       final scaled = layer.copyWith(
         fontSize: scaledFontSize,
+        scale: newScale,
         letterSpacing: scaledLetterSpacing,
         padding: scaledPadding,
         backgroundRadius: scaledRadius,
@@ -920,11 +923,13 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
         // When scaling the arrow, increase the width only, not the height nor stroke width
         return layer.copyWith(
           width: (layer.width * factor).clamp(1.0, 50000.0),
+          scale: newScale,
         );
       }
       return layer.copyWith(
         width: (layer.width * factor).clamp(1.0, 50000.0),
         height: (layer.height * factor).clamp(1.0, 50000.0),
+        scale: newScale,
         cornerRadius: (layer.cornerRadius * factor).clamp(0.0, 1000.0),
         strokeWidth: (layer.strokeWidth * factor).clamp(0.0, 500.0),
       );
@@ -932,28 +937,33 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       return layer.copyWith(
         width: (layer.width * factor).clamp(4.0, 50000.0),
         height: (layer.height * factor).clamp(4.0, 50000.0),
+        scale: newScale,
       );
     } else if (layer is ImageLayer) {
       return layer.copyWith(
         width: (layer.width * factor).clamp(4.0, 50000.0),
         height: (layer.height * factor).clamp(4.0, 50000.0),
+        scale: newScale,
         borderRadius: (layer.borderRadius * factor).clamp(0.0, 1000.0),
       );
     } else if (layer is DeviceMockupLayer) {
       return layer.copyWith(
         width: (layer.width * factor).clamp(20.0, 50000.0),
         height: (layer.height * factor).clamp(20.0, 50000.0),
+        scale: newScale,
       );
     } else if (layer is ComponentInstanceLayer) {
       return layer.copyWith(
         width: (layer.width * factor).clamp(1.0, 50000.0),
         height: (layer.height * factor).clamp(1.0, 50000.0),
+        scale: newScale,
       );
     }
 
     return layer.copyWithTransform(
       width: (layer.width * factor).clamp(1.0, 50000.0),
       height: (layer.height * factor).clamp(1.0, 50000.0),
+      scale: newScale,
     );
   }
 

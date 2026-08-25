@@ -121,6 +121,7 @@ class VectorLayer extends Layer {
     super.zIndex = 0,
     super.visible = true,
     super.locked = false,
+    super.scale = 1.0,
     List<VectorPathElement>? elements,
     // Backwards compatibility constructors
     List<VectorPoint>? points,
@@ -168,6 +169,7 @@ class VectorLayer extends Layer {
     bool? visible,
     bool? locked,
     String? name,
+    double? scale,
   }) {
     return copyWith(
       x: x,
@@ -180,6 +182,7 @@ class VectorLayer extends Layer {
       visible: visible,
       locked: locked,
       name: name,
+      scale: scale,
     );
   }
 
@@ -195,6 +198,7 @@ class VectorLayer extends Layer {
     int? zIndex,
     bool? visible,
     bool? locked,
+    double? scale,
     List<VectorPathElement>? elements,
     // Backwards compatibility params
     List<VectorPoint>? points,
@@ -245,6 +249,7 @@ class VectorLayer extends Layer {
       zIndex: zIndex ?? this.zIndex,
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
+      scale: scale ?? this.scale,
       elements: updatedElements,
       shadows: shadows ?? this.shadows,
     );
