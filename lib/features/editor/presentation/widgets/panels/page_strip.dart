@@ -113,16 +113,35 @@ class _PageStripState extends State<PageStrip> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            displayIndex,
-                            style: TextStyle(
-                              color: isActive ? const Color(0xFF9E77F6) : AppColors.textMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                displayIndex,
+                                style: TextStyle(
+                                  color: isActive ? const Color(0xFF9E77F6) : AppColors.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (pageIndex == state.project.coverPageIndex) ...[
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.star_rounded,
+                                  size: 13,
+                                  color: Color(0xFFFBBF24),
+                                ),
+                              ],
+                            ],
                           ),
                           InkWell(
-                            onTap: () => _showSlideOptions(context, pageIndex, pages.length > 1, displayName),
+                            onTap: () => _showSlideOptions(
+                              context,
+                              pageIndex,
+                              pages.length > 1,
+                              displayName,
+                              pageIndex == state.project.coverPageIndex,
+                            ),
                             child: const MoreRingsIcon(
                               size: 16,
                               color: AppColors.textMuted,
@@ -133,15 +152,37 @@ class _PageStripState extends State<PageStrip> {
                           ),
                         ],
                       ),
-                      Text(
-                        displayName,
-                        style: TextStyle(
-                          color: isActive ? const Color(0xFF9E77F6) : AppColors.textSecondary,
-                          fontSize: 12,
-                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              displayName,
+                              style: TextStyle(
+                                color: isActive ? const Color(0xFF9E77F6) : AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (pageIndex == state.project.coverPageIndex)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFBBF24).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Cover',
+                                style: TextStyle(
+                                  color: Color(0xFFFBBF24),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
@@ -396,7 +437,13 @@ class _PageStripState extends State<PageStrip> {
     );
   }
 
-  void _showSlideOptions(BuildContext context, int pageIndex, bool canDelete, String slideName) {
+  void _showSlideOptions(
+    BuildContext context,
+    int pageIndex,
+    bool canDelete,
+    String slideName,
+    bool isCover,
+  ) {
     final bloc = context.read<EditorBloc>();
     showAppModalSheet(
       context: context,
@@ -407,6 +454,24 @@ class _PageStripState extends State<PageStrip> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            AppSheetActionTile(
+              icon: isCover ? Icons.star_rounded : Icons.star_border_rounded,
+              iconColor: const Color(0xFFFBBF24),
+              title: isCover ? 'Current Project Cover' : 'Set as Project Cover',
+              subtitle: isCover
+                  ? 'This slide is displayed on the Home Page'
+                  : 'Display this slide as the project cover on Home Page',
+              trailing: isCover
+                  ? const Icon(Icons.check_circle_rounded, color: Color(0xFFFBBF24), size: 20)
+                  : null,
+              onTap: () {
+                Navigator.pop(ctx);
+                if (!isCover) {
+                  bloc.add(SetProjectCoverEvent(pageIndex));
+                }
+              },
+            ),
+            const SizedBox(height: 6),
             AppSheetActionTile(
               icon: Icons.copy_rounded,
               iconColor: const Color(0xFFA78BFA),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/widgets/app_modal_sheet.dart';
+import 'package:layerly/core/widgets/glass_popup_menu.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/component_instance_layer.dart';
 import 'package:layerly/features/editor/domain/entities/device_mockup_layer.dart';
@@ -271,45 +272,55 @@ class _LayersSheetModalState extends State<_LayersSheetModal> {
           const SizedBox(width: 8),
 
           // Quick Filter Dropdown Button
-          PopupMenuButton<String>(
-            initialValue: _selectedFilter,
+          GlassPopupMenuButton<String>(
+            width: 200,
             onSelected: (val) => setState(() => _selectedFilter = val),
-            color: const Color(0xFF1E1C2B),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Color(0xFF2E2C40)),
-            ),
             itemBuilder: (ctx) => [
-              'All',
-              'Auto Layouts',
-              'Text',
-              'Icons',
-              'Shapes',
-              'Locked / Hidden',
-            ].map((f) {
-              final isSelected = _selectedFilter == f;
-              return PopupMenuItem<String>(
-                value: f,
-                height: 36,
-                child: Row(
-                  children: [
-                    if (isSelected)
-                      const Icon(Icons.check_rounded, size: 14, color: Color(0xFFA78BFA))
-                    else
-                      const SizedBox(width: 14),
-                    const SizedBox(width: 8),
-                    Text(
-                      f,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+              const GlassMenuHeader<String>(
+                title: 'Filter Layers',
+                icon: Icons.filter_list_rounded,
+              ),
+              const GlassMenuDivider<String>(),
+              ...[
+                'All',
+                'Auto Layouts',
+                'Text',
+                'Icons',
+                'Shapes',
+                'Locked / Hidden',
+              ].map((f) {
+                final isSelected = _selectedFilter == f;
+                IconData icon;
+                switch (f) {
+                  case 'All':
+                    icon = Icons.layers_rounded;
+                    break;
+                  case 'Auto Layouts':
+                    icon = Icons.view_quilt_rounded;
+                    break;
+                  case 'Text':
+                    icon = Icons.text_fields_rounded;
+                    break;
+                  case 'Icons':
+                    icon = Icons.star_rounded;
+                    break;
+                  case 'Shapes':
+                    icon = Icons.category_rounded;
+                    break;
+                  case 'Locked / Hidden':
+                    icon = Icons.lock_outline_rounded;
+                    break;
+                  default:
+                    icon = Icons.circle;
+                }
+                return GlassMenuItem<String>(
+                  value: f,
+                  title: f,
+                  icon: icon,
+                  isSelected: isSelected,
+                );
+              }),
+            ],
             child: Container(
               height: 36,
               padding: const EdgeInsets.symmetric(horizontal: 10),

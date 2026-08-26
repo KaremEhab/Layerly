@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:layerly/core/utils/text_span_parser.dart';
+import 'package:layerly/features/editor/data/project_storage_service.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_project.dart';
 import 'package:layerly/features/editor/domain/entities/canvas_page.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
@@ -22,6 +24,7 @@ import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
 
 class EditorBloc extends Bloc<EditorEvent, EditorState> {
   static const int maxHistoryLength = 50;
+  Timer? _autoSaveTimer;
 
   EditorBloc({required CanvasProject initialProject})
     : super(EditorState(project: normalizeProject(initialProject))) {
@@ -69,8 +72,54 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<ToggleGuidesEvent>(_onToggleGuides);
     on<ToggleSnapEvent>(_onToggleSnap);
     on<ScaleLayerEvent>(_onScaleLayer);
+    on<SetProjectCoverEvent>(_onSetProjectCover);
+    on<SaveProjectEvent>(_onSaveProject);
     on<UndoEvent>(_onUndo);
     on<RedoEvent>(_onRedo);
+  }
+
+  @override
+  void onChange(Change<EditorState> change) {
+    super.onChange(change);
+    if (change.nextState.project != change.currentState.project) {
+      _scheduleAutoSave(change.nextState.project);
+    }
+  }
+
+  void _scheduleAutoSave(CanvasProject project) {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 400), () {
+      ProjectStorageService.instance.saveProject(project);
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _autoSaveTimer?.cancel();
+    ProjectStorageService.instance.saveProject(state.project);
+    return super.close();
+  }
+
+  void _onSetProjectCover(SetProjectCoverEvent event, Emitter<EditorState> emit) {
+    if (event.pageIndex < 0 || event.pageIndex >= state.project.pages.length) {
+      return;
+    }
+    final updated = state.project.copyWith(
+      coverPageIndex: event.pageIndex,
+      updatedAt: DateTime.now(),
+    );
+    emit(
+      state.copyWith(
+        project: updated,
+        undoStack: _pushHistory(state.project, state.undoStack),
+        redoStack: [],
+      ),
+    );
+    ProjectStorageService.instance.saveProject(updated);
+  }
+
+  void _onSaveProject(SaveProjectEvent event, Emitter<EditorState> emit) {
+    ProjectStorageService.instance.saveProject(state.project);
   }
 
   List<CanvasProject> _pushHistory(

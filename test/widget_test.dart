@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:layerly/core/theme/app_theme.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
+import 'package:layerly/features/editor/presentation/screens/editor_screen.dart';
 import 'package:layerly/core/widgets/more_rings_icon.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/properties_panel.dart';
 import 'package:layerly/main.dart';
@@ -13,12 +15,36 @@ import 'package:layerly/main.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
-  testWidgets('Layerly Studio - Mobile Layout and Contextual Inspector switching', (WidgetTester tester) async {
+
+  Widget wrapScreen(Widget child) {
+    return MaterialApp(
+      theme: AppTheme.darkTheme,
+      home: child,
+    );
+  }
+
+  testWidgets('Layerly Studio - Home Screen Renders and Lists Recent Designs', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(393, 852);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(const LayerlyApp());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Layerly Studio'), findsOneWidget);
+    expect(find.text('Visual Content & Mockup Studio'), findsOneWidget);
+    expect(find.text('START FROM TEMPLATE'), findsOneWidget);
+    expect(find.text('RECENT DESIGNS'), findsOneWidget);
+  });
+
+  testWidgets('Layerly Studio - Mobile Layout and Contextual Inspector switching', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(wrapScreen(const EditorScreen()));
     await tester.pumpAndSettle();
 
     // 1. Initial State: Nothing selected -> Page Properties
@@ -30,8 +56,7 @@ void main() {
 
     // 2. Select Text Layer -> Contextual Inspector switches to Text Properties
     final BuildContext context = tester.element(find.byType(SafeArea).first);
-    context.read<EditorBloc>().add(const SelectLayerEvent('txt-heading-line-1')); // Heading line 1
-    // Fallback: select any layer from the active page
+    context.read<EditorBloc>().add(const SelectLayerEvent('txt-heading-line-1'));
     final activeLayers = context.read<EditorBloc>().state.activePageLayers;
     if (activeLayers.isNotEmpty) {
       context.read<EditorBloc>().add(SelectLayerEvent(activeLayers.first.id));
@@ -56,7 +81,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(const LayerlyApp());
+    await tester.pumpWidget(wrapScreen(const EditorScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('LAYERLY'), findsOneWidget);
@@ -70,19 +95,19 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(const LayerlyApp());
+    await tester.pumpWidget(wrapScreen(const EditorScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('LAYERLY'), findsOneWidget);
     expect(find.text('Cover Screen'), findsWidgets);
   });
 
-  testWidgets('Layerly Studio - Frame Properties Card with 3 Controllers (Radius, Height, Width) and More Dialog', (WidgetTester tester) async {
+  testWidgets('Layerly Studio - Frame Properties Card with 3 Controllers and More Dialog', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(const LayerlyApp());
+    await tester.pumpWidget(wrapScreen(const EditorScreen()));
     await tester.pumpAndSettle();
 
     final BuildContext context = tester.element(find.byType(Scaffold).first);

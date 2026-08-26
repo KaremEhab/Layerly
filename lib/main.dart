@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
-import 'features/editor/presentation/screens/editor_screen.dart';
+import 'features/home/presentation/screens/home_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,10 +13,11 @@ class LayerlyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Layerly - Offline Visual Content Studio',
+      title: 'Layerly - Visual Content Studio',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const EditorScreen(),
+      home: const HomeScreen(),
     );
   }
 }
+

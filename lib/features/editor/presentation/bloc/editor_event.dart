@@ -465,3 +465,16 @@ class RedoEvent extends EditorEvent {
   const RedoEvent();
 }
 
+// Project & Cover
+class SetProjectCoverEvent extends EditorEvent {
+  final int pageIndex;
+  const SetProjectCoverEvent(this.pageIndex);
+
+  @override
+  List<Object?> get props => [pageIndex];
+}
+
+class SaveProjectEvent extends EditorEvent {
+  const SaveProjectEvent();
+}
+
