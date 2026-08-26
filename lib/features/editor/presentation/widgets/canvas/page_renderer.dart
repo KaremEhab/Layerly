@@ -145,10 +145,17 @@ class PageRenderer extends StatelessWidget {
   Widget _buildLayerItem(Layer layer) {
     final isSelected = selectedLayerIds.contains(layer.id);
     final effectiveLayer = layer is TextLayer
-        ? (layer).copyWith(
-            width: LayerView.measureTextSize(layer).width,
-            height: LayerView.measureTextSize(layer).height,
-          )
+        ? () {
+            final measured = LayerView.measureTextSize(layer);
+            return layer.copyWith(
+              width: layer.horizontalSizing == AutoLayoutSizingMode.hug
+                  ? measured.width
+                  : (layer.width > 0 ? layer.width : measured.width),
+              height: layer.verticalSizing == AutoLayoutSizingMode.hug
+                  ? measured.height
+                  : (layer.height > 0 ? layer.height : measured.height),
+            );
+          }()
         : (layer is AutoLayoutLayer
             ? (layer).copyWith(
                 width: LayerView.measureAutoLayoutSize(layer).width,

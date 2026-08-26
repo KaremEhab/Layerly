@@ -21,6 +21,7 @@ import 'package:layerly/features/editor/domain/services/snapping_service.dart';
 import 'package:layerly/core/utils/uuid_generator.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
+import 'package:layerly/features/editor/presentation/widgets/canvas/layer_view.dart';
 
 class EditorBloc extends Bloc<EditorEvent, EditorState> {
   static const int maxHistoryLength = 50;
@@ -216,7 +217,27 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
 
   void _onUpdateLayer(UpdateLayerEvent event, Emitter<EditorState> emit) {
     final activePage = state.activePage;
-    final updatedLayers = _updateLayerInTree(activePage.layers, event.layer);
+    var layerToUpdate = event.layer;
+
+    if (layerToUpdate is TextLayer) {
+      if (layerToUpdate.horizontalSizing == AutoLayoutSizingMode.hug) {
+        final measured = LayerView.measureTextSize(layerToUpdate);
+        layerToUpdate = layerToUpdate.copyWith(
+          width: measured.width,
+          height: layerToUpdate.verticalSizing == AutoLayoutSizingMode.hug
+              ? measured.height
+              : layerToUpdate.height,
+        );
+      } else if (layerToUpdate.verticalSizing == AutoLayoutSizingMode.hug) {
+        final measured = LayerView.measureTextSize(
+          layerToUpdate,
+          maxWidth: layerToUpdate.width > 0 ? layerToUpdate.width : 280.0,
+        );
+        layerToUpdate = layerToUpdate.copyWith(height: measured.height);
+      }
+    }
+
+    final updatedLayers = _updateLayerInTree(activePage.layers, layerToUpdate);
 
     final updatedPage = activePage.copyWith(layers: updatedLayers);
     final updatedPages = List<CanvasPage>.from(state.project.pages);
@@ -530,32 +551,71 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       newY = layer.y;
     }
 
-    final updatedLayer = layer is AutoLayoutLayer
-        ? layer.copyWith(
-            x: newX,
-            y: newY,
+    final isHorizontalResize = (event.handle == ResizeHandle.centerLeft ||
+        event.handle == ResizeHandle.centerRight ||
+        event.handle == ResizeHandle.topLeft ||
+        event.handle == ResizeHandle.topRight ||
+        event.handle == ResizeHandle.bottomLeft ||
+        event.handle == ResizeHandle.bottomRight);
+    final isVerticalResize = (event.handle == ResizeHandle.topCenter ||
+        event.handle == ResizeHandle.bottomCenter ||
+        event.handle == ResizeHandle.topLeft ||
+        event.handle == ResizeHandle.topRight ||
+        event.handle == ResizeHandle.bottomLeft ||
+        event.handle == ResizeHandle.bottomRight);
+
+    Layer updatedLayer;
+    if (layer is AutoLayoutLayer) {
+      updatedLayer = layer.copyWith(
+        x: newX,
+        y: newY,
+        width: newW,
+        height: newH,
+        horizontalSizing: isHorizontalResize
+            ? AutoLayoutSizingMode.fixed
+            : layer.horizontalSizing,
+        verticalSizing: isVerticalResize
+            ? AutoLayoutSizingMode.fixed
+            : layer.verticalSizing,
+      );
+    } else if (layer is TextLayer) {
+      final newHorizSizing = isHorizontalResize
+          ? AutoLayoutSizingMode.fixed
+          : layer.horizontalSizing;
+      final newVertSizing = isVerticalResize
+          ? AutoLayoutSizingMode.fixed
+          : layer.verticalSizing;
+
+      double calculatedH = newH;
+      if (newVertSizing == AutoLayoutSizingMode.hug &&
+          newHorizSizing != AutoLayoutSizingMode.hug) {
+        final measured = LayerView.measureTextSize(
+          layer.copyWith(
             width: newW,
-            height: newH,
-            horizontalSizing:
-                (event.handle == ResizeHandle.centerLeft ||
-                    event.handle == ResizeHandle.centerRight ||
-                    event.handle == ResizeHandle.topLeft ||
-                    event.handle == ResizeHandle.topRight ||
-                    event.handle == ResizeHandle.bottomLeft ||
-                    event.handle == ResizeHandle.bottomRight)
-                ? AutoLayoutSizingMode.fixed
-                : layer.horizontalSizing,
-            verticalSizing:
-                (event.handle == ResizeHandle.topCenter ||
-                    event.handle == ResizeHandle.bottomCenter ||
-                    event.handle == ResizeHandle.topLeft ||
-                    event.handle == ResizeHandle.topRight ||
-                    event.handle == ResizeHandle.bottomLeft ||
-                    event.handle == ResizeHandle.bottomRight)
-                ? AutoLayoutSizingMode.fixed
-                : layer.verticalSizing,
-          )
-        : layer.copyWithTransform(x: newX, y: newY, width: newW, height: newH);
+            horizontalSizing: newHorizSizing,
+            verticalSizing: newVertSizing,
+          ),
+          maxWidth: newW,
+        );
+        calculatedH = measured.height;
+      }
+
+      updatedLayer = layer.copyWith(
+        x: newX,
+        y: newY,
+        width: newW,
+        height: calculatedH,
+        horizontalSizing: newHorizSizing,
+        verticalSizing: newVertSizing,
+      );
+    } else {
+      updatedLayer = layer.copyWithTransform(
+        x: newX,
+        y: newY,
+        width: newW,
+        height: newH,
+      );
+    }
 
     final updatedLayers = _updateLayerInTree(activePage.layers, updatedLayer);
     final updatedPage = activePage.copyWith(layers: updatedLayers);

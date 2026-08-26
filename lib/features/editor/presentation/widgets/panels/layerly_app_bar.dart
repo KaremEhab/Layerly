@@ -5,6 +5,7 @@ import 'package:layerly/core/constants/app_colors.dart';
 import 'package:layerly/core/constants/responsive_breakpoints.dart';
 import 'package:layerly/core/widgets/app_dialog.dart';
 import 'package:layerly/core/widgets/app_modal_sheet.dart';
+import 'package:layerly/core/widgets/glass_popup_menu.dart';
 import 'package:layerly/features/editor/domain/services/export_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
@@ -44,9 +45,9 @@ class LayerlyAppBar extends StatelessWidget {
         children: [
           // Left: Home Icon Pill (60 x 45)
           _buildGlassButton(
-            width: 60,
-            height: 45,
-            borderRadius: 22.5,
+            width: 50,
+            height: 50,
+            borderRadius: 25,
             onTap: onHome ?? () => _showLeaveConfirmDialog(context),
             child: const Icon(
               Icons.home_outlined,
@@ -62,7 +63,7 @@ class LayerlyAppBar extends StatelessWidget {
             child: _buildGlassButton(
               height: 50,
               borderRadius: 25,
-              onTap: () => _showRenameDialog(context, state.project.name),
+              onTap: () {},
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -78,47 +79,103 @@ class LayerlyAppBar extends StatelessWidget {
                       ),
                     ),
                     Flexible(
-                      child: Container(
-                        height: 32,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF241A3E).withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.75),
-                            width: 1.2,
+                      child: GlassPopupMenuButton<String>(
+                        width: 240,
+                        onSelected: (val) {
+                          switch (val) {
+                            case 'rename':
+                              _showRenameDialog(context, state.project.name);
+                              break;
+                            case 'export':
+                              if (onExport != null) {
+                                onExport!();
+                              } else {
+                                _showExportDialog(context, state);
+                              }
+                              break;
+                            case 'home':
+                              if (onHome != null) {
+                                onHome!();
+                              } else {
+                                _showLeaveConfirmDialog(context);
+                              }
+                              break;
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          GlassMenuHeader<String>(
+                            title: state.project.name,
+                            icon: Icons.design_services_rounded,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                          const GlassMenuDivider<String>(),
+                          const GlassMenuItem<String>(
+                            value: 'rename',
+                            title: 'Rename Project',
+                            subtitle: 'Change project title',
+                            icon: Icons.edit_rounded,
+                            iconColor: Color(0xFFA78BFA),
+                            iconBackgroundColor: Color(0x338B5CF6),
+                          ),
+                          const GlassMenuItem<String>(
+                            value: 'export',
+                            title: 'Export Design',
+                            subtitle: 'Download PNG / JPG / PDF',
+                            icon: Icons.file_download_outlined,
+                            iconColor: Color(0xFF38BDF8),
+                            iconBackgroundColor: Color(0x3338BDF8),
+                          ),
+                          const GlassMenuDivider<String>(),
+                          const GlassMenuItem<String>(
+                            value: 'home',
+                            title: 'Back to Home',
+                            subtitle: 'Return to dashboard',
+                            icon: Icons.home_rounded,
+                            iconColor: Color(0xFF94A3B8),
+                            iconBackgroundColor: Color(0x3394A3B8),
+                          ),
+                        ],
+                        child: Container(
+                          height: 32,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF241A3E).withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.75),
+                              width: 1.2,
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                state.project.name.toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.5,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  state.project.name.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

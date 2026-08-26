@@ -20,6 +20,8 @@ class TextLayer extends Layer {
   final double backgroundRadius;
   final EdgeInsets padding;
   final Gradient? textGradient;
+  final AutoLayoutSizingMode horizontalSizing;
+  final AutoLayoutSizingMode verticalSizing;
 
   const TextLayer({
     required super.id,
@@ -51,6 +53,8 @@ class TextLayer extends Layer {
     this.backgroundRadius = 6.0,
     this.padding = EdgeInsets.zero,
     this.textGradient,
+    this.horizontalSizing = AutoLayoutSizingMode.hug,
+    this.verticalSizing = AutoLayoutSizingMode.hug,
   }) : super(type: LayerType.text);
 
   @override
@@ -115,6 +119,8 @@ class TextLayer extends Layer {
     double? backgroundRadius,
     EdgeInsets? padding,
     Gradient? textGradient,
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
   }) {
     return TextLayer(
       id: id ?? this.id,
@@ -146,6 +152,8 @@ class TextLayer extends Layer {
       backgroundRadius: backgroundRadius ?? this.backgroundRadius,
       padding: padding ?? this.padding,
       textGradient: textGradient ?? this.textGradient,
+      horizontalSizing: horizontalSizing ?? this.horizontalSizing,
+      verticalSizing: verticalSizing ?? this.verticalSizing,
     );
   }
 
@@ -169,5 +177,7 @@ class TextLayer extends Layer {
         backgroundRadius,
         padding,
         textGradient,
+        horizontalSizing,
+        verticalSizing,
       ];
 }

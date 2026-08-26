@@ -157,6 +157,8 @@ class ProjectSerializer {
         'backgroundRadius': layer.backgroundRadius,
         'padding': edgeInsetsToJson(layer.padding),
         'textGradient': gradientToJson(layer.textGradient),
+        'horizontalSizing': layer.horizontalSizing.name,
+        'verticalSizing': layer.verticalSizing.name,
       });
     } else if (layer is ImageLayer) {
       base.addAll({
@@ -334,6 +336,14 @@ class ProjectSerializer {
           backgroundRadius: (json['backgroundRadius'] as num?)?.toDouble() ?? 6.0,
           padding: edgeInsetsFromJson(json['padding'] as Map<String, dynamic>?),
           textGradient: gradientFromJson(json['textGradient'] as Map<String, dynamic>?),
+          horizontalSizing: AutoLayoutSizingMode.values.firstWhere(
+            (s) => s.name == json['horizontalSizing'],
+            orElse: () => AutoLayoutSizingMode.hug,
+          ),
+          verticalSizing: AutoLayoutSizingMode.values.firstWhere(
+            (s) => s.name == json['verticalSizing'],
+            orElse: () => AutoLayoutSizingMode.hug,
+          ),
         );
 
       case LayerType.image:

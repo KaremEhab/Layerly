@@ -6,6 +6,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:layerly/features/editor/domain/entities/auto_layout_layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer.dart';
 import 'package:layerly/features/editor/domain/entities/layer_enums.dart';
+import 'package:layerly/features/editor/domain/entities/text_layer.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
@@ -104,6 +105,8 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
         final singleLayer = selectedLayers.length == 1 ? selectedLayers.first : null;
         final isAutoLayout = singleLayer is AutoLayoutLayer;
         final autoLayoutLayer = isAutoLayout ? singleLayer : null;
+        final isTextLayer = singleLayer is TextLayer;
+        final textLayer = isTextLayer ? singleLayer : null;
         final isLocked = singleLayer?.locked ?? false;
         final isVisible = singleLayer?.visible ?? true;
 
@@ -653,6 +656,69 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                                       ],
                                     ),
                                   ],
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (textLayer != null) ...[
+                            const _MenuDivider(),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const SizedBox(
+                                        width: 54,
+                                        child: Text(
+                                          'Width',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _SizingIconRow(
+                                          current: textLayer.horizontalSizing,
+                                          onSelected: (mode) {
+                                            widget.bloc.add(UpdateLayerEvent(
+                                              textLayer.copyWith(horizontalSizing: mode),
+                                            ));
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      const SizedBox(
+                                        width: 54,
+                                        child: Text(
+                                          'Height',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _SizingIconRow(
+                                          current: textLayer.verticalSizing,
+                                          onSelected: (mode) {
+                                            widget.bloc.add(UpdateLayerEvent(
+                                              textLayer.copyWith(verticalSizing: mode),
+                                            ));
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),

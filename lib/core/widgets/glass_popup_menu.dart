@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 
-/// Base class for items rendered inside a [GlassPopupMenuButton].
+/// Base class for items rendered inside a [GlassPopupMenuButton] or [GlassDropdownPill].
 abstract class GlassMenuEntry<T> {
   const GlassMenuEntry();
 }
@@ -12,6 +12,7 @@ class GlassMenuItem<T> extends GlassMenuEntry<T> {
   final T value;
   final String title;
   final String? subtitle;
+  final TextStyle? titleStyle;
   final IconData? icon;
   final Color? iconColor;
   final Color? iconBackgroundColor;
@@ -24,6 +25,7 @@ class GlassMenuItem<T> extends GlassMenuEntry<T> {
     required this.value,
     required this.title,
     this.subtitle,
+    this.titleStyle,
     this.icon,
     this.iconColor,
     this.iconBackgroundColor,
@@ -53,9 +55,6 @@ class GlassMenuHeader<T> extends GlassMenuEntry<T> {
 }
 
 /// A modern, obsidian-frosted glass popup menu button.
-///
-/// Replaces standard boxy [PopupMenuButton] with an ultra-sleek,
-/// backdrop-blurred, floating acrylic popover.
 class GlassPopupMenuButton<T> extends StatefulWidget {
   final Widget? child;
   final IconData? icon;
@@ -64,6 +63,7 @@ class GlassPopupMenuButton<T> extends StatefulWidget {
   final List<GlassMenuEntry<T>> Function(BuildContext context) itemBuilder;
   final ValueChanged<T>? onSelected;
   final double width;
+  final double? maxHeight;
   final Offset offset;
   final String? tooltip;
   final EdgeInsetsGeometry padding;
@@ -77,6 +77,7 @@ class GlassPopupMenuButton<T> extends StatefulWidget {
     required this.itemBuilder,
     this.onSelected,
     this.width = 230,
+    this.maxHeight,
     this.offset = const Offset(0, 8),
     this.tooltip,
     this.padding = EdgeInsets.zero,
@@ -104,6 +105,7 @@ class _GlassPopupMenuButtonState<T> extends State<GlassPopupMenuButton<T>> {
         targetPosition: targetPosition,
         targetSize: targetSize,
         menuWidth: widget.width,
+        menuMaxHeight: widget.maxHeight,
         offset: widget.offset,
         items: widget.itemBuilder(context),
         onSelected: (val) {
@@ -155,10 +157,94 @@ class _GlassPopupMenuButtonState<T> extends State<GlassPopupMenuButton<T>> {
   }
 }
 
+/// A sleek pill dropdown selector that triggers the frosted acrylic glass popup menu.
+class GlassDropdownPill<T> extends StatelessWidget {
+  final T value;
+  final String label;
+  final TextStyle? labelStyle;
+  final Widget? leading;
+  final List<GlassMenuEntry<T>> Function(BuildContext context) items;
+  final ValueChanged<T> onSelected;
+  final double? width;
+  final double height;
+  final double menuWidth;
+  final double? menuMaxHeight;
+  final BorderRadius? borderRadius;
+  final Color? backgroundColor;
+  final Border? border;
+
+  const GlassDropdownPill({
+    super.key,
+    required this.value,
+    required this.label,
+    this.labelStyle,
+    this.leading,
+    required this.items,
+    required this.onSelected,
+    this.width,
+    this.height = 38,
+    this.menuWidth = 220,
+    this.menuMaxHeight = 320,
+    this.borderRadius,
+    this.backgroundColor,
+    this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = borderRadius ?? BorderRadius.circular(height / 2);
+
+    return GlassPopupMenuButton<T>(
+      width: menuWidth,
+      maxHeight: menuMaxHeight,
+      onSelected: onSelected,
+      itemBuilder: items,
+      child: Container(
+        width: width,
+        height: height,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: backgroundColor ?? AppColors.surfaceSecondary,
+          borderRadius: radius,
+          border: border ?? Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+        child: Row(
+          mainAxisSize: width == null ? MainAxisSize.min : MainAxisSize.max,
+          children: [
+            if (leading != null) ...[
+              leading!,
+              const SizedBox(width: 6),
+            ],
+            Expanded(
+              child: Text(
+                label,
+                style: labelStyle ??
+                    const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.textSecondary,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GlassMenuOverlay<T> extends StatefulWidget {
   final Offset targetPosition;
   final Size targetSize;
   final double menuWidth;
+  final double? menuMaxHeight;
   final Offset offset;
   final List<GlassMenuEntry<T>> items;
   final ValueChanged<T> onSelected;
@@ -168,6 +254,7 @@ class _GlassMenuOverlay<T> extends StatefulWidget {
     required this.targetPosition,
     required this.targetSize,
     required this.menuWidth,
+    this.menuMaxHeight,
     required this.offset,
     required this.items,
     required this.onSelected,
@@ -229,17 +316,20 @@ class _GlassMenuOverlayState<T> extends State<_GlassMenuOverlay<T>>
     if (left < 12) left = 12;
 
     // Estimate rough menu height
-    final approxHeight = widget.items.fold<double>(16.0, (acc, item) {
+    double rawHeight = widget.items.fold<double>(16.0, (acc, item) {
       if (item is GlassMenuItem<T>) return acc + (item.subtitle != null ? 52.0 : 42.0);
       if (item is GlassMenuDivider<T>) return acc + 10.0;
-      if (item is GlassMenuHeader<T>) return acc + 40.0;
+      if (item is GlassMenuHeader<T>) return acc + 36.0;
       return acc + 40.0;
     });
 
+    final maxHeight = widget.menuMaxHeight ?? (screenSize.height * 0.48);
+    final effectiveHeight = rawHeight.clamp(40.0, maxHeight);
+
     // Calculate top position (flip to above target if overflows screen bottom)
     double top = widget.targetPosition.dy + widget.targetSize.height + widget.offset.dy;
-    if (top + approxHeight > screenSize.height - padding.bottom - 12) {
-      top = widget.targetPosition.dy - approxHeight - widget.offset.dy;
+    if (top + effectiveHeight > screenSize.height - padding.bottom - 12) {
+      top = widget.targetPosition.dy - effectiveHeight - widget.offset.dy;
     }
     if (top < padding.top + 12) {
       top = padding.top + 12;
@@ -280,6 +370,7 @@ class _GlassMenuOverlayState<T> extends State<_GlassMenuOverlay<T>>
                   filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                   child: Container(
                     width: widget.menuWidth,
+                    constraints: BoxConstraints(maxHeight: maxHeight),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [
@@ -310,51 +401,54 @@ class _GlassMenuOverlayState<T> extends State<_GlassMenuOverlay<T>>
                       ],
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: widget.items.map((entry) {
-                        if (entry is GlassMenuDivider<T>) {
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                            height: 1,
-                            color: Colors.white.withValues(alpha: 0.08),
-                          );
-                        }
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: widget.items.map((entry) {
+                          if (entry is GlassMenuDivider<T>) {
+                            return Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                              height: 1,
+                              color: Colors.white.withValues(alpha: 0.08),
+                            );
+                          }
 
-                        if (entry is GlassMenuHeader<T>) {
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
-                            child: Row(
-                              children: [
-                                if (entry.icon != null) ...[
-                                  Icon(entry.icon, size: 13, color: AppColors.textMuted),
-                                  const SizedBox(width: 6),
-                                ],
-                                Expanded(
-                                  child: Text(
-                                    entry.title.toUpperCase(),
-                                    style: const TextStyle(
-                                      color: AppColors.textMuted,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.8,
+                          if (entry is GlassMenuHeader<T>) {
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
+                              child: Row(
+                                children: [
+                                  if (entry.icon != null) ...[
+                                    Icon(entry.icon, size: 13, color: AppColors.textMuted),
+                                    const SizedBox(width: 6),
+                                  ],
+                                  Expanded(
+                                    child: Text(
+                                      entry.title.toUpperCase(),
+                                      style: const TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.8,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
+                                ],
+                              ),
+                            );
+                          }
 
-                        if (entry is GlassMenuItem<T>) {
-                          return _buildMenuItem(entry);
-                        }
+                          if (entry is GlassMenuItem<T>) {
+                            return _buildMenuItem(entry);
+                          }
 
-                        return const SizedBox.shrink();
-                      }).toList(),
+                          return const SizedBox.shrink();
+                        }).toList(),
+                      ),
                     ),
                   ),
                 ),
@@ -419,10 +513,12 @@ class _GlassMenuOverlayState<T> extends State<_GlassMenuOverlay<T>>
                 children: [
                   Text(
                     item.title,
-                    style: TextStyle(
+                    style: (item.titleStyle ?? TextStyle(
                       color: itemColor,
                       fontSize: 13,
                       fontWeight: item.isSelected ? FontWeight.w700 : FontWeight.w600,
+                    )).copyWith(
+                      color: itemColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

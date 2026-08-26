@@ -116,11 +116,13 @@ class LayerView extends StatelessWidget {
 
     final span = TextSpanParser.parseToTextSpan(layer.content, style);
 
+    final shouldWrap = layer.horizontalSizing != AutoLayoutSizingMode.hug;
+
     Widget textWidget = Text.rich(
       span,
       textAlign: layer.textAlign,
-      softWrap: false,
-      overflow: TextOverflow.visible,
+      softWrap: shouldWrap,
+      overflow: TextOverflow.clip,
     );
 
     final hasStroke = layer.strokeColor != null &&
@@ -145,8 +147,8 @@ class LayerView extends StatelessWidget {
       final strokeWidget = Text.rich(
         strokeSpan,
         textAlign: layer.textAlign,
-        softWrap: false,
-        overflow: TextOverflow.visible,
+        softWrap: shouldWrap,
+        overflow: TextOverflow.clip,
       );
 
       textWidget = Stack(
@@ -167,8 +169,8 @@ class LayerView extends StatelessWidget {
             style.copyWith(color: Colors.white),
           ),
           textAlign: layer.textAlign,
-          softWrap: false,
-          overflow: TextOverflow.visible,
+          softWrap: shouldWrap,
+          overflow: TextOverflow.clip,
         ),
       );
     }
@@ -989,7 +991,11 @@ class LayerView extends StatelessWidget {
     );
   }
 
-  static Size measureTextSize(TextLayer textLayer) {
+  static Size measureTextSize(
+    TextLayer textLayer, {
+    double? maxWidth,
+    double? maxHeight,
+  }) {
     TextStyle style;
     try {
       style = GoogleFonts.getFont(
@@ -1020,11 +1026,29 @@ class LayerView extends StatelessWidget {
       style,
     );
 
+    final paddingH = textLayer.padding.horizontal;
+    final paddingV = textLayer.padding.vertical;
+
+    final isHugWidth = textLayer.horizontalSizing == AutoLayoutSizingMode.hug;
+    final isFillWidth = textLayer.horizontalSizing == AutoLayoutSizingMode.fill;
+    final isFixedWidth = textLayer.horizontalSizing == AutoLayoutSizingMode.fixed;
+
+    final isHugHeight = textLayer.verticalSizing == AutoLayoutSizingMode.hug;
+    final isFillHeight = textLayer.verticalSizing == AutoLayoutSizingMode.fill;
+
+    double layoutMaxWidth = double.infinity;
+    if (isFillWidth && maxWidth != null) {
+      layoutMaxWidth = (maxWidth - paddingH).clamp(1.0, 5000.0);
+    } else if (isFixedWidth || isFillWidth) {
+      final fixedW = textLayer.width > 0 ? textLayer.width : 280.0;
+      layoutMaxWidth = (fixedW - paddingH).clamp(1.0, 5000.0);
+    }
+
     final textPainter = TextPainter(
       text: parsedSpan,
       textDirection: TextDirection.ltr,
       textAlign: textLayer.textAlign,
-    )..layout();
+    )..layout(maxWidth: layoutMaxWidth);
 
     double maxLineWidth = textPainter.width;
     final lines = textPainter.computeLineMetrics();
@@ -1040,15 +1064,27 @@ class LayerView extends StatelessWidget {
       }
     }
 
-    final paddingH = textLayer.padding.horizontal;
-    final paddingV = textLayer.padding.vertical;
+    double finalW;
+    if (isHugWidth) {
+      finalW = (maxLineWidth + paddingH + 4.0).ceilToDouble();
+    } else if (isFillWidth && maxWidth != null) {
+      finalW = maxWidth;
+    } else {
+      finalW = textLayer.width > 0 ? textLayer.width : (maxLineWidth + paddingH + 4.0).ceilToDouble();
+    }
+
+    double finalH;
+    if (isHugHeight) {
+      finalH = (textPainter.height + paddingV).ceilToDouble();
+    } else if (isFillHeight && maxHeight != null) {
+      finalH = maxHeight;
+    } else {
+      finalH = textLayer.height > 0 ? textLayer.height : (textPainter.height + paddingV).ceilToDouble();
+    }
 
     return Size(
-      (maxLineWidth + paddingH + 4.0).ceilToDouble().clamp(
-        1.0,
-        5000.0,
-      ),
-      (textPainter.height + paddingV).ceilToDouble().clamp(1.0, 5000.0),
+      finalW.clamp(1.0, 5000.0),
+      finalH.clamp(1.0, 5000.0),
     );
   }
 
@@ -1070,9 +1106,29 @@ class LayerView extends StatelessWidget {
     for (int i = 0; i < layer.children.length; i++) {
       final child = layer.children[i];
       final childSize = child is TextLayer
-          ? measureTextSize(child)
+          ? measureTextSize(
+              child,
+              maxWidth: isHorizontal
+                  ? null
+                  : (parentWidth != null
+                      ? parentWidth - layer.paddingHorizontal * 2
+                      : (layer.width > 0 ? layer.width - layer.paddingHorizontal * 2 : null)),
+              maxHeight: isHorizontal
+                  ? (parentHeight != null
+                      ? parentHeight - layer.paddingVertical * 2
+                      : (layer.height > 0 ? layer.height - layer.paddingVertical * 2 : null))
+                  : null,
+            )
           : (child is AutoLayoutLayer
-                ? measureAutoLayoutSize(child)
+                ? measureAutoLayoutSize(
+                    child,
+                    parentWidth: isHorizontal
+                        ? null
+                        : (layer.width > 0 ? layer.width - layer.paddingHorizontal * 2 : null),
+                    parentHeight: isHorizontal
+                        ? (layer.height > 0 ? layer.height - layer.paddingVertical * 2 : null)
+                        : null,
+                  )
                 : Size(child.width, child.height));
       if (isHorizontal) {
         requiredMainAxis += childSize.width;

@@ -30,6 +30,7 @@ import 'package:layerly/core/widgets/more_rings_icon.dart';
 import 'package:layerly/core/widgets/hex_color_picker_widget.dart';
 import 'package:layerly/core/widgets/app_modal_sheet.dart';
 import 'package:layerly/core/widgets/app_dialog.dart';
+import 'package:layerly/core/widgets/glass_popup_menu.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/background_picker_sheet.dart';
 import 'package:layerly/features/editor/presentation/widgets/panels/image_picker_sheet.dart';
 
@@ -970,132 +971,113 @@ class PropertiesPanel extends StatelessWidget {
           // Row 2: Font Family Dropdown + Font Weight Dropdown + Font Size Stepper
           Row(
             children: [
-              // Font Family Dropdown Pill
+              // Font Family Glass Dropdown Pill
               Expanded(
                 flex: 4,
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: layer.fontFamily,
-                      dropdownColor: AppColors.surfaceElevated,
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.textSecondary,
-                        size: 16,
+                child: GlassDropdownPill<String>(
+                  value: layer.fontFamily,
+                  label: layer.fontFamily.toUpperCase(),
+                  menuWidth: 220,
+                  menuMaxHeight: 340,
+                  onSelected: (val) {
+                    onUpdate(layer.copyWith(fontFamily: val));
+                  },
+                  items: (context) {
+                    const defaultFonts = [
+                      'Inter',
+                      'Outfit',
+                      'Poppins',
+                      'Roboto',
+                      'Montserrat',
+                      'Lora',
+                      'Playfair',
+                    ];
+                    final allFonts = <String>{
+                      ...defaultFonts,
+                      layer.fontFamily,
+                    }.toList();
+
+                    return [
+                      const GlassMenuHeader<String>(
+                        title: 'Font Family',
+                        icon: Icons.font_download_rounded,
                       ),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      isExpanded: true,
-                      items: () {
-                        const defaultFonts = [
-                          'Inter',
-                          'Outfit',
-                          'Poppins',
-                          'Roboto',
-                          'Montserrat',
-                          'Lora',
-                          'Playfair',
-                        ];
-                        final allFonts = <String>{
-                          ...defaultFonts,
-                          layer.fontFamily,
-                        }.toList();
-                        return allFonts
-                            .map(
-                              (f) => DropdownMenuItem(
-                                value: f,
-                                child: Text(
-                                  f.toUpperCase(),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                            .toList();
-                      }(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          onUpdate(layer.copyWith(fontFamily: val));
-                        }
-                      },
-                    ),
-                  ),
+                      const GlassMenuDivider<String>(),
+                      ...allFonts.map((f) {
+                        final isSelected = f == layer.fontFamily;
+                        return GlassMenuItem<String>(
+                          value: f,
+                          title: f.toUpperCase(),
+                          titleStyle: TextStyle(
+                            fontFamily: f,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                          isSelected: isSelected,
+                        );
+                      }),
+                    ];
+                  },
                 ),
               ),
               const SizedBox(width: 6),
 
-              // Font Weight Dropdown Pill (Bold, Regular, Medium, SemiBold, etc.)
+              // Font Weight Glass Dropdown Pill
               Expanded(
                 flex: 4,
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<FontWeight>(
-                      value: layer.fontWeight,
-                      dropdownColor: AppColors.surfaceElevated,
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.textSecondary,
-                        size: 16,
-                      ),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      isExpanded: true,
-                      items: () {
-                        const weights = [
-                          (FontWeight.w100, 'Thin'),
-                          (FontWeight.w200, 'ExtraLight'),
-                          (FontWeight.w300, 'Light'),
-                          (FontWeight.w400, 'Regular'),
-                          (FontWeight.w500, 'Medium'),
-                          (FontWeight.w600, 'SemiBold'),
-                          (FontWeight.w700, 'Bold'),
-                          (FontWeight.w800, 'ExtraBold'),
-                          (FontWeight.w900, 'Black'),
-                        ];
-                        final allWeights = <FontWeight>{
-                          ...weights.map((e) => e.$1),
-                          layer.fontWeight,
-                        }.toList();
-                        return allWeights.map((w) {
+                child: () {
+                  const weights = [
+                    (FontWeight.w100, 'Thin'),
+                    (FontWeight.w200, 'ExtraLight'),
+                    (FontWeight.w300, 'Light'),
+                    (FontWeight.w400, 'Regular'),
+                    (FontWeight.w500, 'Medium'),
+                    (FontWeight.w600, 'SemiBold'),
+                    (FontWeight.w700, 'Bold'),
+                    (FontWeight.w800, 'ExtraBold'),
+                    (FontWeight.w900, 'Black'),
+                  ];
+                  final match = weights.where((e) => e.$1 == layer.fontWeight);
+                  final currentLabel = match.isNotEmpty ? match.first.$2 : 'W${layer.fontWeight.value}';
+
+                  return GlassDropdownPill<FontWeight>(
+                    value: layer.fontWeight,
+                    label: currentLabel,
+                    menuWidth: 200,
+                    menuMaxHeight: 340,
+                    onSelected: (val) {
+                      onUpdate(layer.copyWith(fontWeight: val));
+                    },
+                    items: (context) {
+                      final allWeights = <FontWeight>{
+                        ...weights.map((e) => e.$1),
+                        layer.fontWeight,
+                      }.toList();
+
+                      return [
+                        const GlassMenuHeader<FontWeight>(
+                          title: 'Font Weight',
+                          icon: Icons.format_bold_rounded,
+                        ),
+                        const GlassMenuDivider<FontWeight>(),
+                        ...allWeights.map((w) {
                           final match = weights.where((e) => e.$1 == w);
-                          final label = match.isNotEmpty
-                              ? match.first.$2
-                              : 'W${w.value}';
-                          return DropdownMenuItem(
+                          final label = match.isNotEmpty ? match.first.$2 : 'W${w.value}';
+                          final isSelected = w == layer.fontWeight;
+                          return GlassMenuItem<FontWeight>(
                             value: w,
-                            child: Text(
-                              label,
-                              style: TextStyle(fontWeight: w, fontSize: 11),
-                              overflow: TextOverflow.ellipsis,
+                            title: label,
+                            titleStyle: TextStyle(
+                              fontWeight: w,
+                              fontSize: 13,
                             ),
+                            isSelected: isSelected,
                           );
-                        }).toList();
-                      }(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          onUpdate(layer.copyWith(fontWeight: val));
-                        }
-                      },
-                    ),
-                  ),
-                ),
+                        }),
+                      ];
+                    },
+                  );
+                }(),
               ),
               const SizedBox(width: 6),
 
@@ -1114,6 +1096,130 @@ class PropertiesPanel extends StatelessWidget {
                   },
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // Row 3: Width Sizing (Hug/Fill/Fixed) + Height Sizing (Hug/Fill/Fixed) + Width Stepper
+          Row(
+            children: [
+              // Width Sizing Mode Pill
+              Expanded(
+                flex: 4,
+                child: GlassDropdownPill<AutoLayoutSizingMode>(
+                  value: layer.horizontalSizing,
+                  label: () {
+                    switch (layer.horizontalSizing) {
+                      case AutoLayoutSizingMode.hug:
+                        return 'W: Auto Fit';
+                      case AutoLayoutSizingMode.fill:
+                        return 'W: Fill';
+                      case AutoLayoutSizingMode.fixed:
+                        return 'W: ${layer.width.toInt()}px';
+                    }
+                  }(),
+                  menuWidth: 200,
+                  onSelected: (mode) {
+                    onUpdate(layer.copyWith(horizontalSizing: mode));
+                  },
+                  items: (context) => [
+                    const GlassMenuHeader<AutoLayoutSizingMode>(
+                      title: 'Width Sizing',
+                      icon: Icons.swap_horiz_rounded,
+                    ),
+                    const GlassMenuDivider<AutoLayoutSizingMode>(),
+                    GlassMenuItem<AutoLayoutSizingMode>(
+                      value: AutoLayoutSizingMode.hug,
+                      title: 'Auto Width (Fit)',
+                      subtitle: 'Single line text expansion',
+                      icon: Icons.compress_rounded,
+                      isSelected: layer.horizontalSizing == AutoLayoutSizingMode.hug,
+                    ),
+                    GlassMenuItem<AutoLayoutSizingMode>(
+                      value: AutoLayoutSizingMode.fill,
+                      title: 'Fill Container',
+                      subtitle: 'Wrap text to container width',
+                      icon: Icons.fullscreen_rounded,
+                      isSelected: layer.horizontalSizing == AutoLayoutSizingMode.fill,
+                    ),
+                    GlassMenuItem<AutoLayoutSizingMode>(
+                      value: AutoLayoutSizingMode.fixed,
+                      title: 'Fixed Width',
+                      subtitle: 'Wrap text to custom width',
+                      icon: Icons.lock_outline_rounded,
+                      isSelected: layer.horizontalSizing == AutoLayoutSizingMode.fixed,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+
+              // Height Sizing Mode Pill
+              Expanded(
+                flex: 4,
+                child: GlassDropdownPill<AutoLayoutSizingMode>(
+                  value: layer.verticalSizing,
+                  label: () {
+                    switch (layer.verticalSizing) {
+                      case AutoLayoutSizingMode.hug:
+                        return 'H: Auto Wrap';
+                      case AutoLayoutSizingMode.fill:
+                        return 'H: Fill';
+                      case AutoLayoutSizingMode.fixed:
+                        return 'H: ${layer.height.toInt()}px';
+                    }
+                  }(),
+                  menuWidth: 200,
+                  onSelected: (mode) {
+                    onUpdate(layer.copyWith(verticalSizing: mode));
+                  },
+                  items: (context) => [
+                    const GlassMenuHeader<AutoLayoutSizingMode>(
+                      title: 'Height Sizing',
+                      icon: Icons.swap_vert_rounded,
+                    ),
+                    const GlassMenuDivider<AutoLayoutSizingMode>(),
+                    GlassMenuItem<AutoLayoutSizingMode>(
+                      value: AutoLayoutSizingMode.hug,
+                      title: 'Auto Height (Wrap)',
+                      subtitle: 'Grows as lines wrap',
+                      icon: Icons.compress_rounded,
+                      isSelected: layer.verticalSizing == AutoLayoutSizingMode.hug,
+                    ),
+                    GlassMenuItem<AutoLayoutSizingMode>(
+                      value: AutoLayoutSizingMode.fill,
+                      title: 'Fill Container',
+                      subtitle: 'Stretch to container height',
+                      icon: Icons.fullscreen_rounded,
+                      isSelected: layer.verticalSizing == AutoLayoutSizingMode.fill,
+                    ),
+                    GlassMenuItem<AutoLayoutSizingMode>(
+                      value: AutoLayoutSizingMode.fixed,
+                      title: 'Fixed Height',
+                      subtitle: 'Explicit bounding box',
+                      icon: Icons.lock_outline_rounded,
+                      isSelected: layer.verticalSizing == AutoLayoutSizingMode.fixed,
+                    ),
+                  ],
+                ),
+              ),
+              if (layer.horizontalSizing == AutoLayoutSizingMode.fixed) ...[
+                const SizedBox(width: 6),
+                Expanded(
+                  flex: 3,
+                  child: _buildStepperPill(
+                    value: layer.width.toInt(),
+                    onDecrement: () {
+                      final newW = (layer.width - 20).clamp(20.0, 5000.0);
+                      onUpdate(layer.copyWith(width: newW));
+                    },
+                    onIncrement: () {
+                      final newW = (layer.width + 20).clamp(20.0, 5000.0);
+                      onUpdate(layer.copyWith(width: newW));
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -1138,11 +1244,10 @@ class PropertiesPanel extends StatelessWidget {
             title: 'Typography & Spacing',
             subtitle: 'Letter spacing, line height & alignment studio',
             maxHeightFactor: 0.82,
-            child: Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                physics: const BouncingScrollPhysics(),
-                children: [
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              physics: const BouncingScrollPhysics(),
+              children: [
                   // A. Live Preview Box
                       Container(
                         width: double.infinity,
@@ -1206,6 +1311,69 @@ class PropertiesPanel extends StatelessWidget {
                         }(),
                       ),
                       const SizedBox(height: 20),
+
+                      // Resizing & Auto-Wrap Mode
+                      const Row(
+                        children: [
+                          Icon(Icons.aspect_ratio_rounded, color: Color(0xFFA78BFA), size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            'Resizing & Wrapping Mode',
+                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _buildStylePill(
+                            label: 'Auto Width',
+                            icon: Icons.swap_horiz_rounded,
+                            isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.hug &&
+                                currentLayer.verticalSizing == AutoLayoutSizingMode.hug,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(
+                                horizontalSizing: AutoLayoutSizingMode.hug,
+                                verticalSizing: AutoLayoutSizingMode.hug,
+                              );
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildStylePill(
+                            label: 'Auto Height',
+                            icon: Icons.wrap_text_rounded,
+                            isSelected: currentLayer.horizontalSizing != AutoLayoutSizingMode.hug &&
+                                currentLayer.verticalSizing == AutoLayoutSizingMode.hug,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(
+                                horizontalSizing: AutoLayoutSizingMode.fixed,
+                                verticalSizing: AutoLayoutSizingMode.hug,
+                                width: currentLayer.width > 0 ? currentLayer.width : 280.0,
+                              );
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildStylePill(
+                            label: 'Fixed Box',
+                            icon: Icons.crop_free_rounded,
+                            isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.fixed &&
+                                currentLayer.verticalSizing == AutoLayoutSizingMode.fixed,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(
+                                horizontalSizing: AutoLayoutSizingMode.fixed,
+                                verticalSizing: AutoLayoutSizingMode.fixed,
+                              );
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
 
                       // B. Letter Spacing (Tracking)
                       Row(
@@ -1828,11 +1996,10 @@ class PropertiesPanel extends StatelessWidget {
                       }(),
                     ],
                   ),
-                ),
-              );
-            },
-          ),
-        );
+                );
+              },
+            ),
+          );
       }
 
   Widget _buildSheetMicroButton({required IconData icon, required VoidCallback onTap}) {
@@ -2022,30 +2189,32 @@ class PropertiesPanel extends StatelessWidget {
             children: [
               Expanded(
                 flex: 3,
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<IconData>(
-                      value: layer.icon,
-                      dropdownColor: AppColors.surfaceElevated,
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.textSecondary,
-                        size: 18,
+                child: GlassDropdownPill<IconData>(
+                  value: layer.icon,
+                  label: presetIcons[layer.icon] ?? 'Icon',
+                  menuWidth: 210,
+                  menuMaxHeight: 320,
+                  onSelected: (val) {
+                    onUpdate(layer.copyWith(icon: val));
+                  },
+                  items: (context) {
+                    return [
+                      const GlassMenuHeader<IconData>(
+                        title: 'Preset Icons',
+                        icon: Icons.category_rounded,
                       ),
-                      items: items,
-                      onChanged: (val) {
-                        if (val != null) {
-                          onUpdate(layer.copyWith(icon: val));
-                        }
-                      },
-                    ),
-                  ),
+                      const GlassMenuDivider<IconData>(),
+                      ...presetIcons.entries.map((entry) {
+                        final isSelected = entry.key == layer.icon;
+                        return GlassMenuItem<IconData>(
+                          value: entry.key,
+                          title: entry.value,
+                          icon: entry.key,
+                          isSelected: isSelected,
+                        );
+                      }),
+                    ];
+                  },
                 ),
               ),
               const SizedBox(width: 8),
@@ -2213,56 +2382,50 @@ class PropertiesPanel extends StatelessWidget {
           // 2. Position & Stroke Size (Weight) Row only
           Row(
             children: [
-              // Position Dropdown (Inside, Center, Outside)
+              // Position Glass Dropdown (Inside, Center, Outside)
               Expanded(
                 flex: 3,
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<StrokePosition>(
-                      value: layer.strokePosition,
-                      dropdownColor: AppColors.surfaceElevated,
-                      isExpanded: true,
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.textSecondary,
-                        size: 18,
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: StrokePosition.inside,
-                          child: Text(
-                            'Inside',
-                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: StrokePosition.center,
-                          child: Text(
-                            'Center',
-                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: StrokePosition.outside,
-                          child: Text(
-                            'Outside',
-                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          onUpdate(layer.copyWith(strokePosition: val));
-                        }
-                      },
+                child: GlassDropdownPill<StrokePosition>(
+                  value: layer.strokePosition,
+                  label: () {
+                    switch (layer.strokePosition) {
+                      case StrokePosition.inside:
+                        return 'Inside';
+                      case StrokePosition.center:
+                        return 'Center';
+                      case StrokePosition.outside:
+                        return 'Outside';
+                    }
+                  }(),
+                  menuWidth: 190,
+                  onSelected: (val) {
+                    onUpdate(layer.copyWith(strokePosition: val));
+                  },
+                  items: (context) => [
+                    const GlassMenuHeader<StrokePosition>(
+                      title: 'Stroke Position',
+                      icon: Icons.line_style_rounded,
                     ),
-                  ),
+                    const GlassMenuDivider<StrokePosition>(),
+                    GlassMenuItem<StrokePosition>(
+                      value: StrokePosition.inside,
+                      title: 'Inside',
+                      icon: Icons.crop_square_rounded,
+                      isSelected: layer.strokePosition == StrokePosition.inside,
+                    ),
+                    GlassMenuItem<StrokePosition>(
+                      value: StrokePosition.center,
+                      title: 'Center',
+                      icon: Icons.center_focus_strong_rounded,
+                      isSelected: layer.strokePosition == StrokePosition.center,
+                    ),
+                    GlassMenuItem<StrokePosition>(
+                      value: StrokePosition.outside,
+                      title: 'Outside',
+                      icon: Icons.border_outer_rounded,
+                      isSelected: layer.strokePosition == StrokePosition.outside,
+                    ),
+                  ],
                 ),
               ),
 
@@ -3025,73 +3188,101 @@ class PropertiesPanel extends StatelessWidget {
           // Controls Row: Device Model Dropdown + Pick / Replace Image Pill
           Row(
             children: [
-              // Device Selector Dropdown
+              // Device Selector Glass Dropdown Pill
               Expanded(
                 flex: 5,
-                child: Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<MockupDevice>(
-                      value: layer.device,
-                      dropdownColor: const Color(0xFF1E2028),
-                      isExpanded: true,
-                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 18),
-                      items: const [
-                        DropdownMenuItem(
-                          value: MockupDevice.iphone17ProMax,
-                          child: Text('iPhone 17 Pro Max', style: TextStyle(color: Colors.white, fontSize: 12)),
+                child: GlassDropdownPill<MockupDevice>(
+                  value: layer.device,
+                  label: () {
+                    switch (layer.device) {
+                      case MockupDevice.iphone17ProMax:
+                        return 'iPhone 17 Pro Max';
+                      case MockupDevice.iphone17Pro:
+                        return 'iPhone 17 Pro';
+                      case MockupDevice.iphone:
+                        return 'iPhone 16 Pro';
+                      case MockupDevice.android:
+                        return 'Android Phone';
+                      case MockupDevice.macbook:
+                        return 'MacBook Pro 16"';
+                      case MockupDevice.ipadPro:
+                        return 'iPad Pro 13"';
+                      case MockupDevice.appleWatch:
+                        return 'Apple Watch Ultra';
+                      case MockupDevice.browser:
+                        return 'Desktop Browser';
+                    }
+                  }(),
+                  menuWidth: 230,
+                  menuMaxHeight: 360,
+                  onSelected: (MockupDevice newDevice) {
+                    final newDef = MockupDefinition.fromDevice(newDevice);
+                    final newHeight = layer.width / newDef.physicalAspectRatio;
+                    bloc.add(
+                      UpdateLayerEvent(
+                        layer.copyWith(
+                          device: newDevice,
+                          height: newHeight,
+                          cornerRadius: newDef.cornerRadius,
                         ),
-                        DropdownMenuItem(
-                          value: MockupDevice.iphone17Pro,
-                          child: Text('iPhone 17 Pro', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                        DropdownMenuItem(
-                          value: MockupDevice.iphone,
-                          child: Text('iPhone 16 Pro', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                        DropdownMenuItem(
-                          value: MockupDevice.android,
-                          child: Text('Android Phone', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                        DropdownMenuItem(
-                          value: MockupDevice.macbook,
-                          child: Text('MacBook Pro 16"', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                        DropdownMenuItem(
-                          value: MockupDevice.ipadPro,
-                          child: Text('iPad Pro 13"', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                        DropdownMenuItem(
-                          value: MockupDevice.appleWatch,
-                          child: Text('Apple Watch Ultra', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                        DropdownMenuItem(
-                          value: MockupDevice.browser,
-                          child: Text('Desktop Browser', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                      ],
-                      onChanged: (MockupDevice? newDevice) {
-                        if (newDevice != null) {
-                          final newDef = MockupDefinition.fromDevice(newDevice);
-                          final newHeight = layer.width / newDef.physicalAspectRatio;
-                          bloc.add(
-                            UpdateLayerEvent(
-                              layer.copyWith(
-                                device: newDevice,
-                                height: newHeight,
-                                cornerRadius: newDef.cornerRadius,
-                              ),
-                            ),
-                          );
-                        }
-                      },
+                      ),
+                    );
+                  },
+                  items: (context) => [
+                    const GlassMenuHeader<MockupDevice>(
+                      title: 'Device Frame Model',
+                      icon: Icons.devices_rounded,
                     ),
-                  ),
+                    const GlassMenuDivider<MockupDevice>(),
+                    GlassMenuItem<MockupDevice>(
+                      value: MockupDevice.iphone17ProMax,
+                      title: 'iPhone 17 Pro Max',
+                      icon: Icons.phone_iphone_rounded,
+                      isSelected: layer.device == MockupDevice.iphone17ProMax,
+                    ),
+                    GlassMenuItem<MockupDevice>(
+                      value: MockupDevice.iphone17Pro,
+                      title: 'iPhone 17 Pro',
+                      icon: Icons.phone_iphone_rounded,
+                      isSelected: layer.device == MockupDevice.iphone17Pro,
+                    ),
+                    GlassMenuItem<MockupDevice>(
+                      value: MockupDevice.iphone,
+                      title: 'iPhone 16 Pro',
+                      icon: Icons.phone_iphone_rounded,
+                      isSelected: layer.device == MockupDevice.iphone,
+                    ),
+                    GlassMenuItem<MockupDevice>(
+                      value: MockupDevice.android,
+                      title: 'Android Phone',
+                      icon: Icons.android_rounded,
+                      isSelected: layer.device == MockupDevice.android,
+                    ),
+                    GlassMenuItem<MockupDevice>(
+                      value: MockupDevice.macbook,
+                      title: 'MacBook Pro 16"',
+                      icon: Icons.laptop_mac_rounded,
+                      isSelected: layer.device == MockupDevice.macbook,
+                    ),
+                    GlassMenuItem<MockupDevice>(
+                      value: MockupDevice.ipadPro,
+                      title: 'iPad Pro 13"',
+                      icon: Icons.tablet_mac_rounded,
+                      isSelected: layer.device == MockupDevice.ipadPro,
+                    ),
+                    GlassMenuItem<MockupDevice>(
+                      value: MockupDevice.appleWatch,
+                      title: 'Apple Watch Ultra',
+                      icon: Icons.watch_rounded,
+                      isSelected: layer.device == MockupDevice.appleWatch,
+                    ),
+                    GlassMenuItem<MockupDevice>(
+                      value: MockupDevice.browser,
+                      title: 'Desktop Browser',
+                      icon: Icons.language_rounded,
+                      isSelected: layer.device == MockupDevice.browser,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 8),

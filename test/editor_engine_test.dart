@@ -1497,5 +1497,45 @@ void main() {
         expect(measuredSize.height, greaterThan(120));
       },
     );
+
+    test(
+      'TextLayer with fixed width and hug height wraps long text into multi-line and expands height',
+      () {
+        const singleLineLayer = TextLayer(
+          id: 'long-text-hug',
+          name: 'Long Text Hug',
+          x: 0,
+          y: 0,
+          width: 600,
+          height: 40,
+          content: 'This is a very long headline sentence that wraps onto multiple lines when constrained.',
+          fontSize: 24,
+          horizontalSizing: AutoLayoutSizingMode.hug,
+          verticalSizing: AutoLayoutSizingMode.hug,
+        );
+
+        const wrappedLayer = TextLayer(
+          id: 'long-text-fixed',
+          name: 'Long Text Fixed Width',
+          x: 0,
+          y: 0,
+          width: 200,
+          height: 40,
+          content: 'This is a very long headline sentence that wraps onto multiple lines when constrained.',
+          fontSize: 24,
+          horizontalSizing: AutoLayoutSizingMode.fixed,
+          verticalSizing: AutoLayoutSizingMode.hug,
+        );
+
+        final hugSize = LayerView.measureTextSize(singleLineLayer);
+        final wrappedSize = LayerView.measureTextSize(wrappedLayer);
+
+        // Fixed width wraps text, so width is constrained to 200 and height increases
+        expect(hugSize.width, greaterThan(500));
+        expect(wrappedSize.width, 200);
+        expect(wrappedSize.height, greaterThan(hugSize.height));
+      },
+    );
   });
 }
+
