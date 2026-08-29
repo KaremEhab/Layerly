@@ -77,6 +77,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<SaveProjectEvent>(_onSaveProject);
     on<UndoEvent>(_onUndo);
     on<RedoEvent>(_onRedo);
+    on<ApplyAiDesignEvent>(_onApplyAiDesign);
   }
 
   @override
@@ -2539,5 +2540,45 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
         selectedLayerIds: [],
       ),
     );
+  }
+
+  void _onApplyAiDesign(ApplyAiDesignEvent event, Emitter<EditorState> emit) {
+    if (event.asNewPage) {
+      final updatedPages = List<CanvasPage>.from(state.project.pages)
+        ..add(event.page);
+      final newIndex = updatedPages.length - 1;
+      emit(
+        state.copyWith(
+          project: state.project.copyWith(
+            pages: updatedPages,
+            activePageIndex: newIndex,
+          ),
+          selectedLayerIds: [],
+          undoStack: _pushHistory(state.project, state.undoStack),
+          redoStack: [],
+        ),
+      );
+    } else {
+      final updatedPages = List<CanvasPage>.from(state.project.pages);
+      final activeIndex = state.project.activePageIndex;
+      final existingPage = state.activePage;
+      final modifiedPage = existingPage.copyWith(
+        width: event.page.width,
+        height: event.page.height,
+        backgroundType: event.page.backgroundType,
+        backgroundColor: event.page.backgroundColor,
+        backgroundGradient: event.page.backgroundGradient,
+        layers: event.page.layers,
+      );
+      updatedPages[activeIndex] = modifiedPage;
+      emit(
+        state.copyWith(
+          project: state.project.copyWith(pages: updatedPages),
+          selectedLayerIds: [],
+          undoStack: _pushHistory(state.project, state.undoStack),
+          redoStack: [],
+        ),
+      );
+    }
   }
 }

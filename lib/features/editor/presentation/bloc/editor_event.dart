@@ -478,3 +478,14 @@ class SaveProjectEvent extends EditorEvent {
   const SaveProjectEvent();
 }
 
+// AI Design Agent
+class ApplyAiDesignEvent extends EditorEvent {
+  final CanvasPage page;
+  final bool asNewPage;
+
+  const ApplyAiDesignEvent(this.page, {this.asNewPage = false});
+
+  @override
+  List<Object?> get props => [page, asNewPage];
+}
+

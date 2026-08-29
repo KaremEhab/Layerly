@@ -97,101 +97,117 @@ class _FullscreenCanvasViewState extends State<FullscreenCanvasView> {
                 top: 48,
                 left: 16,
                 right: 16,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Left: Preview Mode Pill Badge
-                    Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.visibility_rounded, color: AppColors.primary, size: 16),
-                          SizedBox(width: 6),
-                          Text(
-                            'Preview Mode',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 460;
+                    final isVeryCompact = constraints.maxWidth < 360;
 
-                    // Center: Page Navigator Pill ‹ Page Name (1 of N) ›
-                    Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.chevron_left_rounded, size: 18),
-                            color: activeIndex > 0 ? Colors.white : AppColors.textMuted,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                            onPressed: activeIndex > 0
-                                ? () => context.read<EditorBloc>().add(SelectPageEvent(activeIndex - 1))
-                                : null,
-                          ),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 130),
-                            child: Text(
-                              '${activePage.name} (${activeIndex + 1}/${pages.length})',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.chevron_right_rounded, size: 18),
-                            color: activeIndex < pages.length - 1 ? Colors.white : AppColors.textMuted,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                            onPressed: activeIndex < pages.length - 1
-                                ? () => context.read<EditorBloc>().add(SelectPageEvent(activeIndex + 1))
-                                : null,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Right: Close Fullscreen / Exit Preview
-                    Tooltip(
-                      message: 'Exit Preview',
-                      child: InkWell(
-                        onTap: widget.onExitFullscreen,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          width: 40,
+                    return Row(
+                      children: [
+                        // Left: Preview Mode Pill Badge
+                        Container(
                           height: 40,
+                          padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 12),
                           decoration: BoxDecoration(
                             color: AppColors.surface.withValues(alpha: 0.92),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
                           ),
-                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.visibility_rounded, color: AppColors.primary, size: 16),
+                              if (!isVeryCompact) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  isCompact ? 'Preview' : 'Preview Mode',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                        const SizedBox(width: 8),
+
+                        // Center: Page Navigator Pill (Flexible & Truncating)
+                        Expanded(
+                          child: Center(
+                            child: Container(
+                              height: 40,
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface.withValues(alpha: 0.92),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_left_rounded, size: 18),
+                                    color: activeIndex > 0 ? Colors.white : AppColors.textMuted,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                                    onPressed: activeIndex > 0
+                                        ? () => context.read<EditorBloc>().add(SelectPageEvent(activeIndex - 1))
+                                        : null,
+                                  ),
+                                  Flexible(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Text(
+                                        '${activePage.name} (${activeIndex + 1}/${pages.length})',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                                    color: activeIndex < pages.length - 1 ? Colors.white : AppColors.textMuted,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                                    onPressed: activeIndex < pages.length - 1
+                                        ? () => context.read<EditorBloc>().add(SelectPageEvent(activeIndex + 1))
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Right: Close Fullscreen / Exit Preview
+                        Tooltip(
+                          message: 'Exit Preview',
+                          child: InkWell(
+                            onTap: widget.onExitFullscreen,
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.surface.withValues(alpha: 0.92),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
 

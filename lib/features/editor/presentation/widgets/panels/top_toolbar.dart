@@ -6,6 +6,7 @@ import 'package:layerly/features/editor/domain/services/export_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_state.dart';
+import 'package:layerly/features/ai_agent/presentation/widgets/ai_agent_sheet.dart';
 
 class TopToolbar extends StatelessWidget {
   final VoidCallback? onPreview;
@@ -174,6 +175,25 @@ class TopToolbar extends StatelessWidget {
                 ),
 
                 const SizedBox(width: 14),
+
+                // AI Agent Button
+                ElevatedButton.icon(
+                  onPressed: () => AiAgentSheet.show(context, editorBloc: context.read<EditorBloc>()),
+                  icon: const Icon(Icons.auto_awesome_rounded, size: 15),
+                  label: const Text('AI Agent'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.25),
+                    foregroundColor: const Color(0xFFA78BFA),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      side: const BorderSide(color: Color(0xFF8B5CF6), width: 1),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+
+                const SizedBox(width: 10),
 
                 // Export Button
                 ElevatedButton.icon(

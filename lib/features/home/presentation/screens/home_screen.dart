@@ -9,6 +9,7 @@ import '../../../editor/presentation/screens/editor_screen.dart';
 import '../widgets/cover_slide_picker_sheet.dart';
 import '../widgets/new_project_sheet.dart';
 import '../widgets/project_cover_thumbnail.dart';
+import '../../../ai_agent/presentation/widgets/ai_agent_sheet.dart';
 
 enum ProjectSortBy {
   recentlyEdited('Recently Edited'),
@@ -351,6 +352,43 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 12),
+          // AI Design Agent Quick Action
+          InkWell(
+            onTap: () => AiAgentSheet.show(context),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF8B5CF6), Color(0xFF00D2B4)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.white),
+                  SizedBox(width: 6),
+                  Text(
+                    'AI Agent',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           // Quick New Action
           InkWell(
             onTap: _showNewProjectModal,
@@ -412,10 +450,79 @@ class _HomeScreenState extends State<HomeScreen> {
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: kCanvasPresets.length,
+              itemCount: kCanvasPresets.length + 1,
               separatorBuilder: (context, index) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
-                final preset = kCanvasPresets[index];
+                if (index == 0) {
+                  // AI Design Generator Card
+                  return InkWell(
+                    onTap: () => AiAgentSheet.show(context),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: 140,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                            const Color(0xFF00D2B4).withValues(alpha: 0.15),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF00D2B4).withValues(alpha: 0.4)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF8B5CF6), Color(0xFF00D2B4)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.auto_awesome_rounded, size: 14, color: Colors.white),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00D2B4).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'AI MAGIC',
+                                  style: TextStyle(
+                                    color: Color(0xFF00D2B4),
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'AI Prompt Studio',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                final preset = kCanvasPresets[index - 1];
                 return InkWell(
                   onTap: () async {
                     final created = await ProjectStorageService.instance.createNewProject(
