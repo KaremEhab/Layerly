@@ -243,60 +243,71 @@ class GeminiAiClient {
         responseSchema: withSchema ? _buildSchema() : null,
       ),
       systemInstruction: Content.system(
-        'You are a Principal Figma Design Architect & Visual AI Agent for Layerly Studio. '
-        'You master modern digital product graphic design, social banners, and layout architectures.\n\n'
-        'DESIGN RULES YOU MUST ADHERE TO:\n'
-        '1. ARCHETYPE SELECTION (layoutStyle):\n'
-        '   - splitBento: Modern asymmetric Bento Grid. Use for tech/SaaS feature showcases or rich multi-metric posts. Provide 1 hero feature (isHeroTile: true) and 2 supporting cards.\n'
-        '   - featureGrid: Symmetrical 2x2 grid. Use when showcasing exactly 4 features or comparison items.\n'
-        '   - statisticFocus: Heavy KPI / metrics focus. Highlight big statistics (e.g. 99.99%, < 5ms, 142%) with trend arrows and clear metric labels.\n'
-        '   - heroCards: Vertical stacked glassmorphic cards with icons and value chips. High clarity, easy scanning.\n'
-        '   - centeredMinimal: Symmetrical editorial composition with elegant spacing, divider lines, and central typography focus.\n\n'
-        '2. 8PT SPATIAL SYSTEM & RATIO CONTAINMENT:\n'
-        '   - All elements must be strictly contained inside the safe margins (7.5% padding on all sides). Never generate elements outside canvas bounds.\n'
-        '   - Use standard 8pt tokens for gaps (12, 16, 20px) and card paddings (16, 20, 24px).\n\n'
-        '3. TYPOGRAPHY & CONTRAST:\n'
-        '   - Headlines must be punchy, high-contrast, and concise (under 8 words).\n'
-        '   - Subtitles must provide clear context in 1-2 lines.\n'
-        '   - Badges should be uppercase with short category tags (e.g. "CLINICAL R&D", "ENTERPRISE SAAS").\n\n'
-        '4. COLOR HARMONY & MOOD:\n'
-        '   - Generate rich, non-generic palettes with 2-3 deep gradient background tones and high-vibrancy primary/accent highlights (e.g. Clinical Teal #00D2B4, Electric Violet #8B5CF6, Emerald #10B981, Cyberpunk Coral #F43F5E).\n\n'
+        'You are a Principal Product Designer & UI/UX Design Systems Architect for Apple-grade iOS mobile apps and Layerly Studio.\n'
+        'You master both minimal, professional mobile application designs (Apple HIG standards) and modern digital product architectures.\n\n'
+        'CRITICAL RULE: REAL MOBILE APP SCREENS vs MARKETING GRAPHICS:\n'
+        'When the user asks for an APP design (e.g. "uber app ui ux design", "mobile app", "food delivery app", "banking app", "fitness app", "ios app", "iphone screen", or any application interface):\n'
+        '1. You MUST set:\n'
+        '   - "layoutStyle": "mobileAppScreen"\n'
+        '   - "aspectRatio": "9:16"\n'
+        '   - "headingFont": "Inter"\n'
+        '   - "bodyFont": "Inter"\n'
+        '   - "cardAesthetic": "minimal"\n'
+        '2. REAL IN-APP CONTENT ONLY (NO MARKETING BANNERS):\n'
+        '   - "title": In-app screen header or greeting (e.g. "Where to?", "Uber", "Activity", "Good morning, Alex")\n'
+        '   - "subtitle": In-app status or instruction (e.g. "Choose your ride or schedule ahead", "Available balance", "San Francisco, CA")\n'
+        '   - "badgeText": Current context/tag (e.g. "NOW", "RIDE", "SAN FRANCISCO", "ACTIVE")\n'
+        '   - "features": 3 to 4 real in-app tiers/cards with realistic names, descriptions, prices, ETA, and icons.\n'
+        '     For Uber/Mobility:\n'
+        '     * Card 1: title: "UberX", subtitle: "Affordable, everyday rides • 3 min away", value: "\\\$18.50", iconName: "directions_car", isHeroTile: true, tag: "POPULAR"\n'
+        '     * Card 2: title: "Comfort", subtitle: "Newer cars with extra legroom • 5 min away", value: "\\\$24.20", iconName: "car_rental"\n'
+        '     * Card 3: title: "Black", subtitle: "Premium rides with top-rated drivers • 8 min away", value: "\\\$38.00", iconName: "workspace_premium", tag: "PREMIUM"\n'
+        '     * Card 4: title: "UberXL", subtitle: "Spacious SUVs for up to 6 people • 6 min away", value: "\\\$29.50", iconName: "airport_shuttle"\n'
+        '   - "footerText": "Home • Work • SFO Airport" (Saved place destinations)\n'
+        '   - "ctaText": Real in-app action button (e.g. "Choose UberX", "Confirm Ride", "Request Now")\n'
+        '   - NEVER output marketing buzzwords like "Next-Gen Food Delivery UX", "Architecture • Layerly Studio Design", or "Explore UI Kit" for an app design! It must look and feel like an installed, minimal Apple iOS app.\n\n'
+        'OTHER ARCHETYPES (for social banners, tech posters, and pitch graphics):\n'
+        '- splitBento: Modern asymmetric Bento Grid for feature showcases.\n'
+        '- featureGrid: Symmetrical 2x2 grid.\n'
+        '- statisticFocus: Metrics/KPI dashboard.\n'
+        '- heroCards: Vertical stacked glassmorphic cards.\n'
+        '- centeredMinimal: Symmetrical editorial composition.\n\n'
         'Output pure JSON ONLY. Do not wrap in markdown code fences (do not include ```json), no conversational preamble.',
       ),
     );
 
     final promptBuffer = StringBuffer();
-    promptBuffer.writeln('Generate a complete graphic design recipe JSON for the user request: "$prompt"');
+    promptBuffer.writeln('Generate a complete design recipe JSON for the user request: "$prompt"');
     promptBuffer.writeln();
     promptBuffer.writeln('Required JSON structure:');
     promptBuffer.writeln('{');
-    promptBuffer.writeln('  "title": "Compelling headline (e.g. Unmatched Cloud Performance)",');
-    promptBuffer.writeln('  "subtitle": "Informative subtext explaining the subject",');
-    promptBuffer.writeln('  "badgeText": "UPPERCASE CATEGORY BADGE",');
-    promptBuffer.writeln('  "badgeIcon": "Icon name e.g. medication, biotech, health_and_safety, bolt, shield, cloud, star",');
-    promptBuffer.writeln('  "domain": "pharma|healthcare|tech|saas|fitness|marketing|ecommerce|creative",');
-    promptBuffer.writeln('  "layoutStyle": "splitBento|featureGrid|statisticFocus|heroCards|centeredMinimal",');
-    promptBuffer.writeln('  "cardAesthetic": "glass|solidElevated|gradientBorder|minimal",');
-    promptBuffer.writeln('  "backgroundStyle": "meshRadial|linearAtmosphere|darkStudio|cleanLight",');
-    promptBuffer.writeln('  "headingFont": "Outfit|Space Grotesk|Poppins|Inter",');
+    promptBuffer.writeln('  "title": "In-app header or headline (e.g. Where to? or Uber)",');
+    promptBuffer.writeln('  "subtitle": "In-app subheader or status",');
+    promptBuffer.writeln('  "badgeText": "Short uppercase tag e.g. NOW or MOBILITY",');
+    promptBuffer.writeln('  "badgeIcon": "Icon name e.g. directions_car, location_on, bolt, star, shield, cloud",');
+    promptBuffer.writeln('  "domain": "mobility|fintech|ecommerce|saas|tech|fitness|healthcare|pharma|marketing|creative",');
+    promptBuffer.writeln('  "layoutStyle": "mobileAppScreen|splitBento|featureGrid|statisticFocus|heroCards|centeredMinimal",');
+    promptBuffer.writeln('  "cardAesthetic": "minimal|glass|solidElevated|gradientBorder",');
+    promptBuffer.writeln('  "backgroundStyle": "darkStudio|meshRadial|linearAtmosphere|cleanLight",');
+    promptBuffer.writeln('  "headingFont": "Inter|Outfit|Space Grotesk",');
     promptBuffer.writeln('  "bodyFont": "Inter|Roboto",');
-    promptBuffer.writeln('  "aspectRatio": "1:1|4:5|9:16|16:9",');
-    promptBuffer.writeln('  "gradientColors": ["#0F0C20", "#1F1440", "#0C0A1A"],');
-    promptBuffer.writeln('  "primaryColor": "#8B5CF6",');
-    promptBuffer.writeln('  "accentColor": "#00D2B4",');
+    promptBuffer.writeln('  "aspectRatio": "9:16|1:1|4:5|16:9",');
+    promptBuffer.writeln('  "gradientColors": ["#000000", "#12111A", "#1C1C24"],');
+    promptBuffer.writeln('  "primaryColor": "#FFFFFF",');
+    promptBuffer.writeln('  "accentColor": "#10B981",');
     promptBuffer.writeln('  "features": [');
     promptBuffer.writeln('    {');
-    promptBuffer.writeln('      "title": "Card Title",');
-    promptBuffer.writeln('      "subtitle": "Card Description",');
-    promptBuffer.writeln('      "value": "99.99%",');
-    promptBuffer.writeln('      "iconName": "cloud",');
+    promptBuffer.writeln('      "title": "UberX",');
+    promptBuffer.writeln('      "subtitle": "Affordable, everyday rides • 3 min away",');
+    promptBuffer.writeln('      "value": "\\\$18.50",');
+    promptBuffer.writeln('      "iconName": "directions_car",');
     promptBuffer.writeln('      "isHeroTile": true,');
-    promptBuffer.writeln('      "trend": "+142%",');
-    promptBuffer.writeln('      "tag": "LIVE"');
+    promptBuffer.writeln('      "trend": "3 min",');
+    promptBuffer.writeln('      "tag": "POPULAR"');
     promptBuffer.writeln('    }');
     promptBuffer.writeln('  ],');
-    promptBuffer.writeln('  "footerText": "Attribution or brand text",');
-    promptBuffer.writeln('  "ctaText": "Call to action label"');
+    promptBuffer.writeln('  "footerText": "Home • Work • SFO Airport",');
+    promptBuffer.writeln('  "ctaText": "Choose UberX"');
     promptBuffer.writeln('}');
 
     final response = await model.generateContent([
@@ -320,40 +331,40 @@ class GeminiAiClient {
   static Schema _buildSchema() {
     return Schema.object(
       properties: {
-        'title': Schema.string(description: 'Compelling headline for the graphic design'),
-        'subtitle': Schema.string(description: 'Detailed supportive subtext explaining the subject'),
-        'badgeText': Schema.string(description: 'Short uppercase category badge or tag e.g. PHARMACEUTICAL R&D'),
-        'badgeIcon': Schema.string(description: 'Icon name e.g. medication, health_and_safety, biotech, bolt, star, cloud'),
-        'domain': Schema.string(description: 'One of: pharma, healthcare, tech, saas, fitness, marketing, ecommerce, creative'),
-        'layoutStyle': Schema.string(description: 'One of: splitBento, featureGrid, statisticFocus, heroCards, centeredMinimal'),
-        'cardAesthetic': Schema.string(description: 'One of: glass, solidElevated, gradientBorder, minimal'),
-        'backgroundStyle': Schema.string(description: 'One of: meshRadial, linearAtmosphere, darkStudio, cleanLight'),
-        'headingFont': Schema.string(description: 'Heading font name e.g. Outfit, Space Grotesk, Poppins, Inter'),
+        'title': Schema.string(description: 'In-app header or compelling headline'),
+        'subtitle': Schema.string(description: 'In-app subtext or description'),
+        'badgeText': Schema.string(description: 'Short uppercase category badge or tag e.g. NOW or MOBILITY'),
+        'badgeIcon': Schema.string(description: 'Icon name e.g. directions_car, location_on, bolt, star, shield, cloud'),
+        'domain': Schema.string(description: 'One of: mobility, fintech, ecommerce, saas, tech, fitness, healthcare, pharma, marketing, creative'),
+        'layoutStyle': Schema.string(description: 'One of: mobileAppScreen, splitBento, featureGrid, statisticFocus, heroCards, centeredMinimal'),
+        'cardAesthetic': Schema.string(description: 'One of: minimal, glass, solidElevated, gradientBorder'),
+        'backgroundStyle': Schema.string(description: 'One of: darkStudio, meshRadial, linearAtmosphere, cleanLight'),
+        'headingFont': Schema.string(description: 'Heading font name e.g. Inter, Outfit, Space Grotesk'),
         'bodyFont': Schema.string(description: 'Body font name e.g. Inter, Roboto'),
-        'aspectRatio': Schema.string(description: 'Aspect ratio: 1:1, 4:5, 9:16, or 16:9'),
+        'aspectRatio': Schema.string(description: 'Aspect ratio: 9:16 (for mobile apps), 1:1, 4:5, or 16:9'),
         'gradientColors': Schema.array(
-          description: '2 to 3 hex colors for rich background gradient',
+          description: '2 to 3 hex colors for background gradient',
           items: Schema.string(),
         ),
         'primaryColor': Schema.string(description: 'Hex color for primary highlights/buttons'),
         'accentColor': Schema.string(description: 'Hex color for secondary accents/tags'),
         'features': Schema.array(
-          description: '2 to 4 feature or metric cards',
+          description: '2 to 4 in-app service options, features, or metric cards',
           items: Schema.object(
             properties: {
-              'title': Schema.string(description: 'Card title'),
-              'subtitle': Schema.string(description: 'Card subtitle or description'),
-              'value': Schema.string(description: 'Stat or metric value e.g. 99.4% or Phase III'),
-              'iconName': Schema.string(description: 'Icon name e.g. medication, biotech, health_and_safety, shield, bolt, cloud'),
-              'isHeroTile': Schema.boolean(description: 'True if this card should be the prominent hero tile in a Bento layout'),
-              'trend': Schema.string(description: 'Optional trend or growth indicator e.g. +142% or 4.9/5'),
-              'tag': Schema.string(description: 'Short status chip e.g. LIVE, NEW, PRO'),
+              'title': Schema.string(description: 'Card title e.g. UberX'),
+              'subtitle': Schema.string(description: 'Card subtitle or description e.g. Affordable everyday rides'),
+              'value': Schema.string(description: 'Price or metric value e.g. \$18.50'),
+              'iconName': Schema.string(description: 'Icon name e.g. directions_car, car_rental, workspace_premium, airport_shuttle'),
+              'isHeroTile': Schema.boolean(description: 'True if this card should be selected or prominent'),
+              'trend': Schema.string(description: 'Optional ETA or trend e.g. 3 min'),
+              'tag': Schema.string(description: 'Short status chip e.g. POPULAR, FASTEST, PREMIUM'),
             },
             requiredProperties: ['title'],
           ),
         ),
-        'footerText': Schema.string(description: 'Footer attribution or branding text'),
-        'ctaText': Schema.string(description: 'Call to action text'),
+        'footerText': Schema.string(description: 'Recent destinations or footer text e.g. Home • Work • SFO Airport'),
+        'ctaText': Schema.string(description: 'Primary in-app call to action button e.g. Choose UberX'),
       },
       requiredProperties: ['title', 'subtitle', 'badgeText', 'domain', 'aspectRatio', 'layoutStyle'],
     );

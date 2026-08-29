@@ -21,38 +21,250 @@ class IntelligentSynthesisEngine {
   static DesignRecipe parsePromptToRecipe(String prompt) {
     final lower = prompt.toLowerCase();
 
+    final isAppRequest = lower.contains('app') ||
+        lower.contains('mobile') ||
+        lower.contains('ui ux') ||
+        lower.contains('ui/ux') ||
+        lower.contains('screen') ||
+        lower.contains('ios') ||
+        lower.contains('iphone') ||
+        lower.contains('uber') ||
+        lower.contains('lyft');
+
     // 1. Aspect Ratio Detection
-    String aspectRatio = '1:1';
+    String aspectRatio = isAppRequest ? '9:16' : '1:1';
     if (lower.contains('4:5') || lower.contains('portrait')) {
       aspectRatio = '4:5';
-    } else if (lower.contains('9:16') || lower.contains('story') || lower.contains('reel')) {
+    } else if (lower.contains('9:16') || lower.contains('story') || lower.contains('reel') || isAppRequest) {
       aspectRatio = '9:16';
     } else if (lower.contains('16:9') || lower.contains('landscape') || lower.contains('banner')) {
       aspectRatio = '16:9';
     }
 
     // 2. Layout Style Archetype Detection
-    LayoutStyle layoutStyle = LayoutStyle.heroCards;
-    if (lower.contains('bento')) {
-      layoutStyle = LayoutStyle.splitBento;
-    } else if (lower.contains('grid') || lower.contains('2x2') || lower.contains('four')) {
-      layoutStyle = LayoutStyle.featureGrid;
-    } else if (lower.contains('stat') || lower.contains('metric') || lower.contains('kpi') || lower.contains('number') || lower.contains('dashboard')) {
-      layoutStyle = LayoutStyle.statisticFocus;
-    } else if (lower.contains('minimal') || lower.contains('editorial') || lower.contains('luxury') || lower.contains('simple')) {
-      layoutStyle = LayoutStyle.centeredMinimal;
+    LayoutStyle layoutStyle = isAppRequest ? LayoutStyle.mobileAppScreen : LayoutStyle.heroCards;
+    if (!isAppRequest) {
+      if (lower.contains('bento')) {
+        layoutStyle = LayoutStyle.splitBento;
+      } else if (lower.contains('grid') || lower.contains('2x2') || lower.contains('four')) {
+        layoutStyle = LayoutStyle.featureGrid;
+      } else if (lower.contains('stat') || lower.contains('metric') || lower.contains('kpi') || lower.contains('number') || lower.contains('dashboard')) {
+        layoutStyle = LayoutStyle.statisticFocus;
+      } else if (lower.contains('minimal') || lower.contains('editorial') || lower.contains('luxury') || lower.contains('simple')) {
+        layoutStyle = LayoutStyle.centeredMinimal;
+      }
     }
 
     // 3. Domain Detection
     DesignDomain domain = DesignDomain.creative;
-    if (lower.contains('pharma') || lower.contains('medicine') || lower.contains('drug') || lower.contains('clinical') || lower.contains('biotech') || lower.contains('health')) {
+    if (lower.contains('uber') || lower.contains('ride') || lower.contains('taxi') || lower.contains('cab') || lower.contains('transit')) {
+      domain = DesignDomain.mobility;
+    } else if (lower.contains('food') || lower.contains('eats') || lower.contains('restaurant') || lower.contains('grocery') || lower.contains('delivery')) {
+      domain = DesignDomain.ecommerce;
+    } else if (lower.contains('bank') || lower.contains('crypto') || lower.contains('wallet') || lower.contains('fintech') || lower.contains('pay')) {
+      domain = DesignDomain.fintech;
+    } else if (lower.contains('pharma') || lower.contains('medicine') || lower.contains('drug') || lower.contains('clinical') || lower.contains('biotech') || lower.contains('health')) {
       domain = DesignDomain.pharma;
     } else if (lower.contains('saas') || lower.contains('software') || lower.contains('tech') || lower.contains('cloud') || lower.contains('api')) {
       domain = DesignDomain.saas;
     } else if (lower.contains('fitness') || lower.contains('gym') || lower.contains('workout') || lower.contains('training')) {
       domain = DesignDomain.fitness;
-    } else if (lower.contains('finance') || lower.contains('crypto') || lower.contains('banking') || lower.contains('invest')) {
+    } else if (lower.contains('finance') || lower.contains('invest')) {
       domain = DesignDomain.marketing;
+    }
+
+    if (domain == DesignDomain.mobility || (isAppRequest && lower.contains('uber'))) {
+      return const DesignRecipe(
+        title: 'Where to?',
+        subtitle: 'San Francisco, CA • Choose a ride',
+        badgeText: 'NOW',
+        badgeIcon: 'directions_car',
+        domain: DesignDomain.mobility,
+        layoutStyle: LayoutStyle.mobileAppScreen,
+        cardAesthetic: CardAesthetic.minimal,
+        backgroundStyle: BackgroundStyle.darkStudio,
+        headingFont: 'Inter',
+        bodyFont: 'Inter',
+        aspectRatio: '9:16',
+        gradientColors: ['#000000', '#0D0D12', '#14141A'],
+        primaryColor: '#FFFFFF',
+        accentColor: '#10B981',
+        features: [
+          RecipeFeatureItem(
+            title: 'UberX',
+            subtitle: 'Affordable, everyday rides • 3 min away',
+            value: '\$18.50',
+            iconName: 'directions_car',
+            isHeroTile: true,
+            trend: '3 min',
+            tag: 'POPULAR',
+          ),
+          RecipeFeatureItem(
+            title: 'Comfort',
+            subtitle: 'Newer cars with extra legroom • 5 min away',
+            value: '\$24.20',
+            iconName: 'car_rental',
+            trend: '5 min',
+            tag: 'EXTRA ROOM',
+          ),
+          RecipeFeatureItem(
+            title: 'Black',
+            subtitle: 'Premium rides with professional drivers • 8 min away',
+            value: '\$38.00',
+            iconName: 'workspace_premium',
+            trend: '8 min',
+            tag: 'PREMIUM',
+          ),
+          RecipeFeatureItem(
+            title: 'UberXL',
+            subtitle: 'Spacious rides for groups up to 6 • 6 min away',
+            value: '\$29.50',
+            iconName: 'airport_shuttle',
+            trend: '6 min',
+            tag: '6 SEATS',
+          ),
+        ],
+        footerText: 'Home • Workplace • SFO Airport',
+        ctaText: 'Choose UberX • \$18.50',
+      );
+    }
+
+    if (isAppRequest && domain == DesignDomain.ecommerce) {
+      return const DesignRecipe(
+        title: 'Deliver to 124 Market St',
+        subtitle: 'San Francisco • 15-25 min delivery',
+        badgeText: 'FASTEST',
+        badgeIcon: 'fastfood',
+        domain: DesignDomain.ecommerce,
+        layoutStyle: LayoutStyle.mobileAppScreen,
+        cardAesthetic: CardAesthetic.minimal,
+        backgroundStyle: BackgroundStyle.darkStudio,
+        headingFont: 'Inter',
+        bodyFont: 'Inter',
+        aspectRatio: '9:16',
+        gradientColors: ['#000000', '#0F0E14', '#161420'],
+        primaryColor: '#FFFFFF',
+        accentColor: '#10B981',
+        features: [
+          RecipeFeatureItem(
+            title: 'Sweetgreen Greens Co.',
+            subtitle: 'Warm bowls, fresh salads • 15-20 min',
+            value: '4.9 ★',
+            iconName: 'lunch_dining',
+            isHeroTile: true,
+            trend: '\$0 Delivery',
+            tag: 'POPULAR',
+          ),
+          RecipeFeatureItem(
+            title: 'Blue Bottle Coffee',
+            subtitle: 'Single origin espresso & pastries • 10 min',
+            value: '4.8 ★',
+            iconName: 'local_cafe',
+            trend: 'Fast',
+          ),
+          RecipeFeatureItem(
+            title: 'Tartine Bakery',
+            subtitle: 'Artisan sourdough & croissants • 25 min',
+            value: '4.9 ★',
+            iconName: 'bakery_dining',
+            trend: 'Top Rated',
+            tag: 'FEATURED',
+          ),
+        ],
+        footerText: 'View Cart (2 items) • \$28.40',
+        ctaText: 'Checkout • \$28.40',
+      );
+    }
+
+    if (isAppRequest && domain == DesignDomain.fintech) {
+      return const DesignRecipe(
+        title: '\$24,850.40',
+        subtitle: 'Total Balance • +12.4% this month',
+        badgeText: 'CHECKING',
+        badgeIcon: 'account_balance_wallet',
+        domain: DesignDomain.fintech,
+        layoutStyle: LayoutStyle.mobileAppScreen,
+        cardAesthetic: CardAesthetic.minimal,
+        backgroundStyle: BackgroundStyle.darkStudio,
+        headingFont: 'Inter',
+        bodyFont: 'Inter',
+        aspectRatio: '9:16',
+        gradientColors: ['#000000', '#0A0A10', '#12121A'],
+        primaryColor: '#FFFFFF',
+        accentColor: '#00D2B4',
+        features: [
+          RecipeFeatureItem(
+            title: 'Apple Store Inc.',
+            subtitle: 'Electronics & Subscriptions • Today 2:15 PM',
+            value: '-\$199.00',
+            iconName: 'laptop_mac',
+            isHeroTile: true,
+            tag: 'SHOPPING',
+          ),
+          RecipeFeatureItem(
+            title: 'Payroll Direct Deposit',
+            subtitle: 'Stripe Payments USA • Yesterday',
+            value: '+\$4,850.00',
+            iconName: 'payments',
+            trend: 'Cleared',
+            tag: 'INCOME',
+          ),
+          RecipeFeatureItem(
+            title: 'Uber Technologies',
+            subtitle: 'Ride Transport • Aug 27',
+            value: '-\$24.50',
+            iconName: 'directions_car',
+            tag: 'RIDE',
+          ),
+        ],
+        footerText: 'Account ending in •••• 4921',
+        ctaText: 'Send Money',
+      );
+    }
+
+    if (isAppRequest) {
+      return DesignRecipe(
+        title: 'App Dashboard',
+        subtitle: 'Minimal, professional mobile experience',
+        badgeText: 'MOBILE',
+        badgeIcon: 'phone_iphone',
+        domain: domain,
+        layoutStyle: LayoutStyle.mobileAppScreen,
+        cardAesthetic: CardAesthetic.minimal,
+        backgroundStyle: BackgroundStyle.darkStudio,
+        headingFont: 'Inter',
+        bodyFont: 'Inter',
+        aspectRatio: '9:16',
+        gradientColors: const ['#000000', '#0D0C14', '#151420'],
+        primaryColor: '#FFFFFF',
+        accentColor: '#8B5CF6',
+        features: const [
+          RecipeFeatureItem(
+            title: 'Primary Service',
+            subtitle: 'Active session & real-time telemetry',
+            value: '99.4%',
+            iconName: 'check_circle',
+            isHeroTile: true,
+            tag: 'ACTIVE',
+          ),
+          RecipeFeatureItem(
+            title: 'Quick Activity',
+            subtitle: 'Instant synchronization with cloud',
+            value: '< 10ms',
+            iconName: 'bolt',
+            trend: 'Fast',
+          ),
+          RecipeFeatureItem(
+            title: 'Account Settings',
+            subtitle: 'Manage profile, security & devices',
+            value: 'Pro',
+            iconName: 'security',
+            tag: 'SECURE',
+          ),
+        ],
+        footerText: 'Synced with Apple iCloud',
+        ctaText: 'Get Started',
+      );
     }
 
     if (domain == DesignDomain.pharma) {
@@ -284,101 +496,123 @@ class IntelligentSynthesisEngine {
     final double marginY = verticalPadding;
     final double contentWidth = width - (marginX * 2);
 
-    // 4. Header Section
-    final headerLayer = _buildHeaderSection(
-      recipe: recipe,
-      contentWidth: contentWidth,
-      marginX: marginX,
-      marginY: marginY,
-      primaryColor: primaryColor,
-      isCentered: recipe.layoutStyle == LayoutStyle.centeredMinimal,
-    );
-    layers.add(headerLayer);
+    if (recipe.layoutStyle == LayoutStyle.mobileAppScreen) {
+      final appLayers = _buildMobileAppScreenLayers(
+        recipe: recipe,
+        width: width,
+        height: height,
+        marginX: 44.0,
+        contentWidth: width - 88.0,
+        primaryColor: primaryColor,
+        accentColor: accentColor,
+      );
+      layers.addAll(appLayers);
+    } else {
+      // 4. Header Section
+      final headerLayer = _buildHeaderSection(
+        recipe: recipe,
+        contentWidth: contentWidth,
+        marginX: marginX,
+        marginY: marginY,
+        primaryColor: primaryColor,
+        isCentered: recipe.layoutStyle == LayoutStyle.centeredMinimal,
+      );
+      layers.add(headerLayer);
 
-    // 5. Body Section (Archetype Builder)
-    final double bodyStartY = marginY + 225.0;
-    final double bodyHeight = height - bodyStartY - marginY - 50.0;
+      // 5. Body Section (Archetype Builder)
+      final double bodyStartY = marginY + 225.0;
+      final double bodyHeight = height - bodyStartY - marginY - 50.0;
 
-    switch (recipe.layoutStyle) {
-      case LayoutStyle.splitBento:
-        final bentoLayer = _buildSplitBentoSection(
-          recipe: recipe,
-          contentWidth: contentWidth,
-          bodyStartY: bodyStartY,
-          bodyHeight: bodyHeight,
-          primaryColor: primaryColor,
-          accentColor: accentColor,
-          marginX: marginX,
-        );
-        layers.add(bentoLayer);
-        break;
+      switch (recipe.layoutStyle) {
+        case LayoutStyle.splitBento:
+          final bentoLayer = _buildSplitBentoSection(
+            recipe: recipe,
+            contentWidth: contentWidth,
+            bodyStartY: bodyStartY,
+            bodyHeight: bodyHeight,
+            primaryColor: primaryColor,
+            accentColor: accentColor,
+            marginX: marginX,
+          );
+          layers.add(bentoLayer);
+          break;
 
-      case LayoutStyle.featureGrid:
-        final gridLayer = _buildFeatureGridSection(
-          recipe: recipe,
-          contentWidth: contentWidth,
-          bodyStartY: bodyStartY,
-          bodyHeight: bodyHeight,
-          primaryColor: primaryColor,
-          accentColor: accentColor,
-          marginX: marginX,
-        );
-        layers.add(gridLayer);
-        break;
+        case LayoutStyle.featureGrid:
+          final gridLayer = _buildFeatureGridSection(
+            recipe: recipe,
+            contentWidth: contentWidth,
+            bodyStartY: bodyStartY,
+            bodyHeight: bodyHeight,
+            primaryColor: primaryColor,
+            accentColor: accentColor,
+            marginX: marginX,
+          );
+          layers.add(gridLayer);
+          break;
 
-      case LayoutStyle.statisticFocus:
-        final statLayer = _buildStatisticFocusSection(
-          recipe: recipe,
-          contentWidth: contentWidth,
-          bodyStartY: bodyStartY,
-          bodyHeight: bodyHeight,
-          primaryColor: primaryColor,
-          accentColor: accentColor,
-          marginX: marginX,
-        );
-        layers.add(statLayer);
-        break;
+        case LayoutStyle.statisticFocus:
+          final statLayer = _buildStatisticFocusSection(
+            recipe: recipe,
+            contentWidth: contentWidth,
+            bodyStartY: bodyStartY,
+            bodyHeight: bodyHeight,
+            primaryColor: primaryColor,
+            accentColor: accentColor,
+            marginX: marginX,
+          );
+          layers.add(statLayer);
+          break;
 
-      case LayoutStyle.centeredMinimal:
-        final minimalLayer = _buildCenteredMinimalSection(
-          recipe: recipe,
-          contentWidth: contentWidth,
-          bodyStartY: bodyStartY,
-          bodyHeight: bodyHeight,
-          primaryColor: primaryColor,
-          accentColor: accentColor,
-          marginX: marginX,
-        );
-        layers.add(minimalLayer);
-        break;
+        case LayoutStyle.centeredMinimal:
+          final minimalLayer = _buildCenteredMinimalSection(
+            recipe: recipe,
+            contentWidth: contentWidth,
+            bodyStartY: bodyStartY,
+            bodyHeight: bodyHeight,
+            primaryColor: primaryColor,
+            accentColor: accentColor,
+            marginX: marginX,
+          );
+          layers.add(minimalLayer);
+          break;
 
-      case LayoutStyle.heroCards:
-        final cardsLayer = _buildHeroCardsSection(
-          recipe: recipe,
-          contentWidth: contentWidth,
-          bodyStartY: bodyStartY,
-          bodyHeight: bodyHeight,
-          primaryColor: primaryColor,
-          accentColor: accentColor,
-          marginX: marginX,
-        );
-        layers.add(cardsLayer);
-        break;
+        case LayoutStyle.heroCards:
+          final cardsLayer = _buildHeroCardsSection(
+            recipe: recipe,
+            contentWidth: contentWidth,
+            bodyStartY: bodyStartY,
+            bodyHeight: bodyHeight,
+            primaryColor: primaryColor,
+            accentColor: accentColor,
+            marginX: marginX,
+          );
+          layers.add(cardsLayer);
+          break;
+
+        case LayoutStyle.mobileAppScreen:
+          break;
+      }
+
+      // 6. Footer Section
+      final footerLayer = _buildFooterSection(
+        recipe: recipe,
+        contentWidth: contentWidth,
+        marginX: marginX,
+        y: height - marginY - 44,
+        primaryColor: primaryColor,
+      );
+      layers.add(footerLayer);
     }
 
-    // 6. Footer Section
-    final footerLayer = _buildFooterSection(
-      recipe: recipe,
-      contentWidth: contentWidth,
-      marginX: marginX,
-      y: height - marginY - 44,
-      primaryColor: primaryColor,
-    );
-    layers.add(footerLayer);
+    final pageName = recipe.layoutStyle == LayoutStyle.mobileAppScreen
+        ? (recipe.title.contains('?')
+            ? 'Uber iOS App UI'
+            : (recipe.title.length > 24 ? '${recipe.title.substring(0, 24)} App UI' : '${recipe.title} App UI'))
+        : '${recipe.domain.name.toUpperCase()} ${recipe.aspectRatio} Design';
 
     return CanvasPage(
       id: UuidGenerator.generate(),
-      name: '${recipe.domain.name.toUpperCase()} ${recipe.aspectRatio} Design',
+      name: pageName,
       width: width,
       height: height,
       backgroundType: BackgroundType.gradient,
@@ -388,6 +622,987 @@ class IntelligentSynthesisEngine {
       horizontalPadding: horizontalPadding,
       verticalPadding: verticalPadding,
     );
+  }
+
+  /// Apple-Grade Minimal Professional Mobile App Screen Architecture
+  static List<Layer> _buildMobileAppScreenLayers({
+    required DesignRecipe recipe,
+    required double width,
+    required double height,
+    required double marginX,
+    required double contentWidth,
+    required Color primaryColor,
+    required Color accentColor,
+  }) {
+    final List<Layer> layers = [];
+
+    // 1. iOS Status Bar & Dynamic Island (y = 20, height = 48)
+    final timeLayer = TextLayer(
+      id: UuidGenerator.generate(),
+      name: 'Status Time',
+      x: 0,
+      y: 0,
+      width: 70,
+      height: 30,
+      content: '9:41',
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      fontFamily: 'Inter',
+      color: Colors.white,
+    );
+
+    final dynamicIsland = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Dynamic Island',
+      x: 0,
+      y: 0,
+      width: 170,
+      height: 36,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.fixed,
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 0,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.center,
+      backgroundColor: Colors.black,
+      cornerRadius: 18,
+      strokeColor: Colors.white.withValues(alpha: 0.12),
+      strokeWidth: 1.2,
+      children: [
+        ShapeLayer(
+          id: UuidGenerator.generate(),
+          name: 'Camera Lens',
+          x: 0,
+          y: 0,
+          width: 11,
+          height: 11,
+          shapeType: ShapeType.roundedRectangle,
+          cornerRadius: 6,
+          fill: const Color(0xFF1E1E28),
+        ),
+      ],
+    );
+
+    final statusIconsRow = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Status Indicators',
+      x: 0,
+      y: 0,
+      width: 86,
+      height: 30,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.hug,
+      verticalSizing: AutoLayoutSizingMode.hug,
+      gap: 8,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.end,
+      children: [
+        IconLayer(
+          id: UuidGenerator.generate(),
+          name: 'Cellular Icon',
+          x: 0,
+          y: 0,
+          width: 20,
+          height: 20,
+          icon: Icons.signal_cellular_alt_rounded,
+          color: Colors.white,
+        ),
+        IconLayer(
+          id: UuidGenerator.generate(),
+          name: 'WiFi Icon',
+          x: 0,
+          y: 0,
+          width: 20,
+          height: 20,
+          icon: Icons.wifi_rounded,
+          color: Colors.white,
+        ),
+        IconLayer(
+          id: UuidGenerator.generate(),
+          name: 'Battery Icon',
+          x: 0,
+          y: 0,
+          width: 24,
+          height: 24,
+          icon: Icons.battery_full_rounded,
+          color: Colors.white,
+        ),
+      ],
+    );
+
+    final statusBarLayer = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Status Bar & Island',
+      x: marginX,
+      y: 20,
+      width: contentWidth,
+      height: 48,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.fixed,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.spaceBetween,
+      children: [timeLayer, dynamicIsland, statusIconsRow],
+    );
+    layers.add(statusBarLayer);
+
+    // 2. In-App Navigation Bar / Header (y = 86, height = 74)
+    final brandTitle = (recipe.title.contains('?') || recipe.title.toLowerCase().contains('where'))
+        ? 'Uber'
+        : recipe.title;
+
+    final headerTitleBlock = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'App Header Block',
+      x: 0,
+      y: 0,
+      width: contentWidth * 0.55,
+      height: 70,
+      direction: AutoLayoutDirection.vertical,
+      horizontalSizing: AutoLayoutSizingMode.hug,
+      verticalSizing: AutoLayoutSizingMode.hug,
+      gap: 4,
+      alignment: AutoLayoutAlignment.start,
+      distribution: AutoLayoutDistribution.start,
+      children: [
+        TextLayer(
+          id: UuidGenerator.generate(),
+          name: 'App Title',
+          x: 0,
+          y: 0,
+          width: 220,
+          height: 40,
+          content: brandTitle,
+          fontSize: 34,
+          fontWeight: FontWeight.w900,
+          fontFamily: 'Inter',
+          color: Colors.white,
+          letterSpacing: -1.0,
+        ),
+        TextLayer(
+          id: UuidGenerator.generate(),
+          name: 'Location Subtitle',
+          x: 0,
+          y: 0,
+          width: 260,
+          height: 22,
+          content: recipe.subtitle.isNotEmpty ? recipe.subtitle : 'San Francisco, CA ▾',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          fontFamily: 'Inter',
+          color: Colors.white.withValues(alpha: 0.65),
+        ),
+      ],
+    );
+
+    final headerActionBlock = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Header Actions',
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 48,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.hug,
+      verticalSizing: AutoLayoutSizingMode.hug,
+      gap: 10,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.end,
+      children: [
+        AutoLayoutLayer(
+          id: UuidGenerator.generate(),
+          name: 'Activity Pill',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 40,
+          direction: AutoLayoutDirection.horizontal,
+          horizontalSizing: AutoLayoutSizingMode.hug,
+          verticalSizing: AutoLayoutSizingMode.hug,
+          gap: 6,
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          backgroundColor: const Color(0xFF1E1C28),
+          cornerRadius: 20,
+          strokeColor: Colors.white.withValues(alpha: 0.12),
+          strokeWidth: 1.0,
+          alignment: AutoLayoutAlignment.center,
+          children: [
+            IconLayer(
+              id: UuidGenerator.generate(),
+              name: 'Activity Icon',
+              x: 0,
+              y: 0,
+              width: 16,
+              height: 16,
+              icon: Icons.history_rounded,
+              color: Colors.white70,
+            ),
+            const TextLayer(
+              id: 'activity-label',
+              name: 'Activity Label',
+              x: 0,
+              y: 0,
+              width: 50,
+              height: 18,
+              content: 'Activity',
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+              color: Colors.white,
+            ),
+          ],
+        ),
+        AutoLayoutLayer(
+          id: UuidGenerator.generate(),
+          name: 'Profile Avatar',
+          x: 0,
+          y: 0,
+          width: 44,
+          height: 44,
+          direction: AutoLayoutDirection.horizontal,
+          horizontalSizing: AutoLayoutSizingMode.fixed,
+          verticalSizing: AutoLayoutSizingMode.fixed,
+          backgroundColor: const Color(0xFF2C2A3C),
+          cornerRadius: 22,
+          strokeColor: Colors.white.withValues(alpha: 0.15),
+          strokeWidth: 1.2,
+          alignment: AutoLayoutAlignment.center,
+          distribution: AutoLayoutDistribution.center,
+          children: [
+            IconLayer(
+              id: UuidGenerator.generate(),
+              name: 'Avatar Icon',
+              x: 0,
+              y: 0,
+              width: 22,
+              height: 22,
+              icon: Icons.person_rounded,
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final appHeaderLayer = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'In-App Navigation Header',
+      x: marginX,
+      y: 86,
+      width: contentWidth,
+      height: 74,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.hug,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.spaceBetween,
+      children: [headerTitleBlock, headerActionBlock],
+    );
+    layers.add(appHeaderLayer);
+
+    // 3. Apple-Style Search Destination Card (y = 176, height = 78)
+    final searchCard = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Destination Search Bar',
+      x: marginX,
+      y: 176,
+      width: contentWidth,
+      height: 78,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.fixed,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: const Color(0xFF161522),
+      cornerRadius: 24,
+      strokeColor: Colors.white.withValues(alpha: 0.12),
+      strokeWidth: 1.2,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.spaceBetween,
+      children: [
+        AutoLayoutLayer(
+          id: UuidGenerator.generate(),
+          name: 'Search Icon Box',
+          x: 0,
+          y: 0,
+          width: 44,
+          height: 44,
+          direction: AutoLayoutDirection.horizontal,
+          horizontalSizing: AutoLayoutSizingMode.fixed,
+          verticalSizing: AutoLayoutSizingMode.fixed,
+          backgroundColor: const Color(0xFF252336),
+          cornerRadius: 22,
+          alignment: AutoLayoutAlignment.center,
+          distribution: AutoLayoutDistribution.center,
+          children: [
+            IconLayer(
+              id: UuidGenerator.generate(),
+              name: 'Search Icon',
+              x: 0,
+              y: 0,
+              width: 22,
+              height: 22,
+              icon: Icons.search_rounded,
+              color: accentColor,
+            ),
+          ],
+        ),
+        AutoLayoutLayer(
+          id: UuidGenerator.generate(),
+          name: 'Search Text Block',
+          x: 0,
+          y: 0,
+          width: contentWidth * 0.55,
+          height: 46,
+          direction: AutoLayoutDirection.vertical,
+          horizontalSizing: AutoLayoutSizingMode.fixed,
+          verticalSizing: AutoLayoutSizingMode.hug,
+          gap: 2,
+          alignment: AutoLayoutAlignment.start,
+          distribution: AutoLayoutDistribution.center,
+          children: [
+            const TextLayer(
+              id: 'where-to-title',
+              name: 'Where to Title',
+              x: 0,
+              y: 0,
+              width: 200,
+              height: 24,
+              content: 'Where to?',
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
+              color: Colors.white,
+            ),
+            TextLayer(
+              id: UuidGenerator.generate(),
+              name: 'Where to Subtext',
+              x: 0,
+              y: 0,
+              width: 280,
+              height: 18,
+              content: 'Search rides, airports or saved places',
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              color: Colors.white.withValues(alpha: 0.52),
+            ),
+          ],
+        ),
+        AutoLayoutLayer(
+          id: UuidGenerator.generate(),
+          name: 'Now Pill',
+          x: 0,
+          y: 0,
+          width: 82,
+          height: 38,
+          direction: AutoLayoutDirection.horizontal,
+          horizontalSizing: AutoLayoutSizingMode.hug,
+          verticalSizing: AutoLayoutSizingMode.hug,
+          gap: 4,
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          backgroundColor: const Color(0xFF262438),
+          cornerRadius: 19,
+          alignment: AutoLayoutAlignment.center,
+          children: [
+            IconLayer(
+              id: UuidGenerator.generate(),
+              name: 'Clock Icon',
+              x: 0,
+              y: 0,
+              width: 14,
+              height: 14,
+              icon: Icons.access_time_filled_rounded,
+              color: Colors.white70,
+            ),
+            const TextLayer(
+              id: 'now-label',
+              name: 'Now Label',
+              x: 0,
+              y: 0,
+              width: 44,
+              height: 18,
+              content: 'Now ▾',
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ],
+    );
+    layers.add(searchCard);
+
+    // 4. Service Selection Section (Rides / App tiers) (y = 272, height = 470)
+    final serviceItems = recipe.features.isNotEmpty
+        ? recipe.features
+        : const [
+            RecipeFeatureItem(
+              title: 'UberX',
+              subtitle: 'Affordable, everyday rides • 3 min away',
+              value: '\$18.50',
+              iconName: 'directions_car',
+              isHeroTile: true,
+              trend: '3 min',
+              tag: 'POPULAR',
+            ),
+            RecipeFeatureItem(
+              title: 'Comfort',
+              subtitle: 'Newer cars with extra legroom • 5 min away',
+              value: '\$24.20',
+              iconName: 'car_rental',
+              trend: '5 min',
+              tag: 'EXTRA ROOM',
+            ),
+            RecipeFeatureItem(
+              title: 'Black',
+              subtitle: 'Premium rides with professional drivers • 8 min away',
+              value: '\$38.00',
+              iconName: 'workspace_premium',
+              trend: '8 min',
+              tag: 'PREMIUM',
+            ),
+            RecipeFeatureItem(
+              title: 'UberXL',
+              subtitle: 'Spacious rides for groups up to 6 • 6 min away',
+              value: '\$29.50',
+              iconName: 'airport_shuttle',
+              trend: '6 min',
+              tag: '6 SEATS',
+            ),
+          ];
+
+    final servicesHeaderRow = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Services Header Row',
+      x: 0,
+      y: 0,
+      width: contentWidth,
+      height: 30,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.hug,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.spaceBetween,
+      children: [
+        const TextLayer(
+          id: 'suggested-rides-title',
+          name: 'Section Title',
+          x: 0,
+          y: 0,
+          width: 180,
+          height: 26,
+          content: 'Suggested Rides',
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          fontFamily: 'Inter',
+          color: Colors.white,
+        ),
+        TextLayer(
+          id: UuidGenerator.generate(),
+          name: 'Fastest Badge',
+          x: 0,
+          y: 0,
+          width: 130,
+          height: 18,
+          content: 'FASTEST PICKUP',
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          fontFamily: 'Inter',
+          color: accentColor,
+          textAlign: TextAlign.right,
+        ),
+      ],
+    );
+
+    final List<Layer> serviceCardLayers = [];
+    for (int i = 0; i < serviceItems.length && i < 4; i++) {
+      final item = serviceItems[i];
+      final isHero = item.isHeroTile || i == 0;
+
+      final cardLayer = AutoLayoutLayer(
+        id: UuidGenerator.generate(),
+        name: '${item.title} Tier Card',
+        x: 0,
+        y: 0,
+        width: contentWidth,
+        height: isHero ? 100 : 92,
+        direction: AutoLayoutDirection.horizontal,
+        horizontalSizing: AutoLayoutSizingMode.fixed,
+        verticalSizing: AutoLayoutSizingMode.fixed,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: isHero ? const Color(0xFF221F34) : const Color(0xFF14131E),
+        cornerRadius: 20,
+        strokeColor: isHero ? accentColor.withValues(alpha: 0.60) : Colors.white.withValues(alpha: 0.08),
+        strokeWidth: isHero ? 1.6 : 1.0,
+        alignment: AutoLayoutAlignment.center,
+        distribution: AutoLayoutDistribution.spaceBetween,
+        children: [
+          AutoLayoutLayer(
+            id: UuidGenerator.generate(),
+            name: 'Service Icon Container',
+            x: 0,
+            y: 0,
+            width: isHero ? 56 : 50,
+            height: isHero ? 56 : 50,
+            direction: AutoLayoutDirection.horizontal,
+            horizontalSizing: AutoLayoutSizingMode.fixed,
+            verticalSizing: AutoLayoutSizingMode.fixed,
+            backgroundColor: isHero ? const Color(0xFF2F2A4A) : const Color(0xFF1D1B2A),
+            cornerRadius: 15,
+            alignment: AutoLayoutAlignment.center,
+            distribution: AutoLayoutDistribution.center,
+            children: [
+              IconLayer(
+                id: UuidGenerator.generate(),
+                name: 'Service Icon',
+                x: 0,
+                y: 0,
+                width: isHero ? 30 : 26,
+                height: isHero ? 30 : 26,
+                icon: _resolveIcon(item.iconName),
+                color: isHero ? Colors.white : Colors.white70,
+              ),
+            ],
+          ),
+          AutoLayoutLayer(
+            id: UuidGenerator.generate(),
+            name: 'Service Info Block',
+            x: 0,
+            y: 0,
+            width: contentWidth * 0.54,
+            height: isHero ? 58 : 52,
+            direction: AutoLayoutDirection.vertical,
+            horizontalSizing: AutoLayoutSizingMode.fixed,
+            verticalSizing: AutoLayoutSizingMode.hug,
+            gap: 3,
+            alignment: AutoLayoutAlignment.start,
+            distribution: AutoLayoutDistribution.center,
+            children: [
+              AutoLayoutLayer(
+                id: UuidGenerator.generate(),
+                name: 'Title Row',
+                x: 0,
+                y: 0,
+                width: contentWidth * 0.52,
+                height: 24,
+                direction: AutoLayoutDirection.horizontal,
+                horizontalSizing: AutoLayoutSizingMode.hug,
+                verticalSizing: AutoLayoutSizingMode.hug,
+                gap: 8,
+                alignment: AutoLayoutAlignment.center,
+                children: [
+                  TextLayer(
+                    id: UuidGenerator.generate(),
+                    name: 'Tier Title',
+                    x: 0,
+                    y: 0,
+                    width: 100,
+                    height: 22,
+                    content: item.title,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    fontFamily: 'Inter',
+                    color: Colors.white,
+                  ),
+                  if (item.tag != null && item.tag!.isNotEmpty)
+                    AutoLayoutLayer(
+                      id: UuidGenerator.generate(),
+                      name: 'Tag Chip',
+                      x: 0,
+                      y: 0,
+                      width: 70,
+                      height: 20,
+                      direction: AutoLayoutDirection.horizontal,
+                      horizontalSizing: AutoLayoutSizingMode.hug,
+                      verticalSizing: AutoLayoutSizingMode.hug,
+                      paddingHorizontal: 7,
+                      paddingVertical: 3,
+                      backgroundColor: isHero ? accentColor.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.10),
+                      cornerRadius: 6,
+                      alignment: AutoLayoutAlignment.center,
+                      children: [
+                        TextLayer(
+                          id: UuidGenerator.generate(),
+                          name: 'Tag Text',
+                          x: 0,
+                          y: 0,
+                          width: 60,
+                          height: 14,
+                          content: item.tag!.toUpperCase(),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: 'Inter',
+                          color: isHero ? accentColor : Colors.white70,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              if (item.subtitle != null)
+                TextLayer(
+                  id: UuidGenerator.generate(),
+                  name: 'Tier Subtitle',
+                  x: 0,
+                  y: 0,
+                  width: contentWidth * 0.52,
+                  height: 18,
+                  content: item.subtitle!,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  fontFamily: 'Inter',
+                  color: Colors.white.withValues(alpha: 0.65),
+                ),
+            ],
+          ),
+          AutoLayoutLayer(
+            id: UuidGenerator.generate(),
+            name: 'Price Block',
+            x: 0,
+            y: 0,
+            width: contentWidth * 0.20,
+            height: isHero ? 50 : 46,
+            direction: AutoLayoutDirection.vertical,
+            horizontalSizing: AutoLayoutSizingMode.fixed,
+            verticalSizing: AutoLayoutSizingMode.hug,
+            gap: 2,
+            alignment: AutoLayoutAlignment.end,
+            distribution: AutoLayoutDistribution.center,
+            children: [
+              TextLayer(
+                id: UuidGenerator.generate(),
+                name: 'Price Text',
+                x: 0,
+                y: 0,
+                width: 90,
+                height: 24,
+                content: item.value ?? '\$18.50',
+                fontSize: isHero ? 20 : 18,
+                fontWeight: FontWeight.w900,
+                fontFamily: 'Inter',
+                color: Colors.white,
+                textAlign: TextAlign.right,
+              ),
+              TextLayer(
+                id: UuidGenerator.generate(),
+                name: 'ETA Text',
+                x: 0,
+                y: 0,
+                width: 90,
+                height: 16,
+                content: item.trend ?? '3 min',
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                color: Colors.white.withValues(alpha: 0.50),
+                textAlign: TextAlign.right,
+              ),
+            ],
+          ),
+        ],
+      );
+      serviceCardLayers.add(cardLayer);
+    }
+
+    final servicesSection = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Services Tier Stack',
+      x: marginX,
+      y: 272,
+      width: contentWidth,
+      height: 440,
+      direction: AutoLayoutDirection.vertical,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.hug,
+      gap: 10,
+      alignment: AutoLayoutAlignment.start,
+      children: [servicesHeaderRow, ...serviceCardLayers],
+    );
+    layers.add(servicesSection);
+
+    // 5. Apple Grouped Recent Destinations (y = 740, height = 250)
+    final savedPlaces = [
+      ('Home', '124 Market Street, Financial District', Icons.home_rounded, const Color(0xFF38BDF8)),
+      ('Workplace', '500 Howard Street, Suite 400', Icons.work_rounded, const Color(0xFFF59E0B)),
+      ('SFO Airport', 'Terminal 2, Departures Level', Icons.flight_takeoff_rounded, const Color(0xFFA855F7)),
+    ];
+
+    final List<Layer> savedPlaceRows = [];
+    for (int i = 0; i < savedPlaces.length; i++) {
+      final p = savedPlaces[i];
+      final placeRow = AutoLayoutLayer(
+        id: UuidGenerator.generate(),
+        name: '${p.$1} Row',
+        x: 0,
+        y: 0,
+        width: contentWidth - 32,
+        height: 54,
+        direction: AutoLayoutDirection.horizontal,
+        horizontalSizing: AutoLayoutSizingMode.fixed,
+        verticalSizing: AutoLayoutSizingMode.fixed,
+        alignment: AutoLayoutAlignment.center,
+        distribution: AutoLayoutDistribution.spaceBetween,
+        children: [
+          AutoLayoutLayer(
+            id: UuidGenerator.generate(),
+            name: 'Place Icon Box',
+            x: 0,
+            y: 0,
+            width: 38,
+            height: 38,
+            direction: AutoLayoutDirection.horizontal,
+            horizontalSizing: AutoLayoutSizingMode.fixed,
+            verticalSizing: AutoLayoutSizingMode.fixed,
+            backgroundColor: p.$4.withValues(alpha: 0.16),
+            cornerRadius: 19,
+            alignment: AutoLayoutAlignment.center,
+            distribution: AutoLayoutDistribution.center,
+            children: [
+              IconLayer(
+                id: UuidGenerator.generate(),
+                name: 'Icon',
+                x: 0,
+                y: 0,
+                width: 18,
+                height: 18,
+                icon: p.$3,
+                color: p.$4,
+              ),
+            ],
+          ),
+          AutoLayoutLayer(
+            id: UuidGenerator.generate(),
+            name: 'Place Text Block',
+            x: 0,
+            y: 0,
+            width: contentWidth - 140,
+            height: 44,
+            direction: AutoLayoutDirection.vertical,
+            horizontalSizing: AutoLayoutSizingMode.fixed,
+            verticalSizing: AutoLayoutSizingMode.hug,
+            gap: 2,
+            alignment: AutoLayoutAlignment.start,
+            distribution: AutoLayoutDistribution.center,
+            children: [
+              TextLayer(
+                id: UuidGenerator.generate(),
+                name: 'Place Name',
+                x: 0,
+                y: 0,
+                width: 200,
+                height: 20,
+                content: p.$1,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+                color: Colors.white,
+              ),
+              TextLayer(
+                id: UuidGenerator.generate(),
+                name: 'Place Address',
+                x: 0,
+                y: 0,
+                width: contentWidth - 150,
+                height: 16,
+                content: p.$2,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                fontFamily: 'Inter',
+                color: Colors.white.withValues(alpha: 0.55),
+              ),
+            ],
+          ),
+          IconLayer(
+            id: UuidGenerator.generate(),
+            name: 'Chevron',
+            x: 0,
+            y: 0,
+            width: 14,
+            height: 14,
+            icon: Icons.arrow_forward_ios_rounded,
+            color: Colors.white.withValues(alpha: 0.35),
+          ),
+        ],
+      );
+
+      savedPlaceRows.add(placeRow);
+
+      if (i < savedPlaces.length - 1) {
+        savedPlaceRows.add(
+          ShapeLayer(
+            id: UuidGenerator.generate(),
+            name: 'Divider Line',
+            x: 0,
+            y: 0,
+            width: contentWidth - 32,
+            height: 1,
+            fill: Colors.white.withValues(alpha: 0.06),
+          ),
+        );
+      }
+    }
+
+    final savedPlacesSection = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Recent Destinations Card',
+      x: marginX,
+      y: 740,
+      width: contentWidth,
+      height: 240,
+      direction: AutoLayoutDirection.vertical,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.hug,
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: const Color(0xFF14131E),
+      cornerRadius: 22,
+      strokeColor: Colors.white.withValues(alpha: 0.08),
+      strokeWidth: 1.0,
+      alignment: AutoLayoutAlignment.start,
+      children: savedPlaceRows,
+    );
+    layers.add(savedPlacesSection);
+
+    // 6. Sticky Booking CTA Button (y = 1005, height = 70)
+    final ctaButton = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'Primary CTA Button',
+      x: marginX,
+      y: 1005,
+      width: contentWidth,
+      height: 70,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.fixed,
+      backgroundColor: Colors.white,
+      cornerRadius: 24,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.center,
+      gap: 8,
+      children: [
+        const IconLayer(
+          id: 'cta-icon',
+          name: 'CTA Check Icon',
+          x: 0,
+          y: 0,
+          width: 20,
+          height: 20,
+          icon: Icons.check_circle_rounded,
+          color: Colors.black,
+        ),
+        TextLayer(
+          id: UuidGenerator.generate(),
+          name: 'CTA Text',
+          x: 0,
+          y: 0,
+          width: 280,
+          height: 26,
+          content: recipe.ctaText ?? 'Choose UberX • \$18.50',
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
+          fontFamily: 'Inter',
+          color: Colors.black,
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+    layers.add(ctaButton);
+
+    // 7. iOS Bottom Navigation Bar & Home Indicator (y = 1775, height = 110)
+    final tabs = [
+      ('Home', Icons.home_filled, true),
+      ('Services', Icons.grid_view_rounded, false),
+      ('Activity', Icons.receipt_long_rounded, false),
+      ('Account', Icons.person_rounded, false),
+    ];
+
+    final List<Layer> tabWidgets = [];
+    for (final t in tabs) {
+      tabWidgets.add(
+        AutoLayoutLayer(
+          id: UuidGenerator.generate(),
+          name: '${t.$1} Tab',
+          x: 0,
+          y: 0,
+          width: 70,
+          height: 52,
+          direction: AutoLayoutDirection.vertical,
+          horizontalSizing: AutoLayoutSizingMode.hug,
+          verticalSizing: AutoLayoutSizingMode.hug,
+          gap: 4,
+          alignment: AutoLayoutAlignment.center,
+          distribution: AutoLayoutDistribution.center,
+          children: [
+            IconLayer(
+              id: UuidGenerator.generate(),
+              name: 'Tab Icon',
+              x: 0,
+              y: 0,
+              width: 24,
+              height: 24,
+              icon: t.$2,
+              color: t.$3 ? Colors.white : Colors.white.withValues(alpha: 0.45),
+            ),
+            TextLayer(
+              id: UuidGenerator.generate(),
+              name: 'Tab Label',
+              x: 0,
+              y: 0,
+              width: 60,
+              height: 16,
+              content: t.$1,
+              fontSize: 11,
+              fontWeight: t.$3 ? FontWeight.w700 : FontWeight.w500,
+              fontFamily: 'Inter',
+              color: t.$3 ? Colors.white : Colors.white.withValues(alpha: 0.45),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    final bottomNavBar = AutoLayoutLayer(
+      id: UuidGenerator.generate(),
+      name: 'iOS Tab Bar',
+      x: 0,
+      y: 1775,
+      width: width,
+      height: 105,
+      direction: AutoLayoutDirection.horizontal,
+      horizontalSizing: AutoLayoutSizingMode.fixed,
+      verticalSizing: AutoLayoutSizingMode.fixed,
+      paddingHorizontal: 40,
+      backgroundColor: const Color(0xFF0C0B12),
+      strokeColor: Colors.white.withValues(alpha: 0.08),
+      strokeWidth: 1.0,
+      alignment: AutoLayoutAlignment.center,
+      distribution: AutoLayoutDistribution.spaceBetween,
+      children: tabWidgets,
+    );
+    layers.add(bottomNavBar);
+
+    final homeIndicator = ShapeLayer(
+      id: UuidGenerator.generate(),
+      name: 'Home Indicator Pill',
+      x: (width - 150) / 2,
+      y: 1895,
+      width: 150,
+      height: 5,
+      shapeType: ShapeType.roundedRectangle,
+      cornerRadius: 3,
+      fill: Colors.white.withValues(alpha: 0.38),
+    );
+    layers.add(homeIndicator);
+
+    return layers;
   }
 
   // --- Layout Section Builders ---
@@ -1766,6 +2981,79 @@ class IntelligentSynthesisEngine {
 
   static IconData _resolveIcon(String iconName) {
     switch (iconName.toLowerCase()) {
+      case 'directions_car':
+      case 'car':
+      case 'ride':
+      case 'taxi':
+        return Icons.directions_car_rounded;
+      case 'car_rental':
+      case 'comfort':
+        return Icons.car_rental_rounded;
+      case 'workspace_premium':
+      case 'black':
+      case 'premium':
+      case 'vip':
+        return Icons.workspace_premium_rounded;
+      case 'airport_shuttle':
+      case 'xl':
+      case 'van':
+        return Icons.airport_shuttle_rounded;
+      case 'search':
+        return Icons.search_rounded;
+      case 'history':
+      case 'activity':
+        return Icons.history_rounded;
+      case 'person':
+      case 'user':
+        return Icons.person_rounded;
+      case 'home':
+        return Icons.home_rounded;
+      case 'work':
+      case 'business':
+        return Icons.work_rounded;
+      case 'flight':
+      case 'flight_takeoff':
+      case 'airport':
+      case 'airplane':
+        return Icons.flight_takeoff_rounded;
+      case 'access_time':
+      case 'time':
+      case 'clock':
+        return Icons.access_time_filled_rounded;
+      case 'location_on':
+      case 'pin':
+        return Icons.location_on_rounded;
+      case 'fastfood':
+      case 'food':
+      case 'burger':
+        return Icons.fastfood_rounded;
+      case 'lunch_dining':
+      case 'salad':
+        return Icons.lunch_dining_rounded;
+      case 'local_cafe':
+      case 'coffee':
+        return Icons.local_cafe_rounded;
+      case 'bakery_dining':
+      case 'bakery':
+        return Icons.bakery_dining_rounded;
+      case 'account_balance_wallet':
+      case 'wallet':
+        return Icons.account_balance_wallet_rounded;
+      case 'laptop_mac':
+      case 'apple':
+      case 'laptop':
+        return Icons.laptop_mac_rounded;
+      case 'payments':
+      case 'payment':
+      case 'salary':
+        return Icons.payments_rounded;
+      case 'fitness_center':
+      case 'gym':
+      case 'workout':
+        return Icons.fitness_center_rounded;
+      case 'phone_iphone':
+      case 'phone':
+        return Icons.phone_iphone_rounded;
       case 'medication':
       case 'pill':
         return Icons.medication_rounded;

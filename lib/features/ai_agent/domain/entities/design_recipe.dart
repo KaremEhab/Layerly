@@ -6,6 +6,7 @@ enum LayoutStyle {
   featureGrid,
   statisticFocus,
   centeredMinimal,
+  mobileAppScreen,
 }
 
 enum CardAesthetic {
@@ -31,6 +32,8 @@ enum DesignDomain {
   marketing,
   ecommerce,
   creative,
+  mobility,
+  fintech,
 }
 
 class RecipeFeatureItem extends Equatable {
@@ -141,6 +144,9 @@ class DesignRecipe extends Equatable {
     final rawLayout = (json['layoutStyle'] as String? ?? '').toLowerCase();
     final layoutStyle = LayoutStyle.values.firstWhere(
       (l) => l.name.toLowerCase() == rawLayout ||
+          (rawLayout.contains('app') && l == LayoutStyle.mobileAppScreen) ||
+          (rawLayout.contains('mobile') && l == LayoutStyle.mobileAppScreen) ||
+          (rawLayout.contains('screen') && l == LayoutStyle.mobileAppScreen) ||
           (rawLayout.contains('bento') && l == LayoutStyle.splitBento) ||
           (rawLayout.contains('grid') && l == LayoutStyle.featureGrid) ||
           (rawLayout.contains('stat') && l == LayoutStyle.statisticFocus) ||
@@ -160,6 +166,11 @@ class DesignRecipe extends Equatable {
       orElse: () => BackgroundStyle.meshRadial,
     );
 
+    final rawAspect = json['aspectRatio'] as String?;
+    final aspectRatio = (rawAspect != null && rawAspect.isNotEmpty)
+        ? rawAspect
+        : (layoutStyle == LayoutStyle.mobileAppScreen ? '9:16' : '1:1');
+
     return DesignRecipe(
       title: json['title'] as String? ?? 'Untitled Design',
       subtitle: json['subtitle'] as String? ?? '',
@@ -174,11 +185,11 @@ class DesignRecipe extends Equatable {
       backgroundStyle: backgroundStyle,
       headingFont: json['headingFont'] as String? ?? 'Outfit',
       bodyFont: json['bodyFont'] as String? ?? 'Inter',
-      aspectRatio: json['aspectRatio'] as String? ?? '1:1',
+      aspectRatio: aspectRatio,
       gradientColors: (json['gradientColors'] as List<dynamic>?)
               ?.map((c) => c.toString())
               .toList() ??
-          const ['#0B132B', '#1C2541'],
+          const ['#0B132B', '#1C2541', '#3A506B'],
       primaryColor: json['primaryColor'] as String? ?? '#8B5CF6',
       accentColor: json['accentColor'] as String? ?? '#10B981',
       features: (json['features'] as List<dynamic>?)

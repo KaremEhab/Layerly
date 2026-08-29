@@ -17,6 +17,8 @@ import 'package:layerly/features/editor/domain/services/snapping_service.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_bloc.dart';
 import 'package:layerly/features/editor/presentation/bloc/editor_event.dart';
 import 'package:layerly/features/editor/presentation/widgets/canvas/layer_view.dart';
+import 'package:layerly/features/ai_agent/data/intelligent_synthesis_engine.dart';
+import 'package:layerly/features/ai_agent/domain/entities/design_recipe.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1536,6 +1538,41 @@ void main() {
         expect(wrappedSize.height, greaterThan(hugSize.height));
       },
     );
+
+    test(
+      'IntelligentSynthesisEngine parses app requests into minimal professional mobile app screen recipes',
+      () {
+        // 1. Uber app request
+        final uberRecipe = IntelligentSynthesisEngine.parsePromptToRecipe('uber app ui ux design');
+        expect(uberRecipe.layoutStyle, LayoutStyle.mobileAppScreen);
+        expect(uberRecipe.aspectRatio, '9:16');
+        expect(uberRecipe.domain, DesignDomain.mobility);
+        expect(uberRecipe.features.any((f) => f.title == 'UberX'), isTrue);
+
+        // 2. Synthesize Canvas Page
+        final page = IntelligentSynthesisEngine.synthesizeCanvasPage(uberRecipe);
+        expect(page.width, 1080.0);
+        expect(page.height, 1920.0);
+        expect(page.name.toLowerCase().contains('app'), isTrue);
+
+        // Verify key Apple mobile app components exist
+        final layerNames = page.layers.map((l) => l.name).toList();
+        expect(layerNames.contains('Status Bar & Island'), isTrue);
+        expect(layerNames.contains('In-App Navigation Header'), isTrue);
+        expect(layerNames.contains('Destination Search Bar'), isTrue);
+        expect(layerNames.contains('Services Tier Stack'), isTrue);
+        expect(layerNames.contains('Recent Destinations Card'), isTrue);
+        expect(layerNames.contains('Primary CTA Button'), isTrue);
+        expect(layerNames.contains('iOS Tab Bar'), isTrue);
+        expect(layerNames.contains('Home Indicator Pill'), isTrue);
+
+        // Verify non-app requests still route to marketing/bento archetypes
+        final pharmaRecipe = IntelligentSynthesisEngine.parsePromptToRecipe('pharma bento grid showcase');
+        expect(pharmaRecipe.layoutStyle, LayoutStyle.splitBento);
+        expect(pharmaRecipe.aspectRatio, '1:1');
+      },
+    );
   });
 }
+
 
