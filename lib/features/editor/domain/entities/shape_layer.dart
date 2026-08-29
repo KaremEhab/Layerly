@@ -27,6 +27,8 @@ class ShapeLayer extends Layer {
     super.visible = true,
     super.locked = false,
     super.scale = 1.0,
+    super.horizontalSizing = AutoLayoutSizingMode.fixed,
+    super.verticalSizing = AutoLayoutSizingMode.fixed,
     this.shapeType = ShapeType.roundedRectangle,
     this.fill = const Color(0xFF1D1E24),
     this.gradient,
@@ -68,6 +70,17 @@ class ShapeLayer extends Layer {
     );
   }
 
+  @override
+  ShapeLayer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  }) {
+    return copyWith(
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
+    );
+  }
+
   ShapeLayer copyWith({
     String? id,
     String? name,
@@ -81,6 +94,8 @@ class ShapeLayer extends Layer {
     bool? visible,
     bool? locked,
     double? scale,
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
     ShapeType? shapeType,
     Color? fill,
     Gradient? gradient,
@@ -105,6 +120,8 @@ class ShapeLayer extends Layer {
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
       scale: scale ?? this.scale,
+      horizontalSizing: horizontalSizing ?? this.horizontalSizing,
+      verticalSizing: verticalSizing ?? this.verticalSizing,
       shapeType: shapeType ?? this.shapeType,
       fill: fill ?? this.fill,
       gradient: gradient ?? this.gradient,

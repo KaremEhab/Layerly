@@ -1218,8 +1218,18 @@ class LayerView extends StatelessWidget {
                 final child = layer.children[i];
                 final isChildSelected = selectedLayerIds.contains(child.id);
 
+                final targetW = child.horizontalSizing == AutoLayoutSizingMode.fill
+                    ? math.max(10.0, layer.width - layer.paddingHorizontal * 2)
+                    : child.width;
+                final targetH = child.verticalSizing == AutoLayoutSizingMode.fill
+                    ? math.max(10.0, layer.height - layer.paddingVertical * 2)
+                    : child.height;
+                final childLayer = (targetW != child.width || targetH != child.height)
+                    ? child.copyWithTransform(width: targetW, height: targetH)
+                    : child;
+
                 Widget childView = LayerView(
-                  layer: child,
+                  layer: childLayer,
                   getComponentDefinition: getComponentDefinition,
                   onSelectLayer: onSelectLayer,
                   selectedLayerIds: selectedLayerIds,
@@ -1258,14 +1268,12 @@ class LayerView extends StatelessWidget {
                   behavior: isChildSelected || isContainerOrDescendantSelected
                       ? HitTestBehavior.opaque
                       : HitTestBehavior.translucent,
-                  // When the child is already selected, tapping it keeps it selected
-                  // and prevents the tap from bubbling up to the outer frame.
-                  onTap: isChildSelected
+                  // When the child or container is selected, tapping selects the child directly.
+                  onTap: (isChildSelected || isContainerOrDescendantSelected)
                       ? () => onSelectLayer?.call(child.id, false)
                       : null,
-                  // Only allow diving into this child on double-click if the container
-                  // (or an element in this container hierarchy) is already selected!
-                  onDoubleTap: isContainerOrDescendantSelected
+                  // Double tap only dives into direct child when this container is directly selected
+                  onDoubleTap: isContainerDirectlySelected
                       ? () => onSelectLayer?.call(child.id, false)
                       : null,
                   onPanStart: isChildSelected && onMoveLayer != null
@@ -1371,40 +1379,92 @@ class LayerView extends StatelessWidget {
           minHeight: 0,
           maxWidth: double.infinity,
           maxHeight: double.infinity,
-          child: Flex(
-            direction: isHorizontal ? Axis.horizontal : Axis.vertical,
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: _getFlexCrossAxis(layer.alignment),
-            children: [
-              for (int i = 0; i < layer.children.length; i++) ...[
-                if (i > 0)
-                  SizedBox(
-                    width: isHorizontal ? effectiveGap : 0,
-                    height: isHorizontal ? 0 : effectiveGap,
-                  ),
-                () {
-                  final child = layer.children[i];
-                  final isChildSelected = selectedLayerIds.contains(child.id);
-                  final childSize = child is TextLayer
-                      ? measureTextSize(child)
-                      : (child is AutoLayoutLayer
-                            ? measureAutoLayoutSize(
-                                child,
-                                parentWidth: innerW,
-                                parentHeight: innerH,
-                              )
-                            : Size(child.width, child.height));
-                  final childLayer = child is TextLayer
-                      ? child.copyWith(
-                          width: childSize.width,
-                          height: childSize.height,
-                        )
-                      : (child is AutoLayoutLayer
-                            ? child.copyWith(
-                                width: childSize.width,
-                                height: childSize.height,
-                              )
-                            : child);
+          child: () {
+            // Calculate available main space for fill children across ALL child types
+            double nonFillMain = 0;
+            int fillCountMain = 0;
+            for (final c in layer.children) {
+              if (isHorizontal) {
+                if (c.horizontalSizing == AutoLayoutSizingMode.fill) {
+                  fillCountMain++;
+                } else {
+                  nonFillMain += c is TextLayer
+                      ? measureTextSize(c).width
+                      : (c is AutoLayoutLayer ? measureAutoLayoutSize(c).width : c.width);
+                }
+              } else {
+                if (c.verticalSizing == AutoLayoutSizingMode.fill) {
+                  fillCountMain++;
+                } else {
+                  nonFillMain += c is TextLayer
+                      ? measureTextSize(c).height
+                      : (c is AutoLayoutLayer ? measureAutoLayoutSize(c).height : c.height);
+                }
+              }
+            }
+
+            final totalGaps = math.max(0, layer.children.length - 1) * effectiveGap;
+            final remainingMain = isHorizontal
+                ? math.max(10.0, innerW - nonFillMain - totalGaps)
+                : math.max(10.0, innerH - nonFillMain - totalGaps);
+            final fillMainUnit = fillCountMain > 0
+                ? math.max(10.0, remainingMain / fillCountMain)
+                : 0.0;
+
+            return Flex(
+              direction: isHorizontal ? Axis.horizontal : Axis.vertical,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: _getFlexCrossAxis(layer.alignment),
+              children: [
+                for (int i = 0; i < layer.children.length; i++) ...[
+                  if (i > 0)
+                    SizedBox(
+                      width: isHorizontal ? effectiveGap : 0,
+                      height: isHorizontal ? 0 : effectiveGap,
+                    ),
+                  () {
+                    final child = layer.children[i];
+                    final isChildSelected = selectedLayerIds.contains(child.id);
+
+                    double targetW = child.width;
+                    double targetH = child.height;
+
+                    if (isHorizontal) {
+                      if (child.horizontalSizing == AutoLayoutSizingMode.fill) {
+                        targetW = fillMainUnit;
+                      } else if (child.horizontalSizing == AutoLayoutSizingMode.hug) {
+                        targetW = child is TextLayer
+                            ? measureTextSize(child).width
+                            : (child is AutoLayoutLayer ? measureAutoLayoutSize(child).width : child.width);
+                      }
+                      if (child.verticalSizing == AutoLayoutSizingMode.fill) {
+                        targetH = innerH;
+                      } else if (child.verticalSizing == AutoLayoutSizingMode.hug) {
+                        targetH = child is TextLayer
+                            ? measureTextSize(child).height
+                            : (child is AutoLayoutLayer ? measureAutoLayoutSize(child).height : child.height);
+                      }
+                    } else {
+                      if (child.verticalSizing == AutoLayoutSizingMode.fill) {
+                        targetH = fillMainUnit;
+                      } else if (child.verticalSizing == AutoLayoutSizingMode.hug) {
+                        targetH = child is TextLayer
+                            ? measureTextSize(child).height
+                            : (child is AutoLayoutLayer ? measureAutoLayoutSize(child).height : child.height);
+                      }
+                      if (child.horizontalSizing == AutoLayoutSizingMode.fill) {
+                        targetW = innerW;
+                      } else if (child.horizontalSizing == AutoLayoutSizingMode.hug) {
+                        targetW = child is TextLayer
+                            ? measureTextSize(child).width
+                            : (child is AutoLayoutLayer ? measureAutoLayoutSize(child).width : child.width);
+                      }
+                    }
+
+                    final childLayer = child.copyWithTransform(
+                      width: targetW,
+                      height: targetH,
+                    );
 
                   Widget childView = LayerView(
                     layer: childLayer,
@@ -1445,10 +1505,11 @@ class LayerView extends StatelessWidget {
                     behavior: isChildSelected || isContainerOrDescendantSelected
                         ? HitTestBehavior.opaque
                         : HitTestBehavior.translucent,
-                    onTap: isChildSelected
+                    onTap: (isChildSelected || isContainerOrDescendantSelected)
                         ? () => onSelectLayer?.call(child.id, false)
                         : null,
-                    onDoubleTap: isContainerOrDescendantSelected
+                    // Double tap only dives into direct child when this container is directly selected
+                    onDoubleTap: isContainerDirectlySelected
                         ? () => onSelectLayer?.call(child.id, false)
                         : null,
                     onPanStart: isChildSelected ? (_) {} : null,
@@ -1456,8 +1517,8 @@ class LayerView extends StatelessWidget {
                   );
 
                   return SizedBox(
-                    width: childSize.width,
-                    height: childSize.height,
+                    width: targetW,
+                    height: targetH,
                     child: layer.clipContent
                         ? childGestureWidget
                         : DeferPointer(child: childGestureWidget),
@@ -1465,7 +1526,8 @@ class LayerView extends StatelessWidget {
                 }(),
               ],
             ],
-          ),
+          );
+        }(),
         ),
       ),
     );

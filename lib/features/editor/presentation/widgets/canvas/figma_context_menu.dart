@@ -259,16 +259,8 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                                 widget.bloc.add(RemoveAutoLayoutEvent(singleLayer.id));
                               }),
                             ),
-                          if (autoLayoutLayer != null) ...[
+                          if (singleLayer != null) ...[
                             const _MenuDivider(),
-                            _MenuItem(
-                              icon: Icons.tune_rounded,
-                              label: 'Layout settings...',
-                              shortcut: 'Alt+S',
-                              onTap: () => _closeAnd(() {
-                                _showAutoLayoutSettingsDialog(context, autoLayoutLayer);
-                              }),
-                            ),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               child: Column(
@@ -290,12 +282,18 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                                       ),
                                       Expanded(
                                         child: _SizingIconRow(
-                                          current: autoLayoutLayer.horizontalSizing,
+                                          current: singleLayer.horizontalSizing,
                                           onSelected: (mode) {
-                                            widget.bloc.add(UpdateAutoLayoutEvent(
-                                              layerId: autoLayoutLayer.id,
-                                              horizontalSizing: mode,
-                                            ));
+                                            if (singleLayer is AutoLayoutLayer) {
+                                              widget.bloc.add(UpdateAutoLayoutEvent(
+                                                layerId: singleLayer.id,
+                                                horizontalSizing: mode,
+                                              ));
+                                            } else {
+                                              widget.bloc.add(UpdateLayerEvent(
+                                                singleLayer.copyWithSizing(horizontalSizing: mode),
+                                              ));
+                                            }
                                           },
                                         ),
                                       ),
@@ -317,18 +315,43 @@ class _FigmaContextMenuOverlayState extends State<_FigmaContextMenuOverlay>
                                       ),
                                       Expanded(
                                         child: _SizingIconRow(
-                                          current: autoLayoutLayer.verticalSizing,
+                                          current: singleLayer.verticalSizing,
                                           onSelected: (mode) {
-                                            widget.bloc.add(UpdateAutoLayoutEvent(
-                                              layerId: autoLayoutLayer.id,
-                                              verticalSizing: mode,
-                                            ));
+                                            if (singleLayer is AutoLayoutLayer) {
+                                              widget.bloc.add(UpdateAutoLayoutEvent(
+                                                layerId: singleLayer.id,
+                                                verticalSizing: mode,
+                                              ));
+                                            } else {
+                                              widget.bloc.add(UpdateLayerEvent(
+                                                singleLayer.copyWithSizing(verticalSizing: mode),
+                                              ));
+                                            }
                                           },
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (autoLayoutLayer != null) ...[
+                            const _MenuDivider(),
+                            _MenuItem(
+                              icon: Icons.tune_rounded,
+                              label: 'Layout settings...',
+                              shortcut: 'Alt+S',
+                              onTap: () => _closeAnd(() {
+                                _showAutoLayoutSettingsDialog(context, autoLayoutLayer);
+                              }),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                                   const Text(
                                     'Alignment',
                                     style: TextStyle(

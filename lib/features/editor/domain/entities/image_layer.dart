@@ -26,6 +26,8 @@ class ImageLayer extends Layer {
     super.visible = true,
     super.locked = false,
     super.scale = 1.0,
+    super.horizontalSizing = AutoLayoutSizingMode.fixed,
+    super.verticalSizing = AutoLayoutSizingMode.fixed,
     this.imagePath,
     this.assetPath,
     this.svgContent,
@@ -66,6 +68,17 @@ class ImageLayer extends Layer {
     );
   }
 
+  @override
+  ImageLayer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  }) {
+    return copyWith(
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
+    );
+  }
+
   ImageLayer copyWith({
     String? id,
     String? name,
@@ -79,6 +92,8 @@ class ImageLayer extends Layer {
     bool? visible,
     bool? locked,
     double? scale,
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
     String? imagePath,
     String? assetPath,
     String? svgContent,
@@ -103,6 +118,8 @@ class ImageLayer extends Layer {
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
       scale: scale ?? this.scale,
+      horizontalSizing: horizontalSizing ?? this.horizontalSizing,
+      verticalSizing: verticalSizing ?? this.verticalSizing,
       imagePath: imagePath ?? this.imagePath,
       assetPath: assetPath ?? this.assetPath,
       svgContent: svgContent ?? this.svgContent,

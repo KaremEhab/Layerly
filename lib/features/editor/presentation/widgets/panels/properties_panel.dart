@@ -122,13 +122,13 @@ class PropertiesPanel extends StatelessWidget {
     final activePage = state.activePage;
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 104),
+      constraints: const BoxConstraints(minHeight: 88),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +219,7 @@ class PropertiesPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           // Controls Row: Guides Switch + Padding H + Padding V
           Row(
@@ -358,14 +358,14 @@ class PropertiesPanel extends StatelessWidget {
       return primaryCard;
     }
 
+    final childCards = _collectChildCards(context, activePage, layer);
     final cards = <Widget>[
       primaryCard,
-      for (final child in layer.children)
-        _buildChildLayerCard(context, layer, child),
+      ...childCards,
     ];
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = math.max(350.0, screenWidth * 0.8);
+    final cardWidth = math.max(340.0, screenWidth * 0.85);
 
     return SizedBox(
       height: 108,
@@ -381,59 +381,106 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildChildLayerCard(
+  List<Widget> _collectChildCards(
     BuildContext context,
-    AutoLayoutLayer parent,
-    Layer child,
+    CanvasPage activePage,
+    AutoLayoutLayer rootLayer,
   ) {
-    if (child is IconLayer) {
-      return _buildIconCard(
-        context,
-        child,
-        onUpdate: (updated) => _updateChildInParent(context, parent, updated),
-      );
-    } else if (child is TextLayer) {
-      return _buildTextCard(
-        context,
-        child,
-        onUpdate: (updated) => _updateChildInParent(context, parent, updated),
-      );
-    } else if (child is ShapeLayer) {
-      return _buildShapeCard(
-        context,
-        child,
-        onUpdate: (updated) => _updateChildInParent(context, parent, updated),
-      );
-    } else {
-      return Container(
-        constraints: const BoxConstraints(minHeight: 104),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Center(
-          child: Text(
-            child.name,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-          ),
-        ),
-      );
+    final result = <Widget>[];
+
+    void traverse(AutoLayoutLayer parent) {
+      for (final child in parent.children) {
+        if (child is TextLayer) {
+          result.add(
+            _buildTextCard(
+              context,
+              child,
+              onUpdate: (updated) =>
+                  _updateChildInRoot(context, rootLayer, updated),
+            ),
+          );
+        } else if (child is IconLayer) {
+          result.add(
+            _buildIconCard(
+              context,
+              child,
+              onUpdate: (updated) =>
+                  _updateChildInRoot(context, rootLayer, updated),
+            ),
+          );
+        } else if (child is ShapeLayer) {
+          result.add(
+            _buildShapeCard(
+              context,
+              child,
+              onUpdate: (updated) =>
+                  _updateChildInRoot(context, rootLayer, updated),
+            ),
+          );
+        } else if (child is AutoLayoutLayer) {
+          final isFrame = child.direction == AutoLayoutDirection.none;
+          result.add(
+            isFrame
+                ? _buildFramePropertiesCard(
+                    context,
+                    activePage,
+                    child,
+                    onUpdate: (updated) =>
+                        _updateChildInRoot(context, rootLayer, updated),
+                  )
+                : _buildAutoLayoutCard(
+                    context,
+                    activePage,
+                    child,
+                    onUpdate: (updated) =>
+                        _updateChildInRoot(context, rootLayer, updated),
+                  ),
+          );
+          traverse(child);
+        } else if (child is ImageLayer) {
+          result.add(_buildImageProperties(context, child));
+        } else if (child is VectorLayer) {
+          result.add(_buildVectorProperties(context, child));
+        }
+      }
     }
+
+    traverse(rootLayer);
+    return result;
   }
 
-  void _updateChildInParent(
+  void _updateChildInRoot(
     BuildContext context,
-    AutoLayoutLayer parent,
+    AutoLayoutLayer root,
     Layer updatedChild,
   ) {
-    final updatedChildren = parent.children
-        .map((c) => c.id == updatedChild.id ? updatedChild : c)
-        .toList();
-    context.read<EditorBloc>().add(
-      UpdateLayerEvent(parent.copyWith(children: updatedChildren)),
-    );
+    Layer? replaceRecursive(Layer current) {
+      if (current.id == updatedChild.id) {
+        return updatedChild;
+      }
+      if (current is AutoLayoutLayer) {
+        final newChildren = <Layer>[];
+        bool changed = false;
+        for (final c in current.children) {
+          final updated = replaceRecursive(c);
+          if (updated != null) {
+            newChildren.add(updated);
+            changed = true;
+          } else {
+            newChildren.add(c);
+          }
+        }
+        if (changed) {
+          return current.copyWith(children: newChildren);
+        }
+      }
+      return null;
+    }
+
+    final newRoot = replaceRecursive(root);
+    if (newRoot != null) {
+      context.read<EditorBloc>().add(UpdateLayerEvent(newRoot));
+    }
   }
 
   // 2.5 Frame Properties Card (Freeform Frames: Radius, Height & Width)
@@ -449,13 +496,13 @@ class PropertiesPanel extends StatelessWidget {
         .clamp(40.0, 10000.0);
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 104),
+      constraints: const BoxConstraints(minHeight: 88),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,7 +591,7 @@ class PropertiesPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           // Row 2: 3 Controllers + Clip Toggle
           Row(
@@ -698,13 +745,13 @@ class PropertiesPanel extends StatelessWidget {
               .clamp(0.0, 10000.0);
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 104),
+      constraints: const BoxConstraints(minHeight: 88),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -814,7 +861,7 @@ class PropertiesPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           // Row 2: Gap Stepper + Padding H Stepper + Padding V Stepper
           Row(
@@ -915,7 +962,7 @@ class PropertiesPanel extends StatelessWidget {
     required ValueChanged<TextLayer> onUpdate,
   }) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 104),
+      constraints: const BoxConstraints(minHeight: 88),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -1098,130 +1145,6 @@ class PropertiesPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-
-          // Row 3: Width Sizing (Hug/Fill/Fixed) + Height Sizing (Hug/Fill/Fixed) + Width Stepper
-          Row(
-            children: [
-              // Width Sizing Mode Pill
-              Expanded(
-                flex: 4,
-                child: GlassDropdownPill<AutoLayoutSizingMode>(
-                  value: layer.horizontalSizing,
-                  label: () {
-                    switch (layer.horizontalSizing) {
-                      case AutoLayoutSizingMode.hug:
-                        return 'W: Auto Fit';
-                      case AutoLayoutSizingMode.fill:
-                        return 'W: Fill';
-                      case AutoLayoutSizingMode.fixed:
-                        return 'W: ${layer.width.toInt()}px';
-                    }
-                  }(),
-                  menuWidth: 200,
-                  onSelected: (mode) {
-                    onUpdate(layer.copyWith(horizontalSizing: mode));
-                  },
-                  items: (context) => [
-                    const GlassMenuHeader<AutoLayoutSizingMode>(
-                      title: 'Width Sizing',
-                      icon: Icons.swap_horiz_rounded,
-                    ),
-                    const GlassMenuDivider<AutoLayoutSizingMode>(),
-                    GlassMenuItem<AutoLayoutSizingMode>(
-                      value: AutoLayoutSizingMode.hug,
-                      title: 'Auto Width (Fit)',
-                      subtitle: 'Single line text expansion',
-                      icon: Icons.compress_rounded,
-                      isSelected: layer.horizontalSizing == AutoLayoutSizingMode.hug,
-                    ),
-                    GlassMenuItem<AutoLayoutSizingMode>(
-                      value: AutoLayoutSizingMode.fill,
-                      title: 'Fill Container',
-                      subtitle: 'Wrap text to container width',
-                      icon: Icons.fullscreen_rounded,
-                      isSelected: layer.horizontalSizing == AutoLayoutSizingMode.fill,
-                    ),
-                    GlassMenuItem<AutoLayoutSizingMode>(
-                      value: AutoLayoutSizingMode.fixed,
-                      title: 'Fixed Width',
-                      subtitle: 'Wrap text to custom width',
-                      icon: Icons.lock_outline_rounded,
-                      isSelected: layer.horizontalSizing == AutoLayoutSizingMode.fixed,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              // Height Sizing Mode Pill
-              Expanded(
-                flex: 4,
-                child: GlassDropdownPill<AutoLayoutSizingMode>(
-                  value: layer.verticalSizing,
-                  label: () {
-                    switch (layer.verticalSizing) {
-                      case AutoLayoutSizingMode.hug:
-                        return 'H: Auto Wrap';
-                      case AutoLayoutSizingMode.fill:
-                        return 'H: Fill';
-                      case AutoLayoutSizingMode.fixed:
-                        return 'H: ${layer.height.toInt()}px';
-                    }
-                  }(),
-                  menuWidth: 200,
-                  onSelected: (mode) {
-                    onUpdate(layer.copyWith(verticalSizing: mode));
-                  },
-                  items: (context) => [
-                    const GlassMenuHeader<AutoLayoutSizingMode>(
-                      title: 'Height Sizing',
-                      icon: Icons.swap_vert_rounded,
-                    ),
-                    const GlassMenuDivider<AutoLayoutSizingMode>(),
-                    GlassMenuItem<AutoLayoutSizingMode>(
-                      value: AutoLayoutSizingMode.hug,
-                      title: 'Auto Height (Wrap)',
-                      subtitle: 'Grows as lines wrap',
-                      icon: Icons.compress_rounded,
-                      isSelected: layer.verticalSizing == AutoLayoutSizingMode.hug,
-                    ),
-                    GlassMenuItem<AutoLayoutSizingMode>(
-                      value: AutoLayoutSizingMode.fill,
-                      title: 'Fill Container',
-                      subtitle: 'Stretch to container height',
-                      icon: Icons.fullscreen_rounded,
-                      isSelected: layer.verticalSizing == AutoLayoutSizingMode.fill,
-                    ),
-                    GlassMenuItem<AutoLayoutSizingMode>(
-                      value: AutoLayoutSizingMode.fixed,
-                      title: 'Fixed Height',
-                      subtitle: 'Explicit bounding box',
-                      icon: Icons.lock_outline_rounded,
-                      isSelected: layer.verticalSizing == AutoLayoutSizingMode.fixed,
-                    ),
-                  ],
-                ),
-              ),
-              if (layer.horizontalSizing == AutoLayoutSizingMode.fixed) ...[
-                const SizedBox(width: 6),
-                Expanded(
-                  flex: 3,
-                  child: _buildStepperPill(
-                    value: layer.width.toInt(),
-                    onDecrement: () {
-                      final newW = (layer.width - 20).clamp(20.0, 5000.0);
-                      onUpdate(layer.copyWith(width: newW));
-                    },
-                    onIncrement: () {
-                      final newW = (layer.width + 20).clamp(20.0, 5000.0);
-                      onUpdate(layer.copyWith(width: newW));
-                    },
-                  ),
-                ),
-              ],
-            ],
-          ),
         ],
       ),
     );
@@ -1312,60 +1235,108 @@ class PropertiesPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
 
-                      // Resizing & Auto-Wrap Mode
+                      // Resizing Sizing Modes (Width & Height)
                       const Row(
                         children: [
                           Icon(Icons.aspect_ratio_rounded, color: Color(0xFFA78BFA), size: 16),
                           SizedBox(width: 6),
                           Text(
-                            'Resizing & Wrapping Mode',
+                            'Sizing Options (Hug, Fill, Fixed)',
                             style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
+                      // Width Row
                       Row(
                         children: [
+                          const SizedBox(
+                            width: 56,
+                            child: Text('Width', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                          ),
                           _buildStylePill(
-                            label: 'Auto Width',
-                            icon: Icons.swap_horiz_rounded,
-                            isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.hug &&
-                                currentLayer.verticalSizing == AutoLayoutSizingMode.hug,
+                            label: 'Hug',
+                            icon: Icons.compress_rounded,
+                            isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.hug,
                             onTap: () {
                               currentLayer = currentLayer.copyWith(
                                 horizontalSizing: AutoLayoutSizingMode.hug,
-                                verticalSizing: AutoLayoutSizingMode.hug,
                               );
                               onUpdate(currentLayer);
                               setModalState(() {});
                             },
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           _buildStylePill(
-                            label: 'Auto Height',
-                            icon: Icons.wrap_text_rounded,
-                            isSelected: currentLayer.horizontalSizing != AutoLayoutSizingMode.hug &&
-                                currentLayer.verticalSizing == AutoLayoutSizingMode.hug,
+                            label: 'Fill',
+                            icon: Icons.fullscreen_rounded,
+                            isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.fill,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(
+                                horizontalSizing: AutoLayoutSizingMode.fill,
+                              );
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          _buildStylePill(
+                            label: 'Fixed',
+                            icon: Icons.lock_outline_rounded,
+                            isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.fixed,
                             onTap: () {
                               currentLayer = currentLayer.copyWith(
                                 horizontalSizing: AutoLayoutSizingMode.fixed,
-                                verticalSizing: AutoLayoutSizingMode.hug,
                                 width: currentLayer.width > 0 ? currentLayer.width : 280.0,
                               );
                               onUpdate(currentLayer);
                               setModalState(() {});
                             },
                           ),
-                          const SizedBox(width: 8),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Height Row
+                      Row(
+                        children: [
+                          const SizedBox(
+                            width: 56,
+                            child: Text('Height', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                          ),
                           _buildStylePill(
-                            label: 'Fixed Box',
-                            icon: Icons.crop_free_rounded,
-                            isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.fixed &&
-                                currentLayer.verticalSizing == AutoLayoutSizingMode.fixed,
+                            label: 'Hug',
+                            icon: Icons.compress_rounded,
+                            isSelected: currentLayer.verticalSizing == AutoLayoutSizingMode.hug,
                             onTap: () {
                               currentLayer = currentLayer.copyWith(
-                                horizontalSizing: AutoLayoutSizingMode.fixed,
+                                verticalSizing: AutoLayoutSizingMode.hug,
+                              );
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          _buildStylePill(
+                            label: 'Fill',
+                            icon: Icons.fullscreen_rounded,
+                            isSelected: currentLayer.verticalSizing == AutoLayoutSizingMode.fill,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(
+                                verticalSizing: AutoLayoutSizingMode.fill,
+                              );
+                              onUpdate(currentLayer);
+                              setModalState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          _buildStylePill(
+                            label: 'Fixed',
+                            icon: Icons.lock_outline_rounded,
+                            isSelected: currentLayer.verticalSizing == AutoLayoutSizingMode.fixed,
+                            onTap: () {
+                              currentLayer = currentLayer.copyWith(
                                 verticalSizing: AutoLayoutSizingMode.fixed,
+                                height: currentLayer.height > 0 ? currentLayer.height : 60.0,
                               );
                               onUpdate(currentLayer);
                               setModalState(() {});
@@ -1377,18 +1348,23 @@ class PropertiesPanel extends StatelessWidget {
 
                       // B. Letter Spacing (Tracking)
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.space_bar_rounded, color: Color(0xFFA78BFA), size: 16),
-                              SizedBox(width: 6),
-                              Text(
-                                'Letter Spacing (Tracking)',
-                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                          const Expanded(
+                            child: Row(
+                              children: [
+                                Icon(Icons.space_bar_rounded, color: Color(0xFFA78BFA), size: 16),
+                                SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Letter Spacing',
+                                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Row(
                             children: [
                               _buildSheetMicroButton(
@@ -1400,9 +1376,9 @@ class PropertiesPanel extends StatelessWidget {
                                   setModalState(() {});
                                 },
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Container(
-                                width: 70,
+                                width: 66,
                                 padding: const EdgeInsets.symmetric(vertical: 4),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF221F32),
@@ -1412,10 +1388,10 @@ class PropertiesPanel extends StatelessWidget {
                                 alignment: Alignment.center,
                                 child: Text(
                                   '${currentLayer.letterSpacing >= 0 ? '+' : ''}${currentLayer.letterSpacing.toStringAsFixed(2)} px',
-                                  style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               _buildSheetMicroButton(
                                 icon: Icons.add,
                                 onTap: () {
@@ -1446,18 +1422,23 @@ class PropertiesPanel extends StatelessWidget {
 
                       // C. Line Height (Leading)
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.format_line_spacing_rounded, color: Color(0xFFA78BFA), size: 16),
-                              SizedBox(width: 6),
-                              Text(
-                                'Line Height (Leading)',
-                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                          const Expanded(
+                            child: Row(
+                              children: [
+                                Icon(Icons.format_line_spacing_rounded, color: Color(0xFFA78BFA), size: 16),
+                                SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Line Height',
+                                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Row(
                             children: [
                               _buildSheetMicroButton(
@@ -1469,9 +1450,9 @@ class PropertiesPanel extends StatelessWidget {
                                   setModalState(() {});
                                 },
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Container(
-                                width: 70,
+                                width: 66,
                                 padding: const EdgeInsets.symmetric(vertical: 4),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF221F32),
@@ -1481,10 +1462,10 @@ class PropertiesPanel extends StatelessWidget {
                                 alignment: Alignment.center,
                                 child: Text(
                                   '${currentLayer.lineHeight.toStringAsFixed(2)} ×',
-                                  style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(color: Color(0xFF55EFC4), fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               _buildSheetMicroButton(
                                 icon: Icons.add,
                                 onTap: () {
@@ -2096,63 +2077,334 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
-  // 5. Icon Card (Screenshot 1)
+  void _showUniversalLayerSizingSheet(
+    BuildContext context,
+    Layer layer,
+    ValueChanged<Layer> onUpdate,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (bottomSheetContext) {
+        Layer currentLayer = layer;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final isShape = currentLayer is ShapeLayer;
+            final isIcon = currentLayer is IconLayer;
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Color(0xFF161422),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border(
+                  top: BorderSide(color: Color(0xFF2C2844), width: 1.5),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      _buildTypeIconBox(
+                        isShape
+                            ? Icons.crop_square_rounded
+                            : (isIcon ? (currentLayer as IconLayer).icon : Icons.layers_rounded),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              currentLayer.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text(
+                              'Layer Sizing & Constraints',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 20),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Row(
+                    children: [
+                      Icon(Icons.aspect_ratio_rounded, color: Color(0xFFA78BFA), size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        'Sizing Options (Hug, Fill, Fixed)',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Width Row
+                  Row(
+                    children: [
+                      const SizedBox(
+                        width: 56,
+                        child: Text(
+                          'Width',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      _buildStylePill(
+                        label: 'Hug',
+                        icon: Icons.compress_rounded,
+                        isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.hug,
+                        onTap: () {
+                          currentLayer = currentLayer.copyWithSizing(
+                            horizontalSizing: AutoLayoutSizingMode.hug,
+                          );
+                          onUpdate(currentLayer);
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      _buildStylePill(
+                        label: 'Fill',
+                        icon: Icons.fullscreen_rounded,
+                        isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.fill,
+                        onTap: () {
+                          currentLayer = currentLayer.copyWithSizing(
+                            horizontalSizing: AutoLayoutSizingMode.fill,
+                          );
+                          onUpdate(currentLayer);
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      _buildStylePill(
+                        label: 'Fixed',
+                        icon: Icons.lock_outline_rounded,
+                        isSelected: currentLayer.horizontalSizing == AutoLayoutSizingMode.fixed,
+                        onTap: () {
+                          currentLayer = currentLayer.copyWithSizing(
+                            horizontalSizing: AutoLayoutSizingMode.fixed,
+                          );
+                          onUpdate(currentLayer);
+                          setModalState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Height Row
+                  Row(
+                    children: [
+                      const SizedBox(
+                        width: 56,
+                        child: Text(
+                          'Height',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      _buildStylePill(
+                        label: 'Hug',
+                        icon: Icons.compress_rounded,
+                        isSelected: currentLayer.verticalSizing == AutoLayoutSizingMode.hug,
+                        onTap: () {
+                          currentLayer = currentLayer.copyWithSizing(
+                            verticalSizing: AutoLayoutSizingMode.hug,
+                          );
+                          onUpdate(currentLayer);
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      _buildStylePill(
+                        label: 'Fill',
+                        icon: Icons.fullscreen_rounded,
+                        isSelected: currentLayer.verticalSizing == AutoLayoutSizingMode.fill,
+                        onTap: () {
+                          currentLayer = currentLayer.copyWithSizing(
+                            verticalSizing: AutoLayoutSizingMode.fill,
+                          );
+                          onUpdate(currentLayer);
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      _buildStylePill(
+                        label: 'Fixed',
+                        icon: Icons.lock_outline_rounded,
+                        isSelected: currentLayer.verticalSizing == AutoLayoutSizingMode.fixed,
+                        onTap: () {
+                          currentLayer = currentLayer.copyWithSizing(
+                            verticalSizing: AutoLayoutSizingMode.fixed,
+                          );
+                          onUpdate(currentLayer);
+                          setModalState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFA78BFA)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Fill container expands this item to fill all remaining available space in its layout card or frame.',
+                            style: TextStyle(color: Colors.white60, fontSize: 11, height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (currentLayer.horizontalSizing == AutoLayoutSizingMode.fixed ||
+                      currentLayer.verticalSizing == AutoLayoutSizingMode.fixed) ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        if (currentLayer.horizontalSizing == AutoLayoutSizingMode.fixed)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Width: ${currentLayer.width.toInt()}px',
+                                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                                Slider(
+                                  value: currentLayer.width.clamp(10.0, 800.0),
+                                  min: 10.0,
+                                  max: 800.0,
+                                  activeColor: const Color(0xFF6C5CE7),
+                                  onChanged: (v) {
+                                    currentLayer = currentLayer.copyWithTransform(width: v.roundToDouble());
+                                    onUpdate(currentLayer);
+                                    setModalState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (currentLayer.verticalSizing == AutoLayoutSizingMode.fixed)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Height: ${currentLayer.height.toInt()}px',
+                                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                                Slider(
+                                  value: currentLayer.height.clamp(10.0, 800.0),
+                                  min: 10.0,
+                                  max: 800.0,
+                                  activeColor: const Color(0xFF6C5CE7),
+                                  onChanged: (v) {
+                                    currentLayer = currentLayer.copyWithTransform(height: v.roundToDouble());
+                                    onUpdate(currentLayer);
+                                    setModalState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 5. Icon Card
   Widget _buildIconCard(
     BuildContext context,
     IconLayer layer, {
     required ValueChanged<IconLayer> onUpdate,
   }) {
-    final presetIcons = <IconData, String>{
-      Icons.check_circle_outline_rounded: 'Checkmark',
-      Icons.check_rounded: 'Check',
+    final presetIcons = {
+      Icons.check_circle_rounded: 'Check Circle',
       Icons.star_rounded: 'Star',
       Icons.favorite_rounded: 'Heart',
-      Icons.arrow_forward_rounded: 'Arrow',
-      Icons.bolt_rounded: 'Bolt',
-      Icons.auto_awesome_rounded: 'Sparkle',
-      Icons.circle_outlined: 'Circle',
+      Icons.thumb_up_rounded: 'Thumb Up',
+      Icons.shopping_cart_rounded: 'Cart',
+      Icons.person_rounded: 'User',
+      Icons.notifications_rounded: 'Bell',
+      Icons.settings_rounded: 'Settings',
+      Icons.home_rounded: 'Home',
+      Icons.search_rounded: 'Search',
+      Icons.mail_rounded: 'Mail',
+      Icons.call_rounded: 'Phone',
+      Icons.camera_alt_rounded: 'Camera',
+      Icons.location_on_rounded: 'Pin',
+      Icons.play_circle_fill_rounded: 'Play',
+      Icons.download_rounded: 'Download',
+      Icons.share_rounded: 'Share',
+      Icons.bookmark_rounded: 'Bookmark',
+      Icons.visibility_rounded: 'Eye',
+      Icons.info_outline_rounded: 'Info',
+      Icons.help_outline_rounded: 'Help',
+      Icons.warning_amber_rounded: 'Warning',
+      Icons.lock_rounded: 'Lock',
+      Icons.rocket_launch_rounded: 'Rocket',
+      Icons.lightbulb_rounded: 'Idea',
     };
 
-    final items = <DropdownMenuItem<IconData>>[];
-    for (final entry in presetIcons.entries) {
-      items.add(
-        DropdownMenuItem(
-          value: entry.key,
-          child: Text(
-            entry.value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      );
-    }
-    if (!presetIcons.containsKey(layer.icon)) {
-      items.add(
-        DropdownMenuItem(
-          value: layer.icon,
-          child: const Text(
-            'Icon',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      );
-    }
-
     return Container(
-      constraints: const BoxConstraints(minHeight: 104),
+      constraints: const BoxConstraints(minHeight: 88),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2175,16 +2427,24 @@ class PropertiesPanel extends StatelessWidget {
                 onUpdate(layer.copyWith(color: c));
               }),
               const SizedBox(width: 6),
-              const MoreRingsIcon(
-                color: AppColors.textMuted,
-                size: 18,
-                ringRadius: 2.1,
-                strokeWidth: 1.4,
-                spacing: 1.0,
+              InkWell(
+                onTap: () => _showUniversalLayerSizingSheet(
+                  context,
+                  layer,
+                  (l) => onUpdate(l as IconLayer),
+                ),
+                borderRadius: BorderRadius.circular(8),
+                child: const MoreRingsIcon(
+                  color: AppColors.textMuted,
+                  size: 18,
+                  ringRadius: 2.1,
+                  strokeWidth: 1.4,
+                  spacing: 1.0,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
@@ -2252,13 +2512,13 @@ class PropertiesPanel extends StatelessWidget {
     }
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 104),
+      constraints: const BoxConstraints(minHeight: 88),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2281,16 +2541,24 @@ class PropertiesPanel extends StatelessWidget {
                 onUpdate(layer.copyWith(fill: c));
               }),
               const SizedBox(width: 6),
-              const MoreRingsIcon(
-                color: AppColors.textMuted,
-                size: 18,
-                ringRadius: 2.1,
-                strokeWidth: 1.4,
-                spacing: 1.0,
+              InkWell(
+                onTap: () => _showUniversalLayerSizingSheet(
+                  context,
+                  layer,
+                  (l) => onUpdate(l as ShapeLayer),
+                ),
+                borderRadius: BorderRadius.circular(8),
+                child: const MoreRingsIcon(
+                  color: AppColors.textMuted,
+                  size: 18,
+                  ringRadius: 2.1,
+                  strokeWidth: 1.4,
+                  spacing: 1.0,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Row(
             children: [
               const Text(
@@ -3048,7 +3316,7 @@ class PropertiesPanel extends StatelessWidget {
     final cardWidth = math.max(350.0, screenWidth * 0.85);
 
     return SizedBox(
-      height: 108,
+      height: 146,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,

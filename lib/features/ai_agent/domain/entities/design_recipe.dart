@@ -3,8 +3,23 @@ import 'package:equatable/equatable.dart';
 enum LayoutStyle {
   heroCards,
   splitBento,
+  featureGrid,
   statisticFocus,
   centeredMinimal,
+}
+
+enum CardAesthetic {
+  glass,
+  solidElevated,
+  gradientBorder,
+  minimal,
+}
+
+enum BackgroundStyle {
+  meshRadial,
+  linearAtmosphere,
+  darkStudio,
+  cleanLight,
 }
 
 enum DesignDomain {
@@ -23,12 +38,18 @@ class RecipeFeatureItem extends Equatable {
   final String? subtitle;
   final String? value;
   final String iconName;
+  final bool isHeroTile;
+  final String? trend;
+  final String? tag;
 
   const RecipeFeatureItem({
     required this.title,
     this.subtitle,
     this.value,
     this.iconName = 'check_circle',
+    this.isHeroTile = false,
+    this.trend,
+    this.tag,
   });
 
   Map<String, dynamic> toJson() => {
@@ -36,6 +57,9 @@ class RecipeFeatureItem extends Equatable {
         'subtitle': subtitle,
         'value': value,
         'iconName': iconName,
+        'isHeroTile': isHeroTile,
+        'trend': trend,
+        'tag': tag,
       };
 
   factory RecipeFeatureItem.fromJson(Map<String, dynamic> json) {
@@ -44,11 +68,14 @@ class RecipeFeatureItem extends Equatable {
       subtitle: json['subtitle'] as String?,
       value: json['value'] as String?,
       iconName: json['iconName'] as String? ?? 'check_circle',
+      isHeroTile: json['isHeroTile'] as bool? ?? false,
+      trend: json['trend'] as String?,
+      tag: json['tag'] as String?,
     );
   }
 
   @override
-  List<Object?> get props => [title, subtitle, value, iconName];
+  List<Object?> get props => [title, subtitle, value, iconName, isHeroTile, trend, tag];
 }
 
 class DesignRecipe extends Equatable {
@@ -58,6 +85,10 @@ class DesignRecipe extends Equatable {
   final String? badgeIcon;
   final DesignDomain domain;
   final LayoutStyle layoutStyle;
+  final CardAesthetic cardAesthetic;
+  final BackgroundStyle backgroundStyle;
+  final String headingFont;
+  final String bodyFont;
   final String aspectRatio; // '1:1', '4:5', '9:16', '16:9'
   final List<String> gradientColors; // Hex strings e.g. '#0D1B2A', '#1B263B'
   final String primaryColor;
@@ -73,6 +104,10 @@ class DesignRecipe extends Equatable {
     this.badgeIcon,
     this.domain = DesignDomain.creative,
     this.layoutStyle = LayoutStyle.heroCards,
+    this.cardAesthetic = CardAesthetic.glass,
+    this.backgroundStyle = BackgroundStyle.meshRadial,
+    this.headingFont = 'Outfit',
+    this.bodyFont = 'Inter',
     this.aspectRatio = '1:1',
     this.gradientColors = const ['#0B132B', '#1C2541', '#3A506B'],
     this.primaryColor = '#8B5CF6',
@@ -89,6 +124,10 @@ class DesignRecipe extends Equatable {
         'badgeIcon': badgeIcon,
         'domain': domain.name,
         'layoutStyle': layoutStyle.name,
+        'cardAesthetic': cardAesthetic.name,
+        'backgroundStyle': backgroundStyle.name,
+        'headingFont': headingFont,
+        'bodyFont': bodyFont,
         'aspectRatio': aspectRatio,
         'gradientColors': gradientColors,
         'primaryColor': primaryColor,
@@ -99,6 +138,28 @@ class DesignRecipe extends Equatable {
       };
 
   factory DesignRecipe.fromJson(Map<String, dynamic> json) {
+    final rawLayout = (json['layoutStyle'] as String? ?? '').toLowerCase();
+    final layoutStyle = LayoutStyle.values.firstWhere(
+      (l) => l.name.toLowerCase() == rawLayout ||
+          (rawLayout.contains('bento') && l == LayoutStyle.splitBento) ||
+          (rawLayout.contains('grid') && l == LayoutStyle.featureGrid) ||
+          (rawLayout.contains('stat') && l == LayoutStyle.statisticFocus) ||
+          (rawLayout.contains('minimal') && l == LayoutStyle.centeredMinimal),
+      orElse: () => LayoutStyle.heroCards,
+    );
+
+    final rawCardAesthetic = (json['cardAesthetic'] as String? ?? '').toLowerCase();
+    final cardAesthetic = CardAesthetic.values.firstWhere(
+      (c) => c.name.toLowerCase() == rawCardAesthetic,
+      orElse: () => CardAesthetic.glass,
+    );
+
+    final rawBg = (json['backgroundStyle'] as String? ?? '').toLowerCase();
+    final backgroundStyle = BackgroundStyle.values.firstWhere(
+      (b) => b.name.toLowerCase() == rawBg,
+      orElse: () => BackgroundStyle.meshRadial,
+    );
+
     return DesignRecipe(
       title: json['title'] as String? ?? 'Untitled Design',
       subtitle: json['subtitle'] as String? ?? '',
@@ -108,10 +169,11 @@ class DesignRecipe extends Equatable {
         (d) => d.name.toLowerCase() == (json['domain'] as String? ?? '').toLowerCase(),
         orElse: () => DesignDomain.creative,
       ),
-      layoutStyle: LayoutStyle.values.firstWhere(
-        (l) => l.name.toLowerCase() == (json['layoutStyle'] as String? ?? '').toLowerCase(),
-        orElse: () => LayoutStyle.heroCards,
-      ),
+      layoutStyle: layoutStyle,
+      cardAesthetic: cardAesthetic,
+      backgroundStyle: backgroundStyle,
+      headingFont: json['headingFont'] as String? ?? 'Outfit',
+      bodyFont: json['bodyFont'] as String? ?? 'Inter',
       aspectRatio: json['aspectRatio'] as String? ?? '1:1',
       gradientColors: (json['gradientColors'] as List<dynamic>?)
               ?.map((c) => c.toString())
@@ -136,6 +198,10 @@ class DesignRecipe extends Equatable {
         badgeIcon,
         domain,
         layoutStyle,
+        cardAesthetic,
+        backgroundStyle,
+        headingFont,
+        bodyFont,
         aspectRatio,
         gradientColors,
         primaryColor,

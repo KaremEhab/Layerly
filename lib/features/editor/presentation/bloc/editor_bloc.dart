@@ -2015,67 +2015,79 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       newHeight - container.paddingVertical * 2,
     );
 
-    List<Layer> updatedChildren = container.children.map((child) {
-      if (child is AutoLayoutLayer) {
-        double childAvailableWidth = innerContentWidth;
-        double childAvailableHeight = innerContentHeight;
-
-        if (isHorizontal) {
-          childAvailableHeight = innerContentHeight;
-          if (child.horizontalSizing == AutoLayoutSizingMode.fill) {
-            double nonFillWidth = 0;
-            int fillCount = 0;
-            for (final c in container.children) {
-              if (c is AutoLayoutLayer &&
-                  c.horizontalSizing == AutoLayoutSizingMode.fill) {
-                fillCount++;
-              } else {
-                nonFillWidth += c is TextLayer
-                    ? _recalculateTextDimensions(c).width
-                    : c.width;
-              }
-            }
-            final totalGaps =
-                math.max(0, container.children.length - 1) * container.gap;
-            final remaining = innerContentWidth - nonFillWidth - totalGaps;
-            childAvailableWidth = math.max(
-              20.0,
-              remaining / math.max(1, fillCount),
-            );
-          }
+    // 1. Calculate available main space for fill children across ALL child types
+    double nonFillMain = 0;
+    int fillCountMain = 0;
+    for (final c in container.children) {
+      if (isHorizontal) {
+        if (c.horizontalSizing == AutoLayoutSizingMode.fill) {
+          fillCountMain++;
         } else {
-          childAvailableWidth = innerContentWidth;
-          if (child.verticalSizing == AutoLayoutSizingMode.fill) {
-            double nonFillHeight = 0;
-            int fillCount = 0;
-            for (final c in container.children) {
-              if (c is AutoLayoutLayer &&
-                  c.verticalSizing == AutoLayoutSizingMode.fill) {
-                fillCount++;
-              } else {
-                nonFillHeight += c is TextLayer
-                    ? _recalculateTextDimensions(c).height
-                    : c.height;
-              }
-            }
-            final totalGaps =
-                math.max(0, container.children.length - 1) * container.gap;
-            final remaining = innerContentHeight - nonFillHeight - totalGaps;
-            childAvailableHeight = math.max(
-              20.0,
-              remaining / math.max(1, fillCount),
-            );
-          }
+          nonFillMain += c is TextLayer
+              ? _recalculateTextDimensions(c).width
+              : c.width;
         }
+      } else {
+        if (c.verticalSizing == AutoLayoutSizingMode.fill) {
+          fillCountMain++;
+        } else {
+          nonFillMain += c is TextLayer
+              ? _recalculateTextDimensions(c).height
+              : c.height;
+        }
+      }
+    }
 
+    final totalGaps =
+        math.max(0, container.children.length - 1) * container.gap;
+    final remainingMain = isHorizontal
+        ? math.max(10.0, innerContentWidth - nonFillMain - totalGaps)
+        : math.max(10.0, innerContentHeight - nonFillMain - totalGaps);
+    final fillMainUnit = fillCountMain > 0
+        ? math.max(10.0, remainingMain / fillCountMain)
+        : 0.0;
+
+    List<Layer> updatedChildren = container.children.map((child) {
+      double targetW = child.width;
+      double targetH = child.height;
+
+      if (isHorizontal) {
+        // Main is horizontal
+        if (child.horizontalSizing == AutoLayoutSizingMode.fill) {
+          targetW = fillMainUnit;
+        }
+        // Cross is vertical
+        if (child.verticalSizing == AutoLayoutSizingMode.fill) {
+          targetH = innerContentHeight;
+        }
+      } else {
+        // Main is vertical
+        if (child.verticalSizing == AutoLayoutSizingMode.fill) {
+          targetH = fillMainUnit;
+        }
+        // Cross is horizontal
+        if (child.horizontalSizing == AutoLayoutSizingMode.fill) {
+          targetW = innerContentWidth;
+        }
+      }
+
+      if (child is AutoLayoutLayer) {
         return _recalculateAutoLayoutDimensions(
           child,
-          parentAvailableWidth: childAvailableWidth,
-          parentAvailableHeight: childAvailableHeight,
+          parentAvailableWidth: targetW,
+          parentAvailableHeight: targetH,
           isTopLevel: false,
         );
+      } else {
+        if (child.horizontalSizing == AutoLayoutSizingMode.fill ||
+            child.verticalSizing == AutoLayoutSizingMode.fill) {
+          return child.copyWithTransform(
+            width: targetW,
+            height: targetH,
+          );
+        }
+        return child;
       }
-      return child;
     }).toList();
 
     return container.copyWith(

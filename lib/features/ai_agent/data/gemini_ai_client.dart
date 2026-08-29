@@ -100,14 +100,12 @@ class GeminiAiClient {
       }
     }
 
-    // Add any remaining flash/pro models
     for (final m in available) {
       if (!sorted.contains(m) && (m.contains('flash') || m.contains('pro'))) {
         sorted.add(m);
       }
     }
 
-    // Add anything else
     for (final m in available) {
       if (!sorted.contains(m)) {
         sorted.add(m);
@@ -187,9 +185,8 @@ class GeminiAiClient {
 
     Object? lastError;
     for (final modelName in modelsToTry) {
-      // 1. Try with structured responseSchema
+      debugPrint('[GeminiAiClient] Attempting generation with $modelName (with responseSchema)...');
       try {
-        debugPrint('[GeminiAiClient] Attempting generation with $modelName (with responseSchema)...');
         final recipe = await _generateWithModel(modelName, prompt, withSchema: true);
         lastUsedModel = modelName;
         _cachedBestModel = modelName;
@@ -197,11 +194,26 @@ class GeminiAiClient {
         debugPrint('[GeminiAiClient] Successfully generated recipe with $modelName');
         return recipe;
       } catch (e) {
-        debugPrint('[GeminiAiClient] $modelName with schema failed: $e. Retrying without schema...');
         lastError = e;
+        final errStr = e.toString();
+        debugPrint('[GeminiAiClient] $modelName with schema failed: $errStr');
 
-        // 2. Retry without responseSchema in case strict schema is rejected
+        // If it's 503 high demand or 429 quota, don't waste time on the same overloaded model; cascade to next candidate
+        final isServerOverloaded = errStr.contains('503') ||
+            errStr.contains('high demand') ||
+            errStr.contains('UNAVAILABLE') ||
+            errStr.contains('429') ||
+            errStr.contains('RESOURCE_EXHAUSTED');
+
+        if (isServerOverloaded) {
+          debugPrint('[GeminiAiClient] Model $modelName is busy/overloaded (503/429). Cascading to next candidate...');
+          await Future.delayed(const Duration(milliseconds: 600));
+          continue;
+        }
+
+        // If it's a schema syntax issue, retry without schema
         try {
+          debugPrint('[GeminiAiClient] Retrying $modelName without schema...');
           final recipe = await _generateWithModel(modelName, prompt, withSchema: false);
           lastUsedModel = modelName;
           _cachedBestModel = modelName;
@@ -231,34 +243,60 @@ class GeminiAiClient {
         responseSchema: withSchema ? _buildSchema() : null,
       ),
       systemInstruction: Content.system(
-        'You are an expert graphic design AI agent for Layerly Studio. '
-        'Your goal is to parse the user request and generate a rich, professional Design Recipe as a valid JSON object. '
-        'Output pure JSON ONLY. Do not wrap in markdown code blocks, do not include ```json fences or commentary. '
-        'Tailor color palettes, headlines, metrics, and icons directly to the user domain (e.g. pharmaceutical, medical, biotech, tech, marketing). '
-        'Always ensure high visual contrast and premium aesthetic choices.',
+        'You are a Principal Figma Design Architect & Visual AI Agent for Layerly Studio. '
+        'You master modern digital product graphic design, social banners, and layout architectures.\n\n'
+        'DESIGN RULES YOU MUST ADHERE TO:\n'
+        '1. ARCHETYPE SELECTION (layoutStyle):\n'
+        '   - splitBento: Modern asymmetric Bento Grid. Use for tech/SaaS feature showcases or rich multi-metric posts. Provide 1 hero feature (isHeroTile: true) and 2 supporting cards.\n'
+        '   - featureGrid: Symmetrical 2x2 grid. Use when showcasing exactly 4 features or comparison items.\n'
+        '   - statisticFocus: Heavy KPI / metrics focus. Highlight big statistics (e.g. 99.99%, < 5ms, 142%) with trend arrows and clear metric labels.\n'
+        '   - heroCards: Vertical stacked glassmorphic cards with icons and value chips. High clarity, easy scanning.\n'
+        '   - centeredMinimal: Symmetrical editorial composition with elegant spacing, divider lines, and central typography focus.\n\n'
+        '2. 8PT SPATIAL SYSTEM & RATIO CONTAINMENT:\n'
+        '   - All elements must be strictly contained inside the safe margins (7.5% padding on all sides). Never generate elements outside canvas bounds.\n'
+        '   - Use standard 8pt tokens for gaps (12, 16, 20px) and card paddings (16, 20, 24px).\n\n'
+        '3. TYPOGRAPHY & CONTRAST:\n'
+        '   - Headlines must be punchy, high-contrast, and concise (under 8 words).\n'
+        '   - Subtitles must provide clear context in 1-2 lines.\n'
+        '   - Badges should be uppercase with short category tags (e.g. "CLINICAL R&D", "ENTERPRISE SAAS").\n\n'
+        '4. COLOR HARMONY & MOOD:\n'
+        '   - Generate rich, non-generic palettes with 2-3 deep gradient background tones and high-vibrancy primary/accent highlights (e.g. Clinical Teal #00D2B4, Electric Violet #8B5CF6, Emerald #10B981, Cyberpunk Coral #F43F5E).\n\n'
+        'Output pure JSON ONLY. Do not wrap in markdown code fences (do not include ```json), no conversational preamble.',
       ),
     );
 
     final promptBuffer = StringBuffer();
-    promptBuffer.writeln('Generate a graphic design recipe JSON for the following user request: "$prompt"');
+    promptBuffer.writeln('Generate a complete graphic design recipe JSON for the user request: "$prompt"');
     promptBuffer.writeln();
-    promptBuffer.writeln('Output a valid JSON object with the following fields:');
+    promptBuffer.writeln('Required JSON structure:');
     promptBuffer.writeln('{');
-    promptBuffer.writeln('  "title": "Compelling headline for the graphic design",');
-    promptBuffer.writeln('  "subtitle": "Detailed supportive subtext explaining the subject",');
+    promptBuffer.writeln('  "title": "Compelling headline (e.g. Unmatched Cloud Performance)",');
+    promptBuffer.writeln('  "subtitle": "Informative subtext explaining the subject",');
     promptBuffer.writeln('  "badgeText": "UPPERCASE CATEGORY BADGE",');
-    promptBuffer.writeln('  "badgeIcon": "Icon name e.g. medication, biotech, health_and_safety, bolt, star",');
+    promptBuffer.writeln('  "badgeIcon": "Icon name e.g. medication, biotech, health_and_safety, bolt, shield, cloud, star",');
     promptBuffer.writeln('  "domain": "pharma|healthcare|tech|saas|fitness|marketing|ecommerce|creative",');
-    promptBuffer.writeln('  "layoutStyle": "heroCards|splitBento|statisticFocus|centeredMinimal",');
+    promptBuffer.writeln('  "layoutStyle": "splitBento|featureGrid|statisticFocus|heroCards|centeredMinimal",');
+    promptBuffer.writeln('  "cardAesthetic": "glass|solidElevated|gradientBorder|minimal",');
+    promptBuffer.writeln('  "backgroundStyle": "meshRadial|linearAtmosphere|darkStudio|cleanLight",');
+    promptBuffer.writeln('  "headingFont": "Outfit|Space Grotesk|Poppins|Inter",');
+    promptBuffer.writeln('  "bodyFont": "Inter|Roboto",');
     promptBuffer.writeln('  "aspectRatio": "1:1|4:5|9:16|16:9",');
-    promptBuffer.writeln('  "gradientColors": ["#041C24", "#063B48", "#0A1E24"],');
-    promptBuffer.writeln('  "primaryColor": "#00D2B4",');
-    promptBuffer.writeln('  "accentColor": "#10B981",');
+    promptBuffer.writeln('  "gradientColors": ["#0F0C20", "#1F1440", "#0C0A1A"],');
+    promptBuffer.writeln('  "primaryColor": "#8B5CF6",');
+    promptBuffer.writeln('  "accentColor": "#00D2B4",');
     promptBuffer.writeln('  "features": [');
-    promptBuffer.writeln('    {"title": "Metric Title", "subtitle": "Detail", "value": "99.4%", "iconName": "biotech"}');
+    promptBuffer.writeln('    {');
+    promptBuffer.writeln('      "title": "Card Title",');
+    promptBuffer.writeln('      "subtitle": "Card Description",');
+    promptBuffer.writeln('      "value": "99.99%",');
+    promptBuffer.writeln('      "iconName": "cloud",');
+    promptBuffer.writeln('      "isHeroTile": true,');
+    promptBuffer.writeln('      "trend": "+142%",');
+    promptBuffer.writeln('      "tag": "LIVE"');
+    promptBuffer.writeln('    }');
     promptBuffer.writeln('  ],');
-    promptBuffer.writeln('  "footerText": "Attribution or brand name",');
-    promptBuffer.writeln('  "ctaText": "Call to action button label"');
+    promptBuffer.writeln('  "footerText": "Attribution or brand text",');
+    promptBuffer.writeln('  "ctaText": "Call to action label"');
     promptBuffer.writeln('}');
 
     final response = await model.generateContent([
@@ -285,9 +323,13 @@ class GeminiAiClient {
         'title': Schema.string(description: 'Compelling headline for the graphic design'),
         'subtitle': Schema.string(description: 'Detailed supportive subtext explaining the subject'),
         'badgeText': Schema.string(description: 'Short uppercase category badge or tag e.g. PHARMACEUTICAL R&D'),
-        'badgeIcon': Schema.string(description: 'Icon name e.g. medication, health_and_safety, biotech, bolt, star'),
+        'badgeIcon': Schema.string(description: 'Icon name e.g. medication, health_and_safety, biotech, bolt, star, cloud'),
         'domain': Schema.string(description: 'One of: pharma, healthcare, tech, saas, fitness, marketing, ecommerce, creative'),
-        'layoutStyle': Schema.string(description: 'One of: heroCards, splitBento, statisticFocus, centeredMinimal'),
+        'layoutStyle': Schema.string(description: 'One of: splitBento, featureGrid, statisticFocus, heroCards, centeredMinimal'),
+        'cardAesthetic': Schema.string(description: 'One of: glass, solidElevated, gradientBorder, minimal'),
+        'backgroundStyle': Schema.string(description: 'One of: meshRadial, linearAtmosphere, darkStudio, cleanLight'),
+        'headingFont': Schema.string(description: 'Heading font name e.g. Outfit, Space Grotesk, Poppins, Inter'),
+        'bodyFont': Schema.string(description: 'Body font name e.g. Inter, Roboto'),
         'aspectRatio': Schema.string(description: 'Aspect ratio: 1:1, 4:5, 9:16, or 16:9'),
         'gradientColors': Schema.array(
           description: '2 to 3 hex colors for rich background gradient',
@@ -296,13 +338,16 @@ class GeminiAiClient {
         'primaryColor': Schema.string(description: 'Hex color for primary highlights/buttons'),
         'accentColor': Schema.string(description: 'Hex color for secondary accents/tags'),
         'features': Schema.array(
-          description: '2 to 3 feature or metric cards',
+          description: '2 to 4 feature or metric cards',
           items: Schema.object(
             properties: {
               'title': Schema.string(description: 'Card title'),
               'subtitle': Schema.string(description: 'Card subtitle or description'),
               'value': Schema.string(description: 'Stat or metric value e.g. 99.4% or Phase III'),
-              'iconName': Schema.string(description: 'Icon name e.g. medication, biotech, health_and_safety, shield, bolt'),
+              'iconName': Schema.string(description: 'Icon name e.g. medication, biotech, health_and_safety, shield, bolt, cloud'),
+              'isHeroTile': Schema.boolean(description: 'True if this card should be the prominent hero tile in a Bento layout'),
+              'trend': Schema.string(description: 'Optional trend or growth indicator e.g. +142% or 4.9/5'),
+              'tag': Schema.string(description: 'Short status chip e.g. LIVE, NEW, PRO'),
             },
             requiredProperties: ['title'],
           ),
@@ -310,7 +355,7 @@ class GeminiAiClient {
         'footerText': Schema.string(description: 'Footer attribution or branding text'),
         'ctaText': Schema.string(description: 'Call to action text'),
       },
-      requiredProperties: ['title', 'subtitle', 'badgeText', 'domain', 'aspectRatio'],
+      requiredProperties: ['title', 'subtitle', 'badgeText', 'domain', 'aspectRatio', 'layoutStyle'],
     );
   }
 
@@ -344,6 +389,9 @@ class GeminiAiClient {
     final str = error.toString();
     if (str.contains('API_KEY_INVALID') || str.contains('API key not valid')) {
       return 'Google Gemini API key is invalid. Please verify the key at aistudio.google.com.';
+    }
+    if (str.contains('503') || str.contains('high demand') || str.contains('UNAVAILABLE')) {
+      return 'Google Gemini model servers are temporarily experiencing high traffic (503). Retrying with alternative models...';
     }
     if (str.contains('quota') || str.contains('RESOURCE_EXHAUSTED') || str.contains('429')) {
       return 'Gemini rate limit or quota exceeded (429). Please wait a moment or check your quota.';

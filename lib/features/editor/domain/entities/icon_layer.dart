@@ -22,6 +22,8 @@ class IconLayer extends Layer {
     super.visible = true,
     super.locked = false,
     super.scale = 1.0,
+    super.horizontalSizing = AutoLayoutSizingMode.fixed,
+    super.verticalSizing = AutoLayoutSizingMode.fixed,
     this.icon = Icons.check_circle_rounded,
     this.color = const Color(0xFFA970FF),
     this.backgroundColor,
@@ -58,6 +60,17 @@ class IconLayer extends Layer {
     );
   }
 
+  @override
+  IconLayer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  }) {
+    return copyWith(
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
+    );
+  }
+
   IconLayer copyWith({
     String? id,
     String? name,
@@ -71,6 +84,8 @@ class IconLayer extends Layer {
     bool? visible,
     bool? locked,
     double? scale,
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
     IconData? icon,
     Color? color,
     Color? backgroundColor,
@@ -90,6 +105,8 @@ class IconLayer extends Layer {
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
       scale: scale ?? this.scale,
+      horizontalSizing: horizontalSizing ?? this.horizontalSizing,
+      verticalSizing: verticalSizing ?? this.verticalSizing,
       icon: icon ?? this.icon,
       color: color ?? this.color,
       backgroundColor: backgroundColor ?? this.backgroundColor,

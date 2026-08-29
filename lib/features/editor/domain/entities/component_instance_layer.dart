@@ -18,6 +18,8 @@ class ComponentInstanceLayer extends Layer {
     super.visible = true,
     super.locked = false,
     super.scale = 1.0,
+    super.horizontalSizing = AutoLayoutSizingMode.fixed,
+    super.verticalSizing = AutoLayoutSizingMode.fixed,
     required this.componentDefinitionId,
     this.variableOverrides = const {},
   }) : super(type: LayerType.componentInstance);
@@ -51,6 +53,17 @@ class ComponentInstanceLayer extends Layer {
     );
   }
 
+  @override
+  ComponentInstanceLayer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  }) {
+    return copyWith(
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
+    );
+  }
+
   ComponentInstanceLayer copyWith({
     String? id,
     String? name,
@@ -64,6 +77,8 @@ class ComponentInstanceLayer extends Layer {
     bool? visible,
     bool? locked,
     double? scale,
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
     String? componentDefinitionId,
     Map<String, dynamic>? variableOverrides,
   }) {
@@ -80,6 +95,8 @@ class ComponentInstanceLayer extends Layer {
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
       scale: scale ?? this.scale,
+      horizontalSizing: horizontalSizing ?? this.horizontalSizing,
+      verticalSizing: verticalSizing ?? this.verticalSizing,
       componentDefinitionId:
           componentDefinitionId ?? this.componentDefinitionId,
       variableOverrides: variableOverrides ?? this.variableOverrides,

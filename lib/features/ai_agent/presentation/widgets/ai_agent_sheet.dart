@@ -41,6 +41,8 @@ class _AiAgentSheetState extends State<AiAgentSheet> {
 
   // Options
   String _selectedAspectRatio = '1:1';
+  String _selectedLayoutStyle = 'auto';
+  String _selectedAesthetic = 'glass';
   bool _applyAsNewSlide = true;
   String? _savedApiKey;
 
@@ -67,8 +69,15 @@ class _AiAgentSheetState extends State<AiAgentSheet> {
     final prompt = _promptController.text.trim();
     if (prompt.isEmpty) return;
 
-    // Inject selected ratio into prompt if needed
-    final fullPrompt = '$prompt [ratio: $_selectedAspectRatio]';
+    final buffer = StringBuffer(prompt);
+    buffer.write(' [ratio: $_selectedAspectRatio]');
+    if (_selectedLayoutStyle != 'auto') {
+      buffer.write(' [layoutStyle: $_selectedLayoutStyle]');
+    }
+    if (_selectedAesthetic != 'glass') {
+      buffer.write(' [cardAesthetic: $_selectedAesthetic]');
+    }
+    final fullPrompt = buffer.toString();
 
     setState(() {
       _isGenerating = true;
@@ -79,8 +88,14 @@ class _AiAgentSheetState extends State<AiAgentSheet> {
     });
 
     try {
+      final activePage = widget.editorBloc?.state.activePage;
+      final padH = activePage?.horizontalPadding ?? 20.0;
+      final padV = activePage?.verticalPadding ?? 20.0;
+
       final result = await AiAgentService.instance.generateDesign(
         prompt: fullPrompt,
+        horizontalPadding: padH,
+        verticalPadding: padV,
         onProgress: (step) {
           if (mounted) {
             setState(() {
@@ -436,6 +451,66 @@ class _AiAgentSheetState extends State<AiAgentSheet> {
               _buildRatioChip('16:9 (Banner)'),
             ],
           ),
+          const SizedBox(height: 10),
+
+          // Layout Archetype Selector (Figma Architecture)
+          Row(
+            children: [
+              const Text(
+                'Layout:',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildLayoutChip('auto', '✨ Auto (AI)'),
+                      const SizedBox(width: 6),
+                      _buildLayoutChip('splitBento', '🍱 Bento Grid'),
+                      const SizedBox(width: 6),
+                      _buildLayoutChip('featureGrid', '🔳 2x2 Grid'),
+                      const SizedBox(width: 6),
+                      _buildLayoutChip('statisticFocus', '📊 Stat Focus'),
+                      const SizedBox(width: 6),
+                      _buildLayoutChip('heroCards', '⚡ Hero Cards'),
+                      const SizedBox(width: 6),
+                      _buildLayoutChip('centeredMinimal', '✨ Minimal'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Aesthetic Mood Selector
+          Row(
+            children: [
+              const Text(
+                'Mood:',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildAestheticChip('glass', '🔮 Dark Glass'),
+                      const SizedBox(width: 6),
+                      _buildAestheticChip('gradientBorder', '💜 Cyberpunk'),
+                      const SizedBox(width: 6),
+                      _buildAestheticChip('solidElevated', '🧬 Clinical Biotech'),
+                      const SizedBox(width: 6),
+                      _buildAestheticChip('minimal', '📰 Editorial Minimal'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
 
           // Quick Prompt Ideas
@@ -449,23 +524,28 @@ class _AiAgentSheetState extends State<AiAgentSheet> {
             child: Row(
               children: [
                 _buildPromptChip(
-                  '💊 Pharma 1:1 Gradient Post',
-                  'create me a new graphic design with 1:1 ratio and with gradient bg and featuring pharma stuff',
+                  '🍱 Bento SaaS Dashboard',
+                  'next-gen AI developer tools bento grid layout with 1 hero tile and 2 companion metric cards',
                 ),
                 const SizedBox(width: 8),
                 _buildPromptChip(
-                  '🚀 Cloud SaaS Showcase',
-                  'next-gen cloud SaaS feature showcase 1:1 post with dark violet gradient and uptime stats',
+                  '📊 3-KPI Growth Stats',
+                  'quarterly financial revenue and latency statistics focus post with big numbers and trend tags',
                 ),
                 const SizedBox(width: 8),
                 _buildPromptChip(
-                  '📊 Clinical Health Metrics',
-                  'clinical biotechnology research findings 1:1 card with cyan gradient and purity stats',
+                  '💊 Pharma 1:1 Clinical',
+                  'precision pharmacology clinical drug delivery system 1:1 post with cyan gradient',
                 ),
                 const SizedBox(width: 8),
                 _buildPromptChip(
-                  '✨ Minimal Studio Promo',
-                  'minimalist digital product studio banner with smooth gradients and typography',
+                  '🔳 2x2 Cloud Grid',
+                  'cloud infrastructure 4 core capabilities in a balanced 2x2 grid with high-speed metrics',
+                ),
+                const SizedBox(width: 8),
+                _buildPromptChip(
+                  '✨ Editorial Minimal',
+                  'minimalist luxury design studio announcement with elegant typography and dividers',
                 ),
               ],
             ),
@@ -606,20 +686,36 @@ class _AiAgentSheetState extends State<AiAgentSheet> {
                       Icon(
                         _generatedResult!.isGeminiGenerated ? Icons.auto_awesome_rounded : Icons.check_circle_rounded,
                         color: _generatedResult!.isGeminiGenerated ? const Color(0xFF00D2B4) : const Color(0xFFA78BFA),
-                        size: 18,
+                        size: 16,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _generatedResult!.isGeminiGenerated
-                            ? 'Generated via ${_generatedResult!.modelUsed ?? "Gemini"}'
-                            : 'Synthesized via Studio Engine',
-                        style: TextStyle(
-                          color: _generatedResult!.isGeminiGenerated ? const Color(0xFF00D2B4) : const Color(0xFFA78BFA),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _generatedResult!.isGeminiGenerated
+                              ? 'Generated via ${_generatedResult!.modelUsed ?? "Gemini"}'
+                              : 'Synthesized via Studio Engine',
+                          style: TextStyle(
+                            color: _generatedResult!.isGeminiGenerated ? const Color(0xFF00D2B4) : const Color(0xFFA78BFA),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D2B4).withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          _generatedResult!.recipe.layoutStyle.name.toUpperCase(),
+                          style: const TextStyle(color: Color(0xFF00D2B4), fontSize: 9, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -768,6 +864,58 @@ class _AiAgentSheetState extends State<AiAgentSheet> {
         ),
         child: Text(
           ratioKey,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textMuted,
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLayoutChip(String styleKey, String label) {
+    final isSelected = _selectedLayoutStyle == styleKey;
+    return InkWell(
+      onTap: () => setState(() => _selectedLayoutStyle = styleKey),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF00D2B4).withValues(alpha: 0.20) : AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF00D2B4) : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textMuted,
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAestheticChip(String aestheticKey, String label) {
+    final isSelected = _selectedAesthetic == aestheticKey;
+    return InkWell(
+      onTap: () => setState(() => _selectedAesthetic = aestheticKey),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF8B5CF6).withValues(alpha: 0.25) : AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFA78BFA) : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
           style: TextStyle(
             color: isSelected ? Colors.white : AppColors.textMuted,
             fontSize: 11,

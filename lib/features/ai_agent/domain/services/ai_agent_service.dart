@@ -56,6 +56,8 @@ class AiAgentService {
     required String prompt,
     String? explicitApiKey,
     bool forceOffline = false,
+    double horizontalPadding = 20.0,
+    double verticalPadding = 20.0,
     void Function(AiGenerationStep)? onProgress,
   }) async {
     onProgress?.call(const AiGenerationStep(
@@ -121,7 +123,11 @@ class AiAgentService {
     ));
     await Future.delayed(const Duration(milliseconds: 200));
 
-    final page = IntelligentSynthesisEngine.synthesizeCanvasPage(recipe);
+    final page = IntelligentSynthesisEngine.synthesizeCanvasPage(
+      recipe,
+      horizontalPadding: horizontalPadding,
+      verticalPadding: verticalPadding,
+    );
 
     final project = CanvasProject(
       id: UuidGenerator.generate(),

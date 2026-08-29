@@ -16,6 +16,8 @@ abstract class Layer extends Equatable {
   final bool visible;
   final bool locked;
   final double scale;
+  final AutoLayoutSizingMode horizontalSizing;
+  final AutoLayoutSizingMode verticalSizing;
 
   const Layer({
     required this.id,
@@ -31,6 +33,8 @@ abstract class Layer extends Equatable {
     this.visible = true,
     this.locked = false,
     this.scale = 1.0,
+    this.horizontalSizing = AutoLayoutSizingMode.fixed,
+    this.verticalSizing = AutoLayoutSizingMode.fixed,
   });
 
   Rect get bounds => Rect.fromLTWH(x, y, width, height);
@@ -51,6 +55,11 @@ abstract class Layer extends Equatable {
     double? scale,
   });
 
+  Layer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  });
+
   @override
   List<Object?> get props => [
         id,
@@ -66,5 +75,7 @@ abstract class Layer extends Equatable {
         visible,
         locked,
         scale,
+        horizontalSizing,
+        verticalSizing,
       ];
 }

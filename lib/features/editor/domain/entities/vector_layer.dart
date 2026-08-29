@@ -122,6 +122,8 @@ class VectorLayer extends Layer {
     super.visible = true,
     super.locked = false,
     super.scale = 1.0,
+    super.horizontalSizing = AutoLayoutSizingMode.fixed,
+    super.verticalSizing = AutoLayoutSizingMode.fixed,
     List<VectorPathElement>? elements,
     // Backwards compatibility constructors
     List<VectorPoint>? points,
@@ -186,6 +188,17 @@ class VectorLayer extends Layer {
     );
   }
 
+  @override
+  VectorLayer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  }) {
+    return copyWith(
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
+    );
+  }
+
   VectorLayer copyWith({
     String? id,
     String? name,
@@ -199,6 +212,8 @@ class VectorLayer extends Layer {
     bool? visible,
     bool? locked,
     double? scale,
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
     List<VectorPathElement>? elements,
     // Backwards compatibility params
     List<VectorPoint>? points,
@@ -250,6 +265,8 @@ class VectorLayer extends Layer {
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
       scale: scale ?? this.scale,
+      horizontalSizing: horizontalSizing ?? this.horizontalSizing,
+      verticalSizing: verticalSizing ?? this.verticalSizing,
       elements: updatedElements,
       shadows: shadows ?? this.shadows,
     );

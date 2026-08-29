@@ -46,8 +46,14 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Layerly needs access to your photo library to save exported designs directly to your Photos.</string>
+	<string>Layerly needs access to your photo library to save exported designs and graphics directly to your Photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Layerly needs access to your photo library to save exported designs and albums.</string>
+	<string>Layerly needs access to your photo library to pick images for canvas layers and save exported projects.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Layerly needs access to your camera to take photos and insert them directly into your designs.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>

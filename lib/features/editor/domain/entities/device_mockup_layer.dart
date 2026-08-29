@@ -31,6 +31,8 @@ class DeviceMockupLayer extends Layer {
     super.visible = true,
     super.locked = false,
     super.scale = 1.0,
+    super.horizontalSizing = AutoLayoutSizingMode.fixed,
+    super.verticalSizing = AutoLayoutSizingMode.fixed,
     this.device = MockupDevice.iphone17ProMax,
     this.screenImagePath,
     this.frameColor = const Color(0xFF050507),
@@ -76,6 +78,17 @@ class DeviceMockupLayer extends Layer {
     );
   }
 
+  @override
+  DeviceMockupLayer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  }) {
+    return copyWith(
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
+    );
+  }
+
   DeviceMockupLayer copyWith({
     String? id,
     String? name,
@@ -89,6 +102,8 @@ class DeviceMockupLayer extends Layer {
     bool? visible,
     bool? locked,
     double? scale,
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
     MockupDevice? device,
     String? screenImagePath,
     Color? frameColor,
@@ -117,6 +132,8 @@ class DeviceMockupLayer extends Layer {
       visible: visible ?? this.visible,
       locked: locked ?? this.locked,
       scale: scale ?? this.scale,
+      horizontalSizing: horizontalSizing ?? this.horizontalSizing,
+      verticalSizing: verticalSizing ?? this.verticalSizing,
       device: device ?? this.device,
       screenImagePath: screenImagePath ?? this.screenImagePath,
       frameColor: frameColor ?? this.frameColor,

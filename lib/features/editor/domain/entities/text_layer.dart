@@ -20,8 +20,6 @@ class TextLayer extends Layer {
   final double backgroundRadius;
   final EdgeInsets padding;
   final Gradient? textGradient;
-  final AutoLayoutSizingMode horizontalSizing;
-  final AutoLayoutSizingMode verticalSizing;
 
   const TextLayer({
     required super.id,
@@ -36,6 +34,8 @@ class TextLayer extends Layer {
     super.visible = true,
     super.locked = false,
     super.scale = 1.0,
+    super.horizontalSizing = AutoLayoutSizingMode.hug,
+    super.verticalSizing = AutoLayoutSizingMode.hug,
     required this.content,
     this.fontFamily = 'Inter',
     this.fontSize = 28.0,
@@ -53,8 +53,6 @@ class TextLayer extends Layer {
     this.backgroundRadius = 6.0,
     this.padding = EdgeInsets.zero,
     this.textGradient,
-    this.horizontalSizing = AutoLayoutSizingMode.hug,
-    this.verticalSizing = AutoLayoutSizingMode.hug,
   }) : super(type: LayerType.text);
 
   @override
@@ -83,6 +81,17 @@ class TextLayer extends Layer {
       locked: locked,
       name: name,
       scale: scale,
+    );
+  }
+
+  @override
+  TextLayer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  }) {
+    return copyWith(
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
     );
   }
 

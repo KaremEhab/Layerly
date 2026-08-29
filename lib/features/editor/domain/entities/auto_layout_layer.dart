@@ -15,8 +15,6 @@ class AutoLayoutLayer extends Layer {
   final Color? strokeColor;
   final double strokeWidth;
   final StrokePosition strokePosition;
-  final AutoLayoutSizingMode horizontalSizing;
-  final AutoLayoutSizingMode verticalSizing;
   final bool clipContent;
 
   const AutoLayoutLayer({
@@ -32,14 +30,14 @@ class AutoLayoutLayer extends Layer {
     super.visible = true,
     super.locked = false,
     super.scale = 1.0,
+    super.horizontalSizing = AutoLayoutSizingMode.hug,
+    super.verticalSizing = AutoLayoutSizingMode.hug,
     this.direction = AutoLayoutDirection.horizontal,
     this.gap = 12.0,
     this.paddingHorizontal = 16.0,
     this.paddingVertical = 16.0,
     this.alignment = AutoLayoutAlignment.center,
     this.distribution = AutoLayoutDistribution.start,
-    this.horizontalSizing = AutoLayoutSizingMode.hug,
-    this.verticalSizing = AutoLayoutSizingMode.hug,
     this.children = const [],
     this.backgroundColor,
     this.cornerRadius = 12.0,
@@ -91,6 +89,17 @@ class AutoLayoutLayer extends Layer {
       strokeWidth: strokeWidth,
       strokePosition: strokePosition,
       clipContent: clipContent,
+    );
+  }
+
+  @override
+  AutoLayoutLayer copyWithSizing({
+    AutoLayoutSizingMode? horizontalSizing,
+    AutoLayoutSizingMode? verticalSizing,
+  }) {
+    return copyWith(
+      horizontalSizing: horizontalSizing,
+      verticalSizing: verticalSizing,
     );
   }
 
